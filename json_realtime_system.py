@@ -57,7 +57,6 @@ try:
     iterator = 0
     while iterator < 3:
         iterator += 1
-        print("\n\n" + str(iterator))
         last_system_track_number_kirim_datetime = [
             '0000-00-00 00:00:00',
             '0000-00-00 00:00:00',
@@ -171,7 +170,6 @@ try:
                         "AND created_time = '" + last_system_track_number_kirim_datetime[ix] + "';"
                     cur.execute(q)
                     data = cur.fetchall()
-                    print(data, str(session_id), str(ready), last_system_track_number_kirim_datetime[ix])
                     for row in data:
                         results.append(dict(zip(columns, row)))
                 if(ar_mandatory_table_8[ix]=='replay_system_track_kinetic'):
@@ -257,7 +255,7 @@ try:
                         results[len(results)-1]['track_visibility'] = row[0]
             ship_tracks.extend(results)
         completed_data.extend(ship_tracks)
-        # print(completed_data)
+        print(completed_data)
         # return json.dumps(ship_tracks, default=str)
 except psycopg2.Error as e:
     print(e)

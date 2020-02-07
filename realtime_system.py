@@ -58,9 +58,11 @@ last_system_track_number_kirim = ['-', '-', '-', '-', '-', '-', '-', '-']
 #     [5, 6, 7, 8],
 #     [9, 0, 11, 12],
 # ]
-mandatory_datas = []
-completed_data = []
-sent_data = []
+STATE = {
+    "mandatory_datas": [],
+    "completed_data": [],
+    "sent_data": [],
+}
 
 USERS = set()
 
@@ -137,11 +139,11 @@ def information_data():
                 table_data.append(row[0])
                 session_id = row[2]
             mandatory_table_system_track_numbers.append(table_data)
-        # system tracking number disimpan ke arr mandatory_datas
-        mandatory_datas = np.array(mandatory_table_system_track_numbers)
+        # system tracking number disimpan ke arr STATE["mandatory_datas"]
+        STATE["mandatory_datas"] = np.array(mandatory_table_system_track_numbers)
 
         # data ready adalah data yang sudah diintersect untuk mengambil data yang sama
-        data_ready = reduce(np.intersect1d, mandatory_datas)
+        data_ready = reduce(np.intersect1d, STATE["mandatory_datas"])
 
         # 2. kirim data lengkap
         ship_tracks = []
@@ -266,46 +268,37 @@ def information_data():
                     for row in cur.fetchall():
                         results[len(results)-1]['track_visibility'] = row[0]
             ship_tracks.extend(results)
-        completed_data.extend(ship_tracks)
+        STATE["completed_data"].extend(ship_tracks)
         # return json.dumps(ship_tracks, default=str)
     except psycopg2.Error as e:
         print(e)
     # cur.close()
     # conn.close()
 
-async def pull_data():
-    if len(completed_data) == 0 or len(completed_data) != len(sent_data):
-        information_data()
-
-async def get_cached_data():
-    return json.dumps(sent_data, default=str)
-
-async def get_completed_data():
-    return json.dumps(completed_data, default=str)
-
 async def users_event():
     return json.dumps({"type": "users", "count": len(USERS)})
 
-async def send_data():
-    if USERS:  # asyncio.wait doesn't accept an empty list
-        if len(sent_data) < 1 or len(sent_data) != len(completed_data):
-            # todo : salah pengkondisian
-            print("mlebu datane ndes")
-            await pull_data()
-            message = await get_completed_data()
-        else:
-            print("ora mlebu cuk")
-            message = await get_cached_data()
-        sent_data.extend(message)
+async def notify_users():
+    if USERS:
+        message = await users_event()
         await asyncio.wait([user.send(message) for user in USERS])
 
-async def notify_users():
-    if USERS:  # asyncio.wait doesn't accept an empty list
-        message = await users_event()
+async def send_data():
+    if USERS:
+        if len(STATE["completed_data"]) == 0:
+            information_data()
+
+        if len(STATE["sent_data"]) != len(STATE["completed_data"]):
+            message = STATE["completed_data"]
+            STATE["sent_data"].extend(STATE["completed_data"])
+        else:
+            message = STATE["sent_data"]
+        message = json.dumps(message, default=str)
         await asyncio.wait([user.send(message) for user in USERS])
 
 async def register(websocket):
     USERS.add(websocket)
+    print(USERS)
     await notify_users()
 
 async def unregister(websocket):
@@ -313,30 +306,22 @@ async def unregister(websocket):
     await notify_users()
 
 async def detect_insertion_data():
-    if USERS:
-        while True:
-            information_data()
-            if len(sent_data) != len(completed_data):
-                await pull_data()
-            await asyncio.sleep(random.random() * 3)
-            print("always stuck here")
+    while True:
+        information_data()
+        print("its looped!")
+        await asyncio.sleep(1000)
 
 async def handler(websocket, path):
-    await register(websocket)
+    await register(websocket),
     try:
-        async def clients_data():
-            await send_data()
-            # await detect_insertion_data()
-
-        coros = [clients_data() for _ in range(2)]
-        await asyncio.gather(*coros)
+        await send_data()
 
         async for message in websocket:
             pass
     finally:
         await unregister(websocket)
 
-start_server = websockets.serve(handler, "localhost", 6789)
+start_server = websockets.serve(handler, "10.20.112.203", 8080)
 
 asyncio.get_event_loop().run_until_complete(start_server)
 asyncio.get_event_loop().run_forever()
