@@ -46,16 +46,7 @@ ar_dis_track_number_mandatory_table_pjg_cr_time = ['-', '-', '-', '-']
 
 # untuk menyimpan create untuk masing - masing 8
 # tabel
-last_system_track_number_kirim_datetime = [
-    '0000-00-00 00:00:00',
-    '0000-00-00 00:00:00',
-    '0000-00-00 00:00:00',
-    '0000-00-00 00:00:00',
-    '0000-00-00 00:00:00',
-    '0000-00-00 00:00:00',
-    '0000-00-00 00:00:00',
-    '0000-00-00 00:00:00'
-]
+last_system_track_number_kirim_datetime = []
 
 # menyimpan sistem track yang sudah dikirim
 last_system_track_number_kirim = ['-', '-', '-', '-', '-', '-', '-', '-']
@@ -71,13 +62,23 @@ mandatory_datas = []
 completed_data = []
 sent_data = []
 
-data_ready = []
-
 USERS = set()
 
 
 def information_data():
     try:
+        # untuk menyimpan create untuk masing - masing 8
+        # tabel
+        last_system_track_number_kirim_datetime = [
+            '0000-00-00 00:00:00',
+            '0000-00-00 00:00:00',
+            '0000-00-00 00:00:00',
+            '0000-00-00 00:00:00',
+            '0000-00-00 00:00:00',
+            '0000-00-00 00:00:00',
+            '0000-00-00 00:00:00',
+            '0000-00-00 00:00:00'
+        ]
         data_ready = []
         # 1. ambil distinct data
         # 1.1. looping per mandatory table
@@ -168,7 +169,6 @@ def information_data():
                     # dan simpan ke last_system_track_number_kirim
                     last_system_track_number_kirim_datetime[ix] = created_time
                 if(ar_mandatory_table_8[ix]=='replay_system_track_general'):
-
                     q = "SELECT " \
                         "   system_track_number," \
                         "   created_time,identity," \
@@ -276,18 +276,27 @@ def information_data():
 async def pull_data():
     if len(completed_data) == 0 or len(completed_data) != len(sent_data):
         information_data()
-    sent_data.extend(completed_data)
-    return json.dumps(completed_data, default=str)
 
 async def get_cached_data():
     return json.dumps(sent_data, default=str)
+
+async def get_completed_data():
+    return json.dumps(completed_data, default=str)
 
 async def users_event():
     return json.dumps({"type": "users", "count": len(USERS)})
 
 async def send_data():
     if USERS:  # asyncio.wait doesn't accept an empty list
-        message = await pull_data() if len(sent_data) < 1 else await get_cached_data()
+        if len(sent_data) < 1 or len(sent_data) != len(completed_data):
+            # todo : salah pengkondisian
+            print("mlebu datane ndes")
+            await pull_data()
+            message = await get_completed_data()
+        else:
+            print("ora mlebu cuk")
+            message = await get_cached_data()
+        sent_data.extend(message)
         await asyncio.wait([user.send(message) for user in USERS])
 
 async def notify_users():
@@ -308,7 +317,7 @@ async def detect_insertion_data():
         while True:
             information_data()
             if len(sent_data) != len(completed_data):
-                await pull_data
+                await pull_data()
             await asyncio.sleep(random.random() * 3)
             print("always stuck here")
 
@@ -317,7 +326,7 @@ async def handler(websocket, path):
     try:
         async def clients_data():
             await send_data()
-            await detect_insertion_data()
+            # await detect_insertion_data()
 
         coros = [clients_data() for _ in range(2)]
         await asyncio.gather(*coros)
