@@ -292,7 +292,7 @@ async def send_data():
 
         if len(STATE["sent_data"]) != len(STATE["completed_data"]):
             message = STATE["completed_data"]
-            STATE["sent_data"].extend(STATE["completed_data"])
+            STATE["sent_data"] = STATE["completed_data"]
         else:
             message = STATE["sent_data"]
         message = json.dumps(message, default=str)
@@ -311,6 +311,11 @@ async def detect_insertion_data():
     while True:
         if len(STATE["completed_data"]) == 0:
             STATE["completed_data"] = information_data()
+
+        if len(STATE["completed_data"]) != len(information_data()):
+            STATE["completed_data"] = information_data()
+            await send_data()
+            print("updated")
         print("its looped!")
         await asyncio.sleep(3)
 

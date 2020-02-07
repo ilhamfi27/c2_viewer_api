@@ -126,7 +126,7 @@ try:
             mandatory_table_system_track_numbers.append(table_data)
         # system tracking number disimpan ke arr mandatory_datas
         mandatory_datas = np.array(mandatory_table_system_track_numbers)
-
+        print(mandatory_datas)
         # data ready adalah data yang sudah diintersect untuk mengambil data yang sama
         data_ready = reduce(np.intersect1d, mandatory_datas)
 
