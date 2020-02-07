@@ -68,6 +68,7 @@ USERS = set()
 
 
 def information_data():
+    prepared_data = []
     try:
         # untuk menyimpan create untuk masing - masing 8
         # tabel
@@ -268,7 +269,8 @@ def information_data():
                     for row in cur.fetchall():
                         results[len(results)-1]['track_visibility'] = row[0]
             ship_tracks.extend(results)
-        STATE["completed_data"].extend(ship_tracks)
+        prepared_data.extend(ship_tracks)
+        return prepared_data
         # return json.dumps(ship_tracks, default=str)
     except psycopg2.Error as e:
         print(e)
@@ -286,7 +288,7 @@ async def notify_users():
 async def send_data():
     if USERS:
         if len(STATE["completed_data"]) == 0:
-            information_data()
+            STATE["completed_data"] = information_data()
 
         if len(STATE["sent_data"]) != len(STATE["completed_data"]):
             message = STATE["completed_data"]
@@ -307,9 +309,10 @@ async def unregister(websocket):
 
 async def detect_insertion_data():
     while True:
-        information_data()
+        if len(STATE["completed_data"]) == 0:
+            STATE["completed_data"] = information_data()
         print("its looped!")
-        await asyncio.sleep(1000)
+        await asyncio.sleep(3)
 
 async def handler(websocket, path):
     await register(websocket),
@@ -321,7 +324,13 @@ async def handler(websocket, path):
     finally:
         await unregister(websocket)
 
-start_server = websockets.serve(handler, "10.20.112.203", 8080)
+# start_server = websockets.serve(handler, "10.20.112.203", 8080)
+start_server = websockets.serve(handler, "127.0.0.1", 8080)
 
-asyncio.get_event_loop().run_until_complete(start_server)
+tasks = [
+    asyncio.ensure_future(detect_insertion_data()),
+    asyncio.ensure_future(start_server)
+]
+
+asyncio.get_event_loop().run_until_complete(asyncio.gather(*tasks))
 asyncio.get_event_loop().run_forever()
