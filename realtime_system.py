@@ -61,6 +61,8 @@ last_system_track_number_kirim = ['-', '-', '-', '-', '-', '-', '-', '-']
 STATE = {
     "cached_data": [],
     "data_time": [],
+    "removed_data": [],
+    "existed_data": [],
 }
 
 USERS = set()
@@ -153,7 +155,7 @@ def information_data():
             # if loop == 5:
             #     break
             columns = ('system_track_number','created_time','identity','environment','source','track_name','iu_indicator','airborne_indicator')
-            results = []
+            results = {}
             for ix in range(len(ar_mandatory_table_8)):
                 #dapatkan created time yang terakhir per 8 tabel tersebut
                 q = "SELECT " \
@@ -171,7 +173,8 @@ def information_data():
                     # dan simpan ke last_system_track_number_kirim
                     last_system_track_number_kirim_datetime[ix] = created_time
                 if(ar_mandatory_table_8[ix]=='replay_system_track_general'):
-                    q = "SELECT " \
+                    q = "SELECT * FROM " \
+                        "(  SELECT " \
                         "   system_track_number," \
                         "   created_time,identity," \
                         "   environment," \
@@ -181,13 +184,15 @@ def information_data():
                         "   airborne_indicator " \
                         "FROM " + ar_mandatory_table_8[ix] + " " \
                         "WHERE session_id = " + str(session_id) + " " \
-                        "AND system_track_number = " + str(ready) + " " \
-                        "AND created_time = '" + last_system_track_number_kirim_datetime[ix] + "';"
+                        "AND system_track_number = " + str(ready) + " ORDER BY created_time DESC) ss LIMIT 1" 
                     cur.execute(q)
                     for row in cur.fetchall():
-                        results.append(dict(zip(columns, row)))
+                        system_track_number = row[0]
+                        results = dict(zip(columns, row))
+                        source_data = row[4]
                 if(ar_mandatory_table_8[ix]=='replay_system_track_kinetic'):
-                    q = "SELECT " \
+                    q = "SELECT * FROM" \
+                        "( SELECT " \
                         "   latitude," \
                         "   longitude," \
                         "   speed_over_ground," \
@@ -195,46 +200,33 @@ def information_data():
                         "FROM " + ar_mandatory_table_8[ix] + " " \
                         "WHERE session_id = " + str(session_id) + " " \
                         "AND system_track_number = " + str(ready) + " " \
-                        "AND created_time = '" + last_system_track_number_kirim_datetime[ix]+ "';"
+                        "ORDER BY created_time DESC) aa LIMIT 1;"
                     cur.execute(q)
                     for row in cur.fetchall():
-                        results[len(results)-1]['latitude'] = row[0]
-                        results[len(results)-1]['longitude'] = row[1]
-                        results[len(results)-1]['speed_over_ground'] = row[2]
-                        results[len(results)-1]['course_over_ground'] = row[3]
+                        results['latitude'] = row[0]
+                        results['longitude'] = row[1]
+                        results['speed_over_ground'] = row[2]
+                        results['course_over_ground'] = row[3]
 
                 if(ar_mandatory_table_8[ix]=='replay_system_track_processing'):
-                    q = "SELECT " \
+                    q = "SELECT * FROM" \
+                        "( SELECT " \
                         "   track_join_status," \
                         "   track_fusion_status," \
                         "   track_phase_type as track_phase " \
                         "FROM " + ar_mandatory_table_8[ix] + " " \
                         "WHERE session_id = " + str(session_id) + " " \
                         "AND system_track_number = " + str(ready) + " " \
-                        "AND created_time = '" + last_system_track_number_kirim_datetime[ix] + "';"
+                        "ORDER BY created_time DESC) aa LIMIT 1;"
                     cur.execute(q)
                     for row in cur.fetchall():
-                        results[len(results)-1]['track_join_status'] = row[0]
-                        results[len(results)-1]['track_fusion_status'] = row[1]
-                        results[len(results)-1]['track_phase'] = row[2]
+                        if len(results) > 0:
+                            results['track_join_status'] = row[0]
+                            results['track_fusion_status'] = row[1]
+                            results['track_phase'] = row[2]
 
                 if(ar_mandatory_table_8[ix]=='replay_ais_data'):
-                    icek_ais = 0
-                    if(last_system_track_number_kirim_datetime[ix]!='None'):
-                        q = "SELECT " \
-                            "   type_of_ship_or_cargo," \
-                            "   name as ship_name " \
-                            "FROM " + ar_mandatory_table_8[ix] + " " \
-                            "WHERE session_id = " + str(session_id) + " " \
-                            "AND system_track_number = " + str(ready) + " " \
-                            "AND created_time = '" + last_system_track_number_kirim_datetime[ix] + "';"
-                        cur.execute(q)
-                        for row in cur.fetchall():
-                            results[len(results)-1]['type_of_ship_or_cargo'] = row[0]
-                            results[len(results)-1]['ship_name'] = row[1]
-                            icek_ais = 1
-
-                    else:
+                    if(source_data=='AIS_TYPE'):
                         q = "SELECT " \
                             "   * " \
                             "FROM " \
@@ -249,44 +241,38 @@ def information_data():
                             ") aa LIMIT 1;"
                         cur.execute(q)
                         for row in cur.fetchall():
-                            results[len(results)-1]['type_of_ship_or_cargo'] = row[0]
-                            results[len(results)-1]['ship_name'] = row[1]
-                            icek_ais = 1
-
-                    if(icek_ais == 0):
-                        results[len(results)-1]['type_of_ship_or_cargo'] = '-'
-                        results[len(results)-1]['ship_name'] = '-'
+                            if len(results) > 0:
+                                results['type_of_ship_or_cargo'] = row[0]
+                                results['ship_name'] = row[1]
+                    else:
+                        if len(results) > 0:
+                            results['type_of_ship_or_cargo'] = '-'
+                            results['ship_name'] = '-'
 
                 if(ar_mandatory_table_8[ix]=='replay_track_general_setting'):
-                    q = "SELECT " \
+                    q = "SELECT * FROM " \
+                        "( SELECT " \
                         "   track_visibility " \
                         "FROM " + ar_mandatory_table_8[ix] + " " \
                         "WHERE session_id = " + str(session_id) + " " \
                         "AND system_track_number = " + str(ready) + " " \
-                        "AND created_time = '" + last_system_track_number_kirim_datetime[ix] + "';"
+                        "ORDER BY created_time DESC) aa LIMIT 1 ;"
                     cur.execute(q)
                     for row in cur.fetchall():
-                        results[len(results)-1]['track_visibility'] = row[0]
-            ship_tracks.extend(results)
+                        if len(results) > 0:
+                            results['track_visibility'] = row[0]
+            ship_tracks.append([system_track_number, results])
         return ship_tracks
     except psycopg2.Error as e:
         print(e)
     cur.close()
     conn.close()
 
-async def users_event():
-    return json.dumps({"type": "users", "count": len(USERS)})
-
-async def notify_users():
+async def send_cached_data():
     if USERS:
-        message = await users_event()
-        await asyncio.wait([user.send(message) for user in USERS])
-
-async def send_data():
-    if USERS:
-        if len(STATE["cached_data"]) != len(information_data()):
-            message = information_data()
-            STATE["cached_data"] = information_data()
+        if len(STATE["cached_data"]) < 1:
+            message = information_data()[0: 1]
+            STATE["cached_data"] = message
         else:
             message = STATE["cached_data"]
         message = json.dumps(message, default=str)
@@ -295,35 +281,60 @@ async def send_data():
 async def register(websocket):
     USERS.add(websocket)
     print(USERS)
-    await notify_users()
 
 async def unregister(websocket):
     USERS.remove(websocket)
-    await notify_users()
 
 async def data_change_detection():
     while True:
-        if len(STATE["cached_data"]) != len(information_data()):
-            await send_data()
-            STATE["cached_data"] = information_data()
-            # TODO
-            # STATE["data_time"] = 
-            print("updated")
-            
-        print("its looped!")
-        await asyncio.sleep(3)
+        shiptrack_data = np.array(information_data())
+
+        check_track_number_system = np.setdiff1d(np.array(shiptrack_data[0:, 0]), np.array(STATE["existed_data"]))
+        if len(check_track_number_system) > 0:
+            STATE["existed_data"].extend(check_track_number_system)
+            STATE["cached_data"] = list(np.array(shiptrack_data[0:, 1]))
+            print("insert")
+            await send_cached_data()
+
+        if len(check_track_number_system) == 0:
+            changed_data = []
+            for i, data_has_changed in enumerate(np.array(shiptrack_data[0:, 1])):
+                if STATE["cached_data"][i] != np.array(shiptrack_data[i, 1]) and \
+                    np.array(shiptrack_data[i, 0]) not in STATE["removed_data"]:
+                    changed_data.append(data_has_changed)
+                    print("update")
+                    
+                elif STATE["cached_data"][i] != np.array(shiptrack_data[i, 1]) and \
+                    np.array(shiptrack_data[i, 0]) not in STATE["removed_data"] and \
+                    np.array(shiptrack_data[i, 1]) == "REMOVE":
+                    STATE["removed_data"].extend(np.array(shiptrack_data[i, 1]))
+                    del STATE["cached_data"][i]
+                    changed_data.append(data_has_changed)
+                    print("deleted")
+
+            print("changed data", changed_data)
+            if len(changed_data) > 0:
+                STATE["cached_data"] = list(np.array(shiptrack_data[0:, 1]))
+                if USERS:
+                    message = json.dumps(changed_data, default=str)
+                    await asyncio.wait([user.send(message) for user in USERS])
+        
+        print("its sending data!")
+        await asyncio.sleep(7)
 
 async def handler(websocket, path):
     await register(websocket),
     try:
-        await send_data()
+        await send_cached_data()
         async for message in websocket:
             pass
+    except websockets.exceptions.ConnectionClosedError:
+        print("connection error")
     finally:
         await unregister(websocket)
 
-# start_server = websockets.serve(handler, "10.20.112.203", 8080)
-start_server = websockets.serve(handler, "127.0.0.1", 8080)
+start_server = websockets.serve(handler, "10.20.112.203", 8080)
+# start_server = websockets.serve(handler, "127.0.0.1", 8080)
 
 tasks = [
     asyncio.ensure_future(data_change_detection()),

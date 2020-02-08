@@ -52,8 +52,12 @@ mandatory_datas = []
 completed_data = np.array([])
 sent_data = []
 data_ready = []
+data_time = []
 
 try:
+    mandatory_data = []
+    # untuk menyimpan create untuk masing - masing 8
+    # tabel
     last_system_track_number_kirim_datetime = [
         '0000-00-00 00:00:00',
         '0000-00-00 00:00:00',
@@ -68,6 +72,7 @@ try:
     # 1. ambil distinct data
     # 1.1. looping per mandatory table
 
+    # while True:
     mandatory_table_system_track_numbers = []
     for ix, table_name_ in enumerate(ar_mandatory_table):
         if (ar_mandatory_table[ix] == 'replay_system_track_general'):
@@ -121,20 +126,21 @@ try:
             table_data.append(row[0])
             session_id = row[2]
         mandatory_table_system_track_numbers.append(table_data)
-    # system tracking number disimpan ke arr mandatory_datas
-    mandatory_datas = np.array(mandatory_table_system_track_numbers)
+    # system tracking number disimpan ke arr mandatory_data
+    mandatory_data = np.array(mandatory_table_system_track_numbers)
+
     # data ready adalah data yang sudah diintersect untuk mengambil data yang sama
-    data_ready = reduce(np.intersect1d, mandatory_datas)
+    data_ready = reduce(np.intersect1d, mandatory_data)
 
     # 2. kirim data lengkap
-    ship_tracks = np.array([])
-    loop = 0
+    ship_tracks = []
+    # loop = 0
     for ready in data_ready:
-        loop += 1
-        if loop == 4:
-            break
+        # loop += 1
+        # if loop == 5:
+        #     break
         columns = ('system_track_number','created_time','identity','environment','source','track_name','iu_indicator','airborne_indicator')
-        results = []
+        results = {}
         for ix in range(len(ar_mandatory_table_8)):
             #dapatkan created time yang terakhir per 8 tabel tersebut
             q = "SELECT " \
@@ -152,7 +158,8 @@ try:
                 # dan simpan ke last_system_track_number_kirim
                 last_system_track_number_kirim_datetime[ix] = created_time
             if(ar_mandatory_table_8[ix]=='replay_system_track_general'):
-                q = "SELECT " \
+                q = "SELECT * FROM " \
+                    "(  SELECT " \
                     "   system_track_number," \
                     "   created_time,identity," \
                     "   environment," \
@@ -162,14 +169,15 @@ try:
                     "   airborne_indicator " \
                     "FROM " + ar_mandatory_table_8[ix] + " " \
                     "WHERE session_id = " + str(session_id) + " " \
-                    "AND system_track_number = " + str(ready) + " " \
-                    "AND created_time = '" + last_system_track_number_kirim_datetime[ix] + "';"
+                    "AND system_track_number = " + str(ready) + " ORDER BY created_time DESC) ss LIMIT 1" 
                 cur.execute(q)
-                data = cur.fetchall()
-                for row in data:
-                    results.append(dict(zip(columns, row)))
+                for row in cur.fetchall():
+                    system_track_number = row[0]
+                    results = dict(zip(columns, row))
+                    source_data = row[4]
             if(ar_mandatory_table_8[ix]=='replay_system_track_kinetic'):
-                q = "SELECT " \
+                q = "SELECT * FROM" \
+                    "( SELECT " \
                     "   latitude," \
                     "   longitude," \
                     "   speed_over_ground," \
@@ -177,46 +185,42 @@ try:
                     "FROM " + ar_mandatory_table_8[ix] + " " \
                     "WHERE session_id = " + str(session_id) + " " \
                     "AND system_track_number = " + str(ready) + " " \
-                    "AND created_time = '" + last_system_track_number_kirim_datetime[ix]+ "';"
+                    "ORDER BY created_time DESC) aa LIMIT 1;"
+                q3 = q
                 cur.execute(q)
                 for row in cur.fetchall():
-                    results[len(results)-1]['latitude'] = row[0]
-                    results[len(results)-1]['longitude'] = row[1]
-                    results[len(results)-1]['speed_over_ground'] = row[2]
-                    results[len(results)-1]['course_over_ground'] = row[3]
+                    if len(results) > 0:
+                        results['latitude'] = row[0]
+                        results['longitude'] = row[1]
+                        results['speed_over_ground'] = row[2]
+                        results['course_over_ground'] = row[3]
+                    else:
+                        # print(q3, results)
+                        pass
 
             if(ar_mandatory_table_8[ix]=='replay_system_track_processing'):
-                q = "SELECT " \
+                q = "SELECT * FROM" \
+                    "( SELECT " \
                     "   track_join_status," \
                     "   track_fusion_status," \
                     "   track_phase_type as track_phase " \
                     "FROM " + ar_mandatory_table_8[ix] + " " \
                     "WHERE session_id = " + str(session_id) + " " \
                     "AND system_track_number = " + str(ready) + " " \
-                    "AND created_time = '" + last_system_track_number_kirim_datetime[ix] + "';"
+                    "ORDER BY created_time DESC) aa LIMIT 1;"
                 cur.execute(q)
+                q4 = q
                 for row in cur.fetchall():
-                    results[len(results)-1]['track_join_status'] = row[0]
-                    results[len(results)-1]['track_fusion_status'] = row[1]
-                    results[len(results)-1]['track_phase'] = row[2]
+                    if len(results) > 0:
+                        results['track_join_status'] = row[0]
+                        results['track_fusion_status'] = row[1]
+                        results['track_phase'] = row[2]
+                    else:
+                        # print(q4, results)
+                        pass
 
             if(ar_mandatory_table_8[ix]=='replay_ais_data'):
-                icek_ais = 0
-                if(last_system_track_number_kirim_datetime[ix]!='None'):
-                    q = "SELECT " \
-                        "   type_of_ship_or_cargo," \
-                        "   name as ship_name " \
-                        "FROM " + ar_mandatory_table_8[ix] + " " \
-                        "WHERE session_id = " + str(session_id) + " " \
-                        "AND system_track_number = " + str(ready) + " " \
-                        "AND created_time = '" + last_system_track_number_kirim_datetime[ix] + "';"
-                    cur.execute(q)
-                    for row in cur.fetchall():
-                        results[len(results)-1]['type_of_ship_or_cargo'] = row[0]
-                        results[len(results)-1]['ship_name'] = row[1]
-                        icek_ais = 1
-
-                else:
+                if(source_data=='AIS_TYPE'):
                     q = "SELECT " \
                         "   * " \
                         "FROM " \
@@ -231,28 +235,35 @@ try:
                         ") aa LIMIT 1;"
                     cur.execute(q)
                     for row in cur.fetchall():
-                        results[len(results)-1]['type_of_ship_or_cargo'] = row[0]
-                        results[len(results)-1]['ship_name'] = row[1]
-                        icek_ais = 1
-
-                if(icek_ais == 0):
-                    results[len(results)-1]['type_of_ship_or_cargo'] = '-'
-                    results[len(results)-1]['ship_name'] = '-'
+                        if len(results) > 0:
+                            results['type_of_ship_or_cargo'] = row[0]
+                            results['ship_name'] = row[1]
+                        else:
+                            # print(results)
+                            pass
+                else:
+                    if len(results) > 0:
+                        results['type_of_ship_or_cargo'] = '-'
+                        results['ship_name'] = '-'
 
             if(ar_mandatory_table_8[ix]=='replay_track_general_setting'):
-                q = "SELECT " \
+                q = "SELECT * FROM " \
+                    "( SELECT " \
                     "   track_visibility " \
                     "FROM " + ar_mandatory_table_8[ix] + " " \
                     "WHERE session_id = " + str(session_id) + " " \
                     "AND system_track_number = " + str(ready) + " " \
-                    "AND created_time = '" + last_system_track_number_kirim_datetime[ix] + "';"
+                    "ORDER BY created_time DESC) aa LIMIT 1 ;"
                 cur.execute(q)
                 for row in cur.fetchall():
-                    results[len(results)-1]['track_visibility'] = row[0]
-        # ship_tracks.extend(results)
-        ship_tracks = np.append(ship_tracks, results)
-    print(ship_tracks[1]["created_time"])
+                    if len(results) > 0:
+                        results['track_visibility'] = row[0]
+
+        ship_tracks.append([system_track_number, results])
 except psycopg2.Error as e:
     print(e)
 cur.close()
 conn.close()
+
+ship_tracks = np.array(ship_tracks)
+print(ship_tracks[0])
