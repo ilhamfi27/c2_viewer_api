@@ -60,6 +60,7 @@ last_system_track_number_kirim = ['-', '-', '-', '-', '-', '-', '-', '-']
 # ]
 STATE = {
     "cached_data": [],
+    "data_time": [],
 }
 
 USERS = set()
@@ -300,13 +301,13 @@ async def unregister(websocket):
     USERS.remove(websocket)
     await notify_users()
 
-async def detect_insertion_data():
+async def data_change_detection():
     while True:
         if len(STATE["cached_data"]) != len(information_data()):
-            STATE["cached_data"] = information_data()
-
-        if len(STATE["cached_data"]) != len(information_data()):
             await send_data()
+            STATE["cached_data"] = information_data()
+            # TODO
+            # STATE["data_time"] = 
             print("updated")
             
         print("its looped!")
@@ -325,7 +326,7 @@ async def handler(websocket, path):
 start_server = websockets.serve(handler, "127.0.0.1", 8080)
 
 tasks = [
-    asyncio.ensure_future(detect_insertion_data()),
+    asyncio.ensure_future(data_change_detection()),
     asyncio.ensure_future(start_server)
 ]
 
