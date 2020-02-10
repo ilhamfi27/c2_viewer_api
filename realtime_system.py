@@ -156,6 +156,7 @@ def information_data():
                     "ORDER BY st.system_track_number;" \
                 .format(table_name=ar_mandatory_table[ix])
             cur.execute(q)
+            print(q)
             data = cur.fetchall()
 
             table_data = []
@@ -392,9 +393,13 @@ async def data_change_detection():
         shiptrack_data = np.array(information_data())
 
         datas_changed = 0
+        # cek apakah datanya berisi?
         if len(shiptrack_data) > 0: 
             check_track_number_system = np.setdiff1d(shiptrack_data[0:, 0], np.array(REALTIME_STATE["existed_data"]))
-            if len(check_track_number_system) > 0:
+
+            # cek apakah datanya lebih dari 0 dan tidak di data yang dihapus
+            if len(check_track_number_system) > 0 or \
+                check_track_number_system in REALTIME_STATE["removed_data"]:
                 REALTIME_STATE["existed_data"].extend(check_track_number_system)
                 REALTIME_STATE["cached_data"] = list(shiptrack_data[0:, 1])
                 await send_cached_data()
@@ -402,22 +407,24 @@ async def data_change_detection():
             if len(check_track_number_system) == 0:
                 changed_data = []
                 if len(REALTIME_STATE["cached_data"]) > 0:
+                    print(len(REALTIME_STATE["cached_data"]))
+                    print(len(shiptrack_data))
                     for i, data_has_changed in enumerate(shiptrack_data[0:, 1]):
                         if REALTIME_STATE["cached_data"][i] != shiptrack_data[i, 1] and \
-                            shiptrack_data[i, 0] not in REALTIME_STATE["removed_data"]:
+                            shiptrack_data[i, 0] not in REALTIME_STATE["removed_data"] and \
+                            shiptrack_data[i, 1]['track_phase_type'] != "DELETED_BY_SYSTEM" or \
+                            shiptrack_data[i, 1]['track_phase_type'] != "DELETED_BY_SENSOR":
                             changed_data.append(data_has_changed)
-                            print("update")
 
                         elif REALTIME_STATE["cached_data"][i] != shiptrack_data[i, 1] and \
                             shiptrack_data[i, 0] not in REALTIME_STATE["removed_data"] and \
                             shiptrack_data[i, 1]['track_phase_type'] == "DELETED_BY_SYSTEM" or \
                             shiptrack_data[i, 1]['track_phase_type'] == "DELETED_BY_SENSOR":
-                            REALTIME_STATE["removed_data"].extend(shiptrack_data[i, 1])
+                            REALTIME_STATE["removed_data"].append(shiptrack_data[i, 0])
                             del REALTIME_STATE["cached_data"][i]
+                            del REALTIME_STATE["existed_data"][i]
                             changed_data.append(data_has_changed)
-                            print("deleted")
 
-                print("changed data", changed_data)
                 if len(changed_data) > 0:
                     datas_changed += 1
                     REALTIME_STATE["cached_data"] = list(shiptrack_data[0:, 1])
