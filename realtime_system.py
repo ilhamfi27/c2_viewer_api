@@ -25,7 +25,7 @@ ar_mandatory_table = [
     'replay_system_track_general',
     'replay_system_track_kinetic',
     'replay_system_track_processing',
-    'replay_track_general_setting'
+    # 'replay_track_general_setting'
 ]
 ar_mandatory_table_8 = [
     'replay_system_track_general',
@@ -215,7 +215,7 @@ def information_data():
                     q = "SELECT * FROM" \
                         "( SELECT " \
                         "   latitude," \
-                        "   longitude," \
+                        "   (floor(random()*(5-1+1))+1 + longitude) as longitude," \
                         "   speed_over_ground," \
                         "   course_over_ground " \
                         "FROM " + ar_mandatory_table_8[ix] + " " \
@@ -559,7 +559,8 @@ async def handler(websocket, path):
         await unregister(websocket)
 
 # start_server = websockets.serve(handler, "10.20.112.203", 8080)
-start_server = websockets.serve(handler, "172.16.16.12", 8080)
+# start_server = websockets.serve(handler, "172.16.16.12", 8080)
+start_server = websockets.serve(handler, "127.0.0.1", 8080)
 
 tasks = [
     asyncio.ensure_future(data_change_detection()),
