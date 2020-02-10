@@ -202,7 +202,8 @@ def information_data():
                         "   environment," \
                         "   source," \
                         "   track_name," \
-                        "   iu_indicator " \
+                        "   iu_indicator, " \
+                        "   airborne_indicator " \
                         "FROM   " + ar_mandatory_table_8[ix] + " " \
                         "WHERE session_id = " + str(session_id) + " " \
                         "AND system_track_number = " + str(ready) + " ORDER BY created_time DESC) ss LIMIT 1"
@@ -215,7 +216,7 @@ def information_data():
                     q = "SELECT * FROM" \
                         "( SELECT " \
                         "   latitude," \
-                        "   (floor(random()*(5-1+1))+1 + longitude) as longitude," \
+                        "   longitude," \
                         "   speed_over_ground," \
                         "   course_over_ground " \
                         "FROM " + ar_mandatory_table_8[ix] + " " \
@@ -234,7 +235,7 @@ def information_data():
                         "( SELECT " \
                         "   track_join_status," \
                         "   track_fusion_status," \
-                        "   track_phase_type as track_phase " \
+                        "   track_phase_type " \
                         "FROM " + ar_mandatory_table_8[ix] + " " \
                         "WHERE session_id = " + str(session_id) + " " \
                         "AND system_track_number = " + str(ready) + " " \
@@ -244,7 +245,7 @@ def information_data():
                         if len(results) > 0:
                             results['track_join_status'] = row[0]
                             results['track_fusion_status'] = row[1]
-                            results['track_phase'] = row[2]
+                            results['track_phase_type'] = row[2]
 
                 if(ar_mandatory_table_8[ix]=='replay_ais_data'):
                     if(source_data=='AIS_TYPE'):
@@ -269,19 +270,6 @@ def information_data():
                         if len(results) > 0:
                             results['type_of_ship_or_cargo'] = '-'
                             results['ship_name'] = '-'
-
-                if(ar_mandatory_table_8[ix]=='replay_track_general_setting'):
-                    q = "SELECT * FROM " \
-                        "( SELECT " \
-                        "   track_visibility " \
-                        "FROM " + ar_mandatory_table_8[ix] + " " \
-                        "WHERE session_id = " + str(session_id) + " " \
-                        "AND system_track_number = " + str(ready) + " " \
-                        "ORDER BY created_time DESC) aa LIMIT 1 ;"
-                    cur.execute(q)
-                    for row in cur.fetchall():
-                        if len(results) > 0:
-                            results['track_visibility'] = row[0]
             ship_tracks.append([system_track_number, results])
         return ship_tracks
     except psycopg2.Error as e:
@@ -409,7 +397,7 @@ async def data_change_detection():
             if len(check_track_number_system) > 0:
                 REALTIME_STATE["existed_data"].extend(check_track_number_system)
                 REALTIME_STATE["cached_data"] = list(shiptrack_data[0:, 1])
-                print("insert")
+                await send_cached_data()
 
             if len(check_track_number_system) == 0:
                 changed_data = []
@@ -422,7 +410,8 @@ async def data_change_detection():
 
                         elif REALTIME_STATE["cached_data"][i] != shiptrack_data[i, 1] and \
                             shiptrack_data[i, 0] not in REALTIME_STATE["removed_data"] and \
-                            shiptrack_data[i, 1] == "REMOVE":
+                            shiptrack_data[i, 1]['track_phase_type'] == "DELETED_BY_SYSTEM" or \
+                            shiptrack_data[i, 1]['track_phase_type'] == "DELETED_BY_SENSOR":
                             REALTIME_STATE["removed_data"].extend(shiptrack_data[i, 1])
                             del REALTIME_STATE["cached_data"][i]
                             changed_data.append(data_has_changed)
@@ -444,6 +433,7 @@ async def data_change_detection():
             if len(check_object_id) > 0:
                 TACTICAL_FIGURE_STATE["existed_data"].extend(check_object_id)
                 TACTICAL_FIGURE_STATE["cached_data"] = list(tactical_figure_datas[0:, 1])
+                await send_cached_data()
 
             if len(check_object_id) == 0:
                 changed_data = []
@@ -465,7 +455,7 @@ async def data_change_detection():
                 print("changed data", changed_data)
                 if len(changed_data) > 0:
                     datas_changed += 1
-                    TACTICAL_FIGURE_STATE["cached_data"] = list(shiptrack_data[0:, 1])
+                    TACTICAL_FIGURE_STATE["cached_data"] = list(tactical_figure_datas[0:, 1])
                     if USERS:
                         message = json.dumps(changed_data, default=str)
                         await asyncio.wait([user.send(message) for user in USERS])
@@ -500,7 +490,7 @@ async def data_change_detection():
                 print("changed data", changed_data)
                 if len(changed_data) > 0:
                     datas_changed += 1
-                    REFERENCE_POINT_STATE["cached_data"] = list(shiptrack_data[0:, 1])
+                    REFERENCE_POINT_STATE["cached_data"] = list(tactical_figure_datas[0:, 1])
                     if USERS:
                         message = json.dumps(changed_data, default=str)
                         await asyncio.wait([user.send(message) for user in USERS])
@@ -535,13 +525,14 @@ async def data_change_detection():
                 print("changed data", changed_data)
                 if len(changed_data) > 0:
                     datas_changed += 1
-                    AREA_ALERT_STATE["cached_data"] = list(shiptrack_data[0:, 1])
+                    AREA_ALERT_STATE["cached_data"] = list(tactical_figure_datas[0:, 1])
                     if USERS:
                         message = json.dumps(changed_data, default=str)
                         await asyncio.wait([user.send(message) for user in USERS])
 
-        if datas_changed > 0:
-            await send_cached_data()
+        # should be deleted??
+        # if datas_changed > 0:
+        #     await send_cached_data()
         print("its sending data!")
 
         # lama tidur
@@ -558,9 +549,9 @@ async def handler(websocket, path):
     finally:
         await unregister(websocket)
 
-# start_server = websockets.serve(handler, "10.20.112.203", 8080)
-# start_server = websockets.serve(handler, "172.16.16.12", 8080)
-start_server = websockets.serve(handler, "127.0.0.1", 8080)
+# start_server = websockets.serve(handler, "10.20.112.217", 8080)
+start_server = websockets.serve(handler, "192.168.43.14", 14045)
+# start_server = websockets.serve(handler, "127.0.0.1", 8080)
 
 tasks = [
     asyncio.ensure_future(data_change_detection()),
