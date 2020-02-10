@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# WS server example that synchronizes state across clients
+# WS server example that synchronizes REALTIME_state across clients
 
 import asyncio
 import json
@@ -13,8 +13,12 @@ from functools import reduce
 
 logging.basicConfig()
 
-conn = psycopg2.connect("host=localhost dbname=shiptrack user=postgres password=bismillah")
-# conn = psycopg2.connect("host=localhost dbname=shiptrack user=postgres password=bismillah")
+conn = psycopg2.connect("host=127.0.0.1 \
+    dbname=shiptrack \
+    user=postgres \
+    password=bismillah"
+)
+
 cur = conn.cursor()
 # i = 0;
 ar_mandatory_table = [
@@ -58,9 +62,27 @@ last_system_track_number_kirim = ['-', '-', '-', '-', '-', '-', '-', '-']
 #     [5, 6, 7, 8],
 #     [9, 0, 11, 12],
 # ]
-STATE = {
+REALTIME_STATE = {
     "cached_data": [],
     "data_time": [],
+    "removed_data": [],
+    "existed_data": [],
+}
+
+TACTICAL_FIGURE_STATE = {
+    "cached_data": [],
+    "removed_data": [],
+    "existed_data": [],
+}
+
+REFERENCE_POINT_STATE = {
+    "cached_data": [],
+    "removed_data": [],
+    "existed_data": [],
+}
+
+AREA_ALERT_STATE = {
+    "cached_data": [],
     "removed_data": [],
     "existed_data": [],
 }
@@ -180,11 +202,10 @@ def information_data():
                         "   environment," \
                         "   source," \
                         "   track_name," \
-                        "   iu_indicator," \
-                        "   airborne_indicator " \
-                        "FROM " + ar_mandatory_table_8[ix] + " " \
+                        "   iu_indicator " \
+                        "FROM   " + ar_mandatory_table_8[ix] + " " \
                         "WHERE session_id = " + str(session_id) + " " \
-                        "AND system_track_number = " + str(ready) + " ORDER BY created_time DESC) ss LIMIT 1" 
+                        "AND system_track_number = " + str(ready) + " ORDER BY created_time DESC) ss LIMIT 1"
                     cur.execute(q)
                     for row in cur.fetchall():
                         system_track_number = row[0]
@@ -268,13 +289,105 @@ def information_data():
     cur.close()
     conn.close()
 
+def tactical_figure_data():
+    try:
+        columns = (
+            "object_id", "object_type", "name", "environment", "shape", "displaying_popup_alert_status",
+            "line_color", "fill_color", "identity_list", "warning_list", "evaluation_type", "visibility_type",
+            "last_update_time", "network_track_number", "link_status_type", "is_editable", "point_amplification_type",
+            "point_keys", "points"
+        )
+
+        q = "SELECT * " \
+            "    FROM tactical_figure_list " \
+            "    ORDER BY object_id; "
+        cur.execute(q)
+        data = []
+        for row in cur.fetchall():
+            object_id = row[0]
+            results = dict(zip(columns, row))
+            data.append([object_id, results])
+        return data
+    except psycopg2.Error as e:
+        print(e)
+    cur.close()
+    conn.close()
+
+def reference_point_data():
+    try:
+        columns = (
+            "object_type", "object_id", "name", "latitude", "longitude", "altitude", "visibility_type",
+            "point_amplification_type", "is_editable", "network_track_number", "link_status_type", "last_update_time",
+        )
+
+        q = "SELECT * " \
+            "    FROM reference_points " \
+            "    ORDER BY object_id; "
+        cur.execute(q)
+        data = []
+        for row in cur.fetchall():
+            object_id = row[0]
+            results = dict(zip(columns, row))
+            data.append([object_id, results])
+        return data
+    except psycopg2.Error as e:
+        print(e)
+    cur.close()
+    conn.close()
+
+def area_alert_data():
+
+    try:
+        columns = (
+            "session_id", "object_type", "object_id", "warning_type",
+            "track_name", "last_update_time", "mmsi_number", "ship_name",
+            "track_source_type", "is_visible"
+        )
+
+        q = "SELECT aa.* " \
+            "    FROM area_alerts aa " \
+            "JOIN sessions s ON aa.session_id=s.id " \
+            "JOIN " \
+            "( " \
+            "    SELECT session_id,object_id,max(last_update_time) last_update_time " \
+            "    FROM area_alerts " \
+            "    GROUP BY session_id,object_id " \
+            ") mx ON aa.object_id=mx.object_id  " \
+            "and aa.last_update_time=mx.last_update_time " \
+            "and aa.session_id=mx.session_id " \
+            "WHERE s.end_time is NULL " \
+            "ORDER BY aa.object_id; "
+        cur.execute(q)
+        data = []
+        for row in cur.fetchall():
+            object_id = row[3]
+            results = dict(zip(columns, row))
+            data.append([object_id, results])
+        return data
+    except psycopg2.Error as e:
+        print(e)
+    cur.close()
+    conn.close()
+
 async def send_cached_data():
     if USERS:
-        if len(STATE["cached_data"]) < 1:
-            message = information_data()[0: 1]
-            STATE["cached_data"] = message
-        else:
-            message = STATE["cached_data"]
+        # send realtime
+        message = REALTIME_STATE["cached_data"]
+        message = json.dumps(message, default=str)
+        await asyncio.wait([user.send(message) for user in USERS])
+
+        # send tactical figure
+        message = TACTICAL_FIGURE_STATE["cached_data"]
+        message = json.dumps(message, default=str)
+        await asyncio.wait([user.send(message) for user in USERS])
+
+        # send reference point
+        message = REFERENCE_POINT_STATE["cached_data"]
+        message = json.dumps(message, default=str)
+        await asyncio.wait([user.send(message) for user in USERS])
+
+        # area alert point
+        message = AREA_ALERT_STATE["cached_data"]
         message = json.dumps(message, default=str)
         await asyncio.wait([user.send(message) for user in USERS])
 
@@ -287,40 +400,148 @@ async def unregister(websocket):
 
 async def data_change_detection():
     while True:
+        # shiptrack data ------------------------------------------------------------------------
         shiptrack_data = np.array(information_data())
 
-        check_track_number_system = np.setdiff1d(np.array(shiptrack_data[0:, 0]), np.array(STATE["existed_data"]))
-        if len(check_track_number_system) > 0:
-            STATE["existed_data"].extend(check_track_number_system)
-            STATE["cached_data"] = list(np.array(shiptrack_data[0:, 1]))
-            print("insert")
-            await send_cached_data()
+        datas_changed = 0
+        if len(shiptrack_data) > 0: 
+            check_track_number_system = np.setdiff1d(shiptrack_data[0:, 0], np.array(REALTIME_STATE["existed_data"]))
+            if len(check_track_number_system) > 0:
+                REALTIME_STATE["existed_data"].extend(check_track_number_system)
+                REALTIME_STATE["cached_data"] = list(shiptrack_data[0:, 1])
+                print("insert")
 
-        if len(check_track_number_system) == 0:
-            changed_data = []
-            for i, data_has_changed in enumerate(np.array(shiptrack_data[0:, 1])):
-                if STATE["cached_data"][i] != np.array(shiptrack_data[i, 1]) and \
-                    np.array(shiptrack_data[i, 0]) not in STATE["removed_data"]:
-                    changed_data.append(data_has_changed)
-                    print("update")
-                    
-                elif STATE["cached_data"][i] != np.array(shiptrack_data[i, 1]) and \
-                    np.array(shiptrack_data[i, 0]) not in STATE["removed_data"] and \
-                    np.array(shiptrack_data[i, 1]) == "REMOVE":
-                    STATE["removed_data"].extend(np.array(shiptrack_data[i, 1]))
-                    del STATE["cached_data"][i]
-                    changed_data.append(data_has_changed)
-                    print("deleted")
+            if len(check_track_number_system) == 0:
+                changed_data = []
+                for i, data_has_changed in enumerate(shiptrack_data[0:, 1]):
+                    if REALTIME_STATE["cached_data"][i] != shiptrack_data[i, 1] and \
+                        shiptrack_data[i, 0] not in REALTIME_STATE["removed_data"]:
+                        changed_data.append(data_has_changed)
+                        print("update")
 
-            print("changed data", changed_data)
-            if len(changed_data) > 0:
-                STATE["cached_data"] = list(np.array(shiptrack_data[0:, 1]))
-                if USERS:
-                    message = json.dumps(changed_data, default=str)
-                    await asyncio.wait([user.send(message) for user in USERS])
+                    elif REALTIME_STATE["cached_data"][i] != shiptrack_data[i, 1] and \
+                        shiptrack_data[i, 0] not in REALTIME_STATE["removed_data"] and \
+                        shiptrack_data[i, 1] == "REMOVE":
+                        REALTIME_STATE["removed_data"].extend(shiptrack_data[i, 1])
+                        del REALTIME_STATE["cached_data"][i]
+                        changed_data.append(data_has_changed)
+                        print("deleted")
+
+                print("changed data", changed_data)
+                if len(changed_data) > 0:
+                    datas_changed += 1
+                    REALTIME_STATE["cached_data"] = list(shiptrack_data[0:, 1])
+                    if USERS:
+                        message = json.dumps(changed_data, default=str)
+                        await asyncio.wait([user.send(message) for user in USERS])
+
+        # tactical figures ------------------------------------------------------------------------
+        tactical_figure_datas = np.array(tactical_figure_data())
+
+        if len(tactical_figure_datas) > 0: 
+            check_object_id = np.setdiff1d(tactical_figure_datas[0:, 0], np.array(TACTICAL_FIGURE_STATE["existed_data"]))
+            if len(check_object_id) > 0:
+                TACTICAL_FIGURE_STATE["existed_data"].extend(check_object_id)
+                TACTICAL_FIGURE_STATE["cached_data"] = list(tactical_figure_datas[0:, 1])
+
+            if len(check_object_id) == 0:
+                changed_data = []
+                for i, data_has_changed in enumerate(tactical_figure_datas[0:, 1]):
+                    if TACTICAL_FIGURE_STATE["cached_data"][i] != tactical_figure_datas[i, 1] and \
+                        tactical_figure_datas[i, 0] not in TACTICAL_FIGURE_STATE["removed_data"]:
+                        changed_data.append(data_has_changed)
+                        print("update")
+
+                    elif TACTICAL_FIGURE_STATE["cached_data"][i] != tactical_figure_datas[i, 1] and \
+                        tactical_figure_datas[i, 0] not in TACTICAL_FIGURE_STATE["removed_data"] and \
+                        tactical_figure_datas[i, 1] == "REMOVE":
+                        TACTICAL_FIGURE_STATE["removed_data"].extend(tactical_figure_datas[i, 1])
+                        del TACTICAL_FIGURE_STATE["cached_data"][i]
+                        changed_data.append(data_has_changed)
+                        print("deleted")
+
+                print("changed data", changed_data)
+                if len(changed_data) > 0:
+                    datas_changed += 1
+                    TACTICAL_FIGURE_STATE["cached_data"] = list(shiptrack_data[0:, 1])
+                    if USERS:
+                        message = json.dumps(changed_data, default=str)
+                        await asyncio.wait([user.send(message) for user in USERS])
+
+        # reference points ------------------------------------------------------------------------
+        reference_point_datas = np.array(reference_point_data())
+
+        if len(reference_point_datas) > 0: 
+            check_object_id = np.setdiff1d(reference_point_datas[0:, 0], np.array(REFERENCE_POINT_STATE["existed_data"]))
+            if len(check_object_id) > 0:
+                REFERENCE_POINT_STATE["existed_data"].extend(check_object_id)
+                REFERENCE_POINT_STATE["cached_data"] = list(reference_point_datas[0:, 1])
+                await send_cached_data()
+
+            if len(check_object_id) == 0:
+                changed_data = []
+                for i, data_has_changed in enumerate(reference_point_datas[0:, 1]):
+                    if REFERENCE_POINT_STATE["cached_data"][i] != reference_point_datas[i, 1] and \
+                        reference_point_datas[i, 0] not in REFERENCE_POINT_STATE["removed_data"]:
+                        changed_data.append(data_has_changed)
+                        print("update")
+
+                    elif REFERENCE_POINT_STATE["cached_data"][i] != reference_point_datas[i, 1] and \
+                        reference_point_datas[i, 0] not in REFERENCE_POINT_STATE["removed_data"] and \
+                        reference_point_datas[i, 1] == "REMOVE":
+                        REFERENCE_POINT_STATE["removed_data"].extend(reference_point_datas[i, 1])
+                        del REFERENCE_POINT_STATE["cached_data"][i]
+                        changed_data.append(data_has_changed)
+                        print("deleted")
+
+                print("changed data", changed_data)
+                if len(changed_data) > 0:
+                    datas_changed += 1
+                    REFERENCE_POINT_STATE["cached_data"] = list(shiptrack_data[0:, 1])
+                    if USERS:
+                        message = json.dumps(changed_data, default=str)
+                        await asyncio.wait([user.send(message) for user in USERS])
+
+        # area alerts ------------------------------------------------------------------------
+        area_alert_datas = np.array(area_alert_data())
         
+        if len(area_alert_datas) > 0: 
+            check_object_id = np.setdiff1d(area_alert_datas[0:, 0], np.array(AREA_ALERT_STATE["existed_data"]))
+            if len(check_object_id) > 0:
+                AREA_ALERT_STATE["existed_data"].extend(check_object_id)
+                AREA_ALERT_STATE["cached_data"] = list(area_alert_datas[0:, 1])
+                await send_cached_data()
+
+            if len(check_object_id) == 0:
+                changed_data = []
+                for i, data_has_changed in enumerate(area_alert_datas[0:, 1]):
+                    if AREA_ALERT_STATE["cached_data"][i] != area_alert_datas[i, 1] and \
+                        area_alert_datas[i, 0] not in AREA_ALERT_STATE["removed_data"]:
+                        changed_data.append(data_has_changed)
+                        print("update")
+
+                    elif AREA_ALERT_STATE["cached_data"][i] != area_alert_datas[i, 1] and \
+                        area_alert_datas[i, 0] not in AREA_ALERT_STATE["removed_data"] and \
+                        area_alert_datas[i, 1] == "REMOVE":
+                        AREA_ALERT_STATE["removed_data"].extend(area_alert_datas[i, 1])
+                        del AREA_ALERT_STATE["cached_data"][i]
+                        changed_data.append(data_has_changed)
+                        print("deleted")
+
+                print("changed data", changed_data)
+                if len(changed_data) > 0:
+                    datas_changed += 1
+                    AREA_ALERT_STATE["cached_data"] = list(shiptrack_data[0:, 1])
+                    if USERS:
+                        message = json.dumps(changed_data, default=str)
+                        await asyncio.wait([user.send(message) for user in USERS])
+
+        if datas_changed > 0:
+            await send_cached_data()
         print("its sending data!")
-        await asyncio.sleep(7)
+
+        # lama tidur
+        await asyncio.sleep(4)
 
 async def handler(websocket, path):
     await register(websocket),
@@ -333,8 +554,8 @@ async def handler(websocket, path):
     finally:
         await unregister(websocket)
 
-start_server = websockets.serve(handler, "10.20.112.203", 8080)
-# start_server = websockets.serve(handler, "127.0.0.1", 8080)
+# start_server = websockets.serve(handler, "10.20.112.203", 8080)
+start_server = websockets.serve(handler, "172.16.16.12", 8080)
 
 tasks = [
     asyncio.ensure_future(data_change_detection()),
