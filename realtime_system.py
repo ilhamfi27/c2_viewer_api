@@ -413,19 +413,20 @@ async def data_change_detection():
 
             if len(check_track_number_system) == 0:
                 changed_data = []
-                for i, data_has_changed in enumerate(shiptrack_data[0:, 1]):
-                    if REALTIME_STATE["cached_data"][i] != shiptrack_data[i, 1] and \
-                        shiptrack_data[i, 0] not in REALTIME_STATE["removed_data"]:
-                        changed_data.append(data_has_changed)
-                        print("update")
+                if len(REALTIME_STATE["cached_data"]) > 0:
+                    for i, data_has_changed in enumerate(shiptrack_data[0:, 1]):
+                        if REALTIME_STATE["cached_data"][i] != shiptrack_data[i, 1] and \
+                            shiptrack_data[i, 0] not in REALTIME_STATE["removed_data"]:
+                            changed_data.append(data_has_changed)
+                            print("update")
 
-                    elif REALTIME_STATE["cached_data"][i] != shiptrack_data[i, 1] and \
-                        shiptrack_data[i, 0] not in REALTIME_STATE["removed_data"] and \
-                        shiptrack_data[i, 1] == "REMOVE":
-                        REALTIME_STATE["removed_data"].extend(shiptrack_data[i, 1])
-                        del REALTIME_STATE["cached_data"][i]
-                        changed_data.append(data_has_changed)
-                        print("deleted")
+                        elif REALTIME_STATE["cached_data"][i] != shiptrack_data[i, 1] and \
+                            shiptrack_data[i, 0] not in REALTIME_STATE["removed_data"] and \
+                            shiptrack_data[i, 1] == "REMOVE":
+                            REALTIME_STATE["removed_data"].extend(shiptrack_data[i, 1])
+                            del REALTIME_STATE["cached_data"][i]
+                            changed_data.append(data_has_changed)
+                            print("deleted")
 
                 print("changed data", changed_data)
                 if len(changed_data) > 0:
@@ -446,19 +447,20 @@ async def data_change_detection():
 
             if len(check_object_id) == 0:
                 changed_data = []
-                for i, data_has_changed in enumerate(tactical_figure_datas[0:, 1]):
-                    if TACTICAL_FIGURE_STATE["cached_data"][i] != tactical_figure_datas[i, 1] and \
-                        tactical_figure_datas[i, 0] not in TACTICAL_FIGURE_STATE["removed_data"]:
-                        changed_data.append(data_has_changed)
-                        print("update")
+                if len(TACTICAL_FIGURE_STATE["cached_data"]) > 0:
+                    for i, data_has_changed in enumerate(tactical_figure_datas[0:, 1]):
+                        if TACTICAL_FIGURE_STATE["cached_data"][i] != tactical_figure_datas[i, 1] and \
+                            tactical_figure_datas[i, 0] not in TACTICAL_FIGURE_STATE["removed_data"]:
+                            changed_data.append(data_has_changed)
+                            print("update")
 
-                    elif TACTICAL_FIGURE_STATE["cached_data"][i] != tactical_figure_datas[i, 1] and \
-                        tactical_figure_datas[i, 0] not in TACTICAL_FIGURE_STATE["removed_data"] and \
-                        tactical_figure_datas[i, 1] == "REMOVE":
-                        TACTICAL_FIGURE_STATE["removed_data"].extend(tactical_figure_datas[i, 1])
-                        del TACTICAL_FIGURE_STATE["cached_data"][i]
-                        changed_data.append(data_has_changed)
-                        print("deleted")
+                        elif TACTICAL_FIGURE_STATE["cached_data"][i] != tactical_figure_datas[i, 1] and \
+                            tactical_figure_datas[i, 0] not in TACTICAL_FIGURE_STATE["removed_data"] and \
+                            tactical_figure_datas[i, 1] == "REMOVE":
+                            TACTICAL_FIGURE_STATE["removed_data"].extend(tactical_figure_datas[i, 1])
+                            del TACTICAL_FIGURE_STATE["cached_data"][i]
+                            changed_data.append(data_has_changed)
+                            print("deleted")
 
                 print("changed data", changed_data)
                 if len(changed_data) > 0:
@@ -480,19 +482,20 @@ async def data_change_detection():
 
             if len(check_object_id) == 0:
                 changed_data = []
-                for i, data_has_changed in enumerate(reference_point_datas[0:, 1]):
-                    if REFERENCE_POINT_STATE["cached_data"][i] != reference_point_datas[i, 1] and \
-                        reference_point_datas[i, 0] not in REFERENCE_POINT_STATE["removed_data"]:
-                        changed_data.append(data_has_changed)
-                        print("update")
+                if len(REFERENCE_POINT_STATE["cached_data"]) > 0:
+                    for i, data_has_changed in enumerate(reference_point_datas[0:, 1]):
+                        if REFERENCE_POINT_STATE["cached_data"][i] != reference_point_datas[i, 1] and \
+                            reference_point_datas[i, 0] not in REFERENCE_POINT_STATE["removed_data"]:
+                            changed_data.append(data_has_changed)
+                            print("update")
 
-                    elif REFERENCE_POINT_STATE["cached_data"][i] != reference_point_datas[i, 1] and \
-                        reference_point_datas[i, 0] not in REFERENCE_POINT_STATE["removed_data"] and \
-                        reference_point_datas[i, 1] == "REMOVE":
-                        REFERENCE_POINT_STATE["removed_data"].extend(reference_point_datas[i, 1])
-                        del REFERENCE_POINT_STATE["cached_data"][i]
-                        changed_data.append(data_has_changed)
-                        print("deleted")
+                        elif REFERENCE_POINT_STATE["cached_data"][i] != reference_point_datas[i, 1] and \
+                            reference_point_datas[i, 0] not in REFERENCE_POINT_STATE["removed_data"] and \
+                            reference_point_datas[i, 1] == "REMOVE":
+                            REFERENCE_POINT_STATE["removed_data"].extend(reference_point_datas[i, 1])
+                            del REFERENCE_POINT_STATE["cached_data"][i]
+                            changed_data.append(data_has_changed)
+                            print("deleted")
 
                 print("changed data", changed_data)
                 if len(changed_data) > 0:
@@ -514,19 +517,20 @@ async def data_change_detection():
 
             if len(check_object_id) == 0:
                 changed_data = []
-                for i, data_has_changed in enumerate(area_alert_datas[0:, 1]):
-                    if AREA_ALERT_STATE["cached_data"][i] != area_alert_datas[i, 1] and \
-                        area_alert_datas[i, 0] not in AREA_ALERT_STATE["removed_data"]:
-                        changed_data.append(data_has_changed)
-                        print("update")
+                if len(AREA_ALERT_STATE["cached_data"]) > 0:
+                    for i, data_has_changed in enumerate(area_alert_datas[0:, 1]):
+                        if AREA_ALERT_STATE["cached_data"][i] != area_alert_datas[i, 1] and \
+                            area_alert_datas[i, 0] not in AREA_ALERT_STATE["removed_data"]:
+                            changed_data.append(data_has_changed)
+                            print("update")
 
-                    elif AREA_ALERT_STATE["cached_data"][i] != area_alert_datas[i, 1] and \
-                        area_alert_datas[i, 0] not in AREA_ALERT_STATE["removed_data"] and \
-                        area_alert_datas[i, 1] == "REMOVE":
-                        AREA_ALERT_STATE["removed_data"].extend(area_alert_datas[i, 1])
-                        del AREA_ALERT_STATE["cached_data"][i]
-                        changed_data.append(data_has_changed)
-                        print("deleted")
+                        elif AREA_ALERT_STATE["cached_data"][i] != area_alert_datas[i, 1] and \
+                            area_alert_datas[i, 0] not in AREA_ALERT_STATE["removed_data"] and \
+                            area_alert_datas[i, 1] == "REMOVE":
+                            AREA_ALERT_STATE["removed_data"].extend(area_alert_datas[i, 1])
+                            del AREA_ALERT_STATE["cached_data"][i]
+                            changed_data.append(data_has_changed)
+                            print("deleted")
 
                 print("changed data", changed_data)
                 if len(changed_data) > 0:
