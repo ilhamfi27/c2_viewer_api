@@ -390,6 +390,103 @@ async def register(websocket):
 async def unregister(websocket):
     USERS.remove(websocket)
 
+async def data_processing(important_data, STATE, data_category="", mandatory_attr="", must_remove=[], debug=True):
+    datas_changed = 0
+    # cek apakah datanya berisi?
+    if len(important_data) > 0: 
+        # variable existing data digunakan untuk mengecek apakah datanya baru atau data lama
+        existing_data = STATE["existed_data"] + STATE["removed_data"]
+
+        if debug:
+            print(data_category + " existing ", existing_data)
+            print(data_category + " = clean existing data", STATE["existed_data"])
+            print(data_category + " = removed data", STATE["removed_data"])
+
+        # mengambil data selisih dari variable yang sudah ada dan data yang baru
+        check_track_number_system = np.setdiff1d(important_data[0:, 0], np.array(existing_data))
+
+        if debug:
+            print("new " + data_category +" length", len(check_track_number_system))
+            print("new " + data_category, check_track_number_system)
+
+        # cek apakah datanya lebih dari 0
+        if len(check_track_number_system) > 0:
+            
+            # jika masuk ke kondisi ini, maka ada data yang baru dari database
+            new_datas = []
+            for i, new_data in enumerate(important_data):
+
+                # jika data yang diterima statusnya deleted, maka akan dikondisikan ke variable delete
+                if new_data[1][mandatory_attr] in must_remove:
+                    STATE["removed_data"].append(new_data[0])
+                else:
+                    # jika data tidak di memori existed data dan removed data
+                    # maka akan membuat data baru dan dikirim ke user 
+                    if new_data[0] not in STATE["existed_data"] and \
+                        new_data[0] not in STATE["removed_data"]:
+                        STATE["existed_data"].append(new_data[0])
+
+                        # struktur cached data adalah array of 2d arrays
+                        STATE["cached_data"].append(new_data)
+                        new_datas.append(new_data[1])
+            if USERS:
+                message = json.dumps(new_datas, default=str)
+                await asyncio.wait([user.send(message) for user in USERS])
+
+        # jika data tidak ada perubahan jumlah
+        if len(check_track_number_system) == 0:
+            changed_data = []
+            if len(STATE["cached_data"]) > 0:
+                
+                # mengecek apakah datanya terdapat pada memori remove ?
+                # jika iya maka data akan di proses dan dikirim sebagai data baru 
+                for i, data in enumerate(important_data):
+                    if data[0] in STATE["removed_data"] and \
+                        important_data[i, 1][mandatory_attr] not in must_remove:
+                        STATE["existed_data"].append(data[0])
+                        STATE["cached_data"].append(data)
+                        STATE["removed_data"].remove(data[0])
+                        changed_data.append((data))
+                        if debug:
+                            print("brand new" + data_category)
+
+                for i, data in enumerate(STATE['cached_data']):
+                    if data[0] == important_data[i, 0]:
+                        # jika data tidak sama dengan data yang baru, 
+                        if data[1] != important_data[i, 1]:
+                            
+                            # maka akan di proses dengan pengecekan apakah statusnya delete atau bukan
+                            if important_data[i, 1][mandatory_attr] in must_remove:
+
+                                # status delete akan mengganti data dalam memori removed data dan existed data dan 
+                                # menghapus data dari memori existed
+                                STATE["removed_data"].append(data[0])
+                                STATE["existed_data"].remove(data[0])
+                                STATE["cached_data"].pop(i)
+                                
+                                # data akan dikirim ke user
+                                changed_data.append(important_data[i, :])
+                                if debug:
+                                    print(data_category + "deleted")
+                            else:
+                                # jika status data selain deleted maka memori cached data akan direplace dengan data baru
+                                # dan dikirim ke user
+                                changed_data.append((data))
+                                STATE["cached_data"][i][1] = important_data[i, 1]
+                                if debug:
+                                    print(data_category + "updated")
+
+            if debug:
+                print(data_category + " changed", changed_data)
+            changed = np.array(changed_data)
+            if len(changed_data) > 0:
+                datas_changed += 1
+                if USERS:
+                    message = json.dumps(list(changed[0:, 1]), default=str)
+                    await asyncio.wait([user.send(message) for user in USERS])
+    if debug:
+        print("\n==", datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), "\n\n")
+
 async def data_change_detection():
     while True:
         # shiptrack data ------------------------------------------------------------------------
@@ -490,108 +587,18 @@ async def data_change_detection():
 
         # tactical figures ------------------------------------------------------------------------
         tactical_figure_datas = np.array(tactical_figure_data())
-
-        if len(tactical_figure_datas) > 0: 
-            check_object_id = np.setdiff1d(tactical_figure_datas[0:, 0], np.array(TACTICAL_FIGURE_STATE["existed_data"]))
-            if len(check_object_id) > 0:
-                TACTICAL_FIGURE_STATE["existed_data"].extend(check_object_id)
-                TACTICAL_FIGURE_STATE["cached_data"] = list(tactical_figure_datas[0:, 1])
-                await send_cached_data()
-
-            if len(check_object_id) == 0:
-                changed_data = []
-                if len(TACTICAL_FIGURE_STATE["cached_data"]) > 0:
-                    for i, data_has_changed in enumerate(tactical_figure_datas[0:, 1]):
-                        if TACTICAL_FIGURE_STATE["cached_data"][i] != tactical_figure_datas[i, 1] and \
-                            tactical_figure_datas[i, 0] not in TACTICAL_FIGURE_STATE["removed_data"]:
-                            changed_data.append(data_has_changed)
-                            print("update")
-
-                        elif TACTICAL_FIGURE_STATE["cached_data"][i] != tactical_figure_datas[i, 1] and \
-                            tactical_figure_datas[i, 0] not in TACTICAL_FIGURE_STATE["removed_data"] and \
-                            tactical_figure_datas[i, 1] == "REMOVE":
-                            TACTICAL_FIGURE_STATE["removed_data"].extend(tactical_figure_datas[i, 1])
-                            del TACTICAL_FIGURE_STATE["cached_data"][i]
-                            changed_data.append(data_has_changed)
-                            print("deleted")
-
-                # print("tac fig changed", changed_data)
-                if len(changed_data) > 0:
-                    datas_changed += 1
-                    TACTICAL_FIGURE_STATE["cached_data"] = list(tactical_figure_datas[0:, 1])
-                    if USERS:
-                        message = json.dumps(changed_data, default=str)
-                        await asyncio.wait([user.send(message) for user in USERS])
+        await data_processing(tactical_figure_datas, TACTICAL_FIGURE_STATE, data_category="tactical figure", 
+                                mandatory_attr="visibility_type", must_remove=["REMOVE"])
 
         # reference points ------------------------------------------------------------------------
         reference_point_datas = np.array(reference_point_data())
-
-        if len(reference_point_datas) > 0: 
-            check_object_id = np.setdiff1d(reference_point_datas[0:, 0], np.array(REFERENCE_POINT_STATE["existed_data"]))
-            if len(check_object_id) > 0:
-                REFERENCE_POINT_STATE["existed_data"].extend(check_object_id)
-                REFERENCE_POINT_STATE["cached_data"] = list(reference_point_datas[0:, 1])
-                await send_cached_data()
-
-            if len(check_object_id) == 0:
-                changed_data = []
-                if len(REFERENCE_POINT_STATE["cached_data"]) > 0:
-                    for i, data_has_changed in enumerate(reference_point_datas[0:, 1]):
-                        if REFERENCE_POINT_STATE["cached_data"][i] != reference_point_datas[i, 1] and \
-                            reference_point_datas[i, 0] not in REFERENCE_POINT_STATE["removed_data"]:
-                            changed_data.append(data_has_changed)
-                            print("update")
-
-                        elif REFERENCE_POINT_STATE["cached_data"][i] != reference_point_datas[i, 1] and \
-                            reference_point_datas[i, 0] not in REFERENCE_POINT_STATE["removed_data"] and \
-                            reference_point_datas[i, 1] == "REMOVE":
-                            REFERENCE_POINT_STATE["removed_data"].extend(reference_point_datas[i, 1])
-                            del REFERENCE_POINT_STATE["cached_data"][i]
-                            changed_data.append(data_has_changed)
-                            print("deleted")
-
-                # print("ref point changed", changed_data)
-                if len(changed_data) > 0:
-                    datas_changed += 1
-                    REFERENCE_POINT_STATE["cached_data"] = list(tactical_figure_datas[0:, 1])
-                    if USERS:
-                        message = json.dumps(changed_data, default=str)
-                        await asyncio.wait([user.send(message) for user in USERS])
+        await data_processing(reference_point_datas, REFERENCE_POINT_STATE, data_category="reference point", 
+                                mandatory_attr="visibility_type", must_remove=["REMOVE"])
 
         # area alerts ------------------------------------------------------------------------
         area_alert_datas = np.array(area_alert_data())
-        
-        if len(area_alert_datas) > 0: 
-            check_object_id = np.setdiff1d(area_alert_datas[0:, 0], np.array(AREA_ALERT_STATE["existed_data"]))
-            if len(check_object_id) > 0:
-                AREA_ALERT_STATE["existed_data"].extend(check_object_id)
-                AREA_ALERT_STATE["cached_data"] = list(area_alert_datas[0:, 1])
-                await send_cached_data()
-
-            if len(check_object_id) == 0:
-                changed_data = []
-                if len(AREA_ALERT_STATE["cached_data"]) > 0:
-                    for i, data_has_changed in enumerate(area_alert_datas[0:, 1]):
-                        if AREA_ALERT_STATE["cached_data"][i] != area_alert_datas[i, 1] and \
-                            area_alert_datas[i, 0] not in AREA_ALERT_STATE["removed_data"]:
-                            changed_data.append(data_has_changed)
-                            print("update")
-
-                        elif AREA_ALERT_STATE["cached_data"][i] != area_alert_datas[i, 1] and \
-                            area_alert_datas[i, 0] not in AREA_ALERT_STATE["removed_data"] and \
-                            area_alert_datas[i, 1] == "REMOVE":
-                            AREA_ALERT_STATE["removed_data"].extend(area_alert_datas[i, 1])
-                            del AREA_ALERT_STATE["cached_data"][i]
-                            changed_data.append(data_has_changed)
-                            print("deleted")
-
-                # print("area alerts changed", changed_data)
-                if len(changed_data) > 0:
-                    datas_changed += 1
-                    AREA_ALERT_STATE["cached_data"] = list(tactical_figure_datas[0:, 1])
-                    if USERS:
-                        message = json.dumps(changed_data, default=str)
-                        await asyncio.wait([user.send(message) for user in USERS])
+        await data_processing(area_alert_datas, REFERENCE_POINT_STATE, data_category="area alerts", 
+                                mandatory_attr="is_visible", must_remove=["REMOVE"])
 
         # should be deleted??
         # if datas_changed > 0:
@@ -599,7 +606,7 @@ async def data_change_detection():
         # print("its sending data!")
 
         # lama tidur
-        await asyncio.sleep(4)
+        await asyncio.sleep(3)
 
 async def handler(websocket, path):
     await register(websocket),
