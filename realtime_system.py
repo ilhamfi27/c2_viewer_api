@@ -9,6 +9,8 @@ import websockets
 import random
 import psycopg2
 import numpy as np
+import time
+import datetime
 from functools import reduce
 
 logging.basicConfig()
@@ -156,7 +158,6 @@ def information_data():
                     "ORDER BY st.system_track_number;" \
                 .format(table_name=ar_mandatory_table[ix])
             cur.execute(q)
-            print(q)
             data = cur.fetchall()
 
             table_data = []
@@ -361,7 +362,9 @@ def area_alert_data():
 async def send_cached_data():
     if USERS:
         # send realtime
-        message = REALTIME_STATE["cached_data"]
+        # np.array untuk mengambil index ke 1 dari semua row cached data
+        cached_data = np.array(REALTIME_STATE["cached_data"])
+        message = list(cached_data[:, 1])
         message = json.dumps(message, default=str)
         await asyncio.wait([user.send(message) for user in USERS])
 
@@ -395,42 +398,95 @@ async def data_change_detection():
         datas_changed = 0
         # cek apakah datanya berisi?
         if len(shiptrack_data) > 0: 
-            check_track_number_system = np.setdiff1d(shiptrack_data[0:, 0], np.array(REALTIME_STATE["existed_data"]))
+            # variable existing data digunakan untuk mengecek apakah datanya baru atau data lama
+            existing_data = REALTIME_STATE["existed_data"] + REALTIME_STATE["removed_data"]
 
-            # cek apakah datanya lebih dari 0 dan tidak di data yang dihapus
-            if len(check_track_number_system) > 0 or \
-                check_track_number_system in REALTIME_STATE["removed_data"]:
-                REALTIME_STATE["existed_data"].extend(check_track_number_system)
-                REALTIME_STATE["cached_data"] = list(shiptrack_data[0:, 1])
-                await send_cached_data()
+            print("existing ", existing_data)
+            print("= clean existing data", REALTIME_STATE["existed_data"])
+            print("= removed data", REALTIME_STATE["removed_data"])
 
+            # mengambil data selisih dari variable yang sudah ada dan data yang baru
+            check_track_number_system = np.setdiff1d(shiptrack_data[0:, 0], np.array(existing_data))
+
+            print("new track length", len(check_track_number_system))
+            print("new track_number_system", check_track_number_system)
+
+            # cek apakah datanya lebih dari 0
+            if len(check_track_number_system) > 0:
+                
+                # jika masuk ke kondisi ini, maka ada data yang baru dari database
+                new_datas = []
+                for i, new_data in enumerate(shiptrack_data):
+
+                    # jika data yang diterima statusnya deleted, maka akan dikondisikan ke variable delete
+                    if new_data[1]['track_phase_type'] == "DELETED_BY_SYSTEM" or\
+                        new_data[1]['track_phase_type'] == "DELETED_BY_SENSOR":
+                        REALTIME_STATE["removed_data"].append(new_data[0])
+                    else:
+                        # jika data tidak di memori existed data dan removed data
+                        # maka akan membuat data baru dan dikirim ke user 
+                        if new_data[0] not in REALTIME_STATE["existed_data"] and \
+                            new_data[0] not in REALTIME_STATE["removed_data"]:
+                            REALTIME_STATE["existed_data"].append(new_data[0])
+
+                            # struktur cached data adalah array of 2d arrays
+                            REALTIME_STATE["cached_data"].append(new_data)
+                            new_datas.append(new_data[1])
+                if USERS:
+                    message = json.dumps(new_datas, default=str)
+                    await asyncio.wait([user.send(message) for user in USERS])
+
+            # jika data tidak ada perubahan jumlah
             if len(check_track_number_system) == 0:
                 changed_data = []
                 if len(REALTIME_STATE["cached_data"]) > 0:
-                    print(len(REALTIME_STATE["cached_data"]))
-                    print(len(shiptrack_data))
-                    for i, data_has_changed in enumerate(shiptrack_data[0:, 1]):
-                        if REALTIME_STATE["cached_data"][i] != shiptrack_data[i, 1] and \
-                            shiptrack_data[i, 0] not in REALTIME_STATE["removed_data"] and \
-                            shiptrack_data[i, 1]['track_phase_type'] != "DELETED_BY_SYSTEM" or \
-                            shiptrack_data[i, 1]['track_phase_type'] != "DELETED_BY_SENSOR":
-                            changed_data.append(data_has_changed)
+                    
+                    # mengecek apakah datanya terdapat pada memori remove ?
+                    # jika iya maka data akan di proses dan dikirim sebagai data baru 
+                    for i, data in enumerate(shiptrack_data):
+                        status = ["DELETED_BY_SYSTEM", "DELETED_BY_SENSOR"]
+                        if data[0] in REALTIME_STATE["removed_data"] and \
+                            shiptrack_data[i, 1]['track_phase_type'] not in status:
+                            REALTIME_STATE["existed_data"].append(data[0])
+                            REALTIME_STATE["cached_data"].append(data)
+                            REALTIME_STATE["removed_data"].remove(data[0])
+                            changed_data.append((data))
+                            print("brand new")
 
-                        elif REALTIME_STATE["cached_data"][i] != shiptrack_data[i, 1] and \
-                            shiptrack_data[i, 0] not in REALTIME_STATE["removed_data"] and \
-                            shiptrack_data[i, 1]['track_phase_type'] == "DELETED_BY_SYSTEM" or \
-                            shiptrack_data[i, 1]['track_phase_type'] == "DELETED_BY_SENSOR":
-                            REALTIME_STATE["removed_data"].append(shiptrack_data[i, 0])
-                            del REALTIME_STATE["cached_data"][i]
-                            del REALTIME_STATE["existed_data"][i]
-                            changed_data.append(data_has_changed)
+                    for i, data in enumerate(REALTIME_STATE['cached_data']):
+                        if data[0] == shiptrack_data[i, 0]:
+                            # jika data tidak sama dengan data yang baru, 
+                            if data[1] != shiptrack_data[i, 1]:
+                                
+                                # maka akan di proses dengan pengecekan apakah statusnya delete atau bukan
+                                if shiptrack_data[i, 1]['track_phase_type'] == "DELETED_BY_SYSTEM" or \
+                                    shiptrack_data[i, 1]['track_phase_type'] == "DELETED_BY_SENSOR":
 
+                                    # status delete akan mengganti data dalam memori removed data dan existed data dan 
+                                    # menghapus data dari memori existed
+                                    REALTIME_STATE["removed_data"].append(data[0])
+                                    REALTIME_STATE["existed_data"].remove(data[0])
+                                    REALTIME_STATE["cached_data"].pop(i)
+                                    
+                                    # data akan dikirim ke user
+                                    changed_data.append(shiptrack_data[i, :])
+                                    print("deleted")
+                                else:
+                                    # jika status data selain deleted maka memori cached data akan direplace dengan data baru
+                                    # dan dikirim ke user
+                                    changed_data.append((data))
+                                    REALTIME_STATE["cached_data"][i][1] = shiptrack_data[i, 1]
+                                    print("updated")
+
+                print("track changed", changed_data)
+                changed = np.array(changed_data)
                 if len(changed_data) > 0:
                     datas_changed += 1
-                    REALTIME_STATE["cached_data"] = list(shiptrack_data[0:, 1])
                     if USERS:
-                        message = json.dumps(changed_data, default=str)
+                        message = json.dumps(list(changed[0:, 1]), default=str)
                         await asyncio.wait([user.send(message) for user in USERS])
+
+        print("\n==", datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), "\n\n")
 
         # tactical figures ------------------------------------------------------------------------
         tactical_figure_datas = np.array(tactical_figure_data())
@@ -459,7 +515,7 @@ async def data_change_detection():
                             changed_data.append(data_has_changed)
                             print("deleted")
 
-                print("changed data", changed_data)
+                # print("tac fig changed", changed_data)
                 if len(changed_data) > 0:
                     datas_changed += 1
                     TACTICAL_FIGURE_STATE["cached_data"] = list(tactical_figure_datas[0:, 1])
@@ -494,7 +550,7 @@ async def data_change_detection():
                             changed_data.append(data_has_changed)
                             print("deleted")
 
-                print("changed data", changed_data)
+                # print("ref point changed", changed_data)
                 if len(changed_data) > 0:
                     datas_changed += 1
                     REFERENCE_POINT_STATE["cached_data"] = list(tactical_figure_datas[0:, 1])
@@ -529,7 +585,7 @@ async def data_change_detection():
                             changed_data.append(data_has_changed)
                             print("deleted")
 
-                print("changed data", changed_data)
+                # print("area alerts changed", changed_data)
                 if len(changed_data) > 0:
                     datas_changed += 1
                     AREA_ALERT_STATE["cached_data"] = list(tactical_figure_datas[0:, 1])
@@ -540,7 +596,7 @@ async def data_change_detection():
         # should be deleted??
         # if datas_changed > 0:
         #     await send_cached_data()
-        print("its sending data!")
+        # print("its sending data!")
 
         # lama tidur
         await asyncio.sleep(4)
@@ -557,8 +613,8 @@ async def handler(websocket, path):
         await unregister(websocket)
 
 # start_server = websockets.serve(handler, "10.20.112.217", 8080)
-start_server = websockets.serve(handler, "192.168.43.14", 14045)
-# start_server = websockets.serve(handler, "127.0.0.1", 8080)
+# start_server = websockets.serve(handler, "192.168.43.14", 14045)
+start_server = websockets.serve(handler, "127.0.0.1", 8080) 
 
 tasks = [
     asyncio.ensure_future(data_change_detection()),
