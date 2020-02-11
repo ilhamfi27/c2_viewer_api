@@ -3,7 +3,11 @@ import json
 import numpy as np
 from functools import reduce
 
-conn = psycopg2.connect("host=localhost dbname=shiptrack user=postgres password=bismillah")
+conn = psycopg2.connect("host=127.0.0.1 \
+    dbname=shiptrack \
+    user=postgres \
+    password=bismillah"
+)
 # conn = psycopg2.connect("host=localhost dbname=shiptrack user=postgres password=bismillah")
 cur = conn.cursor()
 # i = 0;
@@ -11,7 +15,7 @@ ar_mandatory_table = [
     'replay_system_track_general',
     'replay_system_track_kinetic',
     'replay_system_track_processing',
-    'replay_track_general_setting'
+    # 'replay_track_general_setting'
 ]
 ar_mandatory_table_8 = [
     'replay_system_track_general',
@@ -48,11 +52,30 @@ last_system_track_number_kirim = ['-', '-', '-', '-', '-', '-', '-', '-']
 #     [5, 6, 7, 8],
 #     [9, 0, 11, 12],
 # ]
-mandatory_datas = []
-completed_data = np.array([])
-sent_data = []
-data_ready = []
-data_time = []
+REALTIME_STATE = {
+    "cached_data": [],
+    "data_time": [],
+    "removed_data": [],
+    "existed_data": [],
+}
+
+TACTICAL_FIGURE_STATE = {
+    "cached_data": [],
+    "removed_data": [],
+    "existed_data": [],
+}
+
+REFERENCE_POINT_STATE = {
+    "cached_data": [],
+    "removed_data": [],
+    "existed_data": [],
+}
+
+AREA_ALERT_STATE = {
+    "cached_data": [],
+    "removed_data": [],
+    "existed_data": [],
+}
 
 try:
     mandatory_data = []
@@ -165,11 +188,11 @@ try:
                     "   environment," \
                     "   source," \
                     "   track_name," \
-                    "   iu_indicator," \
+                    "   iu_indicator, " \
                     "   airborne_indicator " \
-                    "FROM " + ar_mandatory_table_8[ix] + " " \
+                    "FROM   " + ar_mandatory_table_8[ix] + " " \
                     "WHERE session_id = " + str(session_id) + " " \
-                    "AND system_track_number = " + str(ready) + " ORDER BY created_time DESC) ss LIMIT 1" 
+                    "AND system_track_number = " + str(ready) + " ORDER BY created_time DESC) ss LIMIT 1"
                 cur.execute(q)
                 for row in cur.fetchall():
                     system_track_number = row[0]
@@ -186,38 +209,29 @@ try:
                     "WHERE session_id = " + str(session_id) + " " \
                     "AND system_track_number = " + str(ready) + " " \
                     "ORDER BY created_time DESC) aa LIMIT 1;"
-                q3 = q
                 cur.execute(q)
                 for row in cur.fetchall():
-                    if len(results) > 0:
-                        results['latitude'] = row[0]
-                        results['longitude'] = row[1]
-                        results['speed_over_ground'] = row[2]
-                        results['course_over_ground'] = row[3]
-                    else:
-                        # print(q3, results)
-                        pass
+                    results['latitude'] = row[0]
+                    results['longitude'] = row[1]
+                    results['speed_over_ground'] = row[2]
+                    results['course_over_ground'] = row[3]
 
             if(ar_mandatory_table_8[ix]=='replay_system_track_processing'):
                 q = "SELECT * FROM" \
                     "( SELECT " \
                     "   track_join_status," \
                     "   track_fusion_status," \
-                    "   track_phase_type as track_phase " \
+                    "   track_phase_type " \
                     "FROM " + ar_mandatory_table_8[ix] + " " \
                     "WHERE session_id = " + str(session_id) + " " \
                     "AND system_track_number = " + str(ready) + " " \
                     "ORDER BY created_time DESC) aa LIMIT 1;"
                 cur.execute(q)
-                q4 = q
                 for row in cur.fetchall():
                     if len(results) > 0:
                         results['track_join_status'] = row[0]
                         results['track_fusion_status'] = row[1]
-                        results['track_phase'] = row[2]
-                    else:
-                        # print(q4, results)
-                        pass
+                        results['track_phase_type'] = row[2]
 
             if(ar_mandatory_table_8[ix]=='replay_ais_data'):
                 if(source_data=='AIS_TYPE'):
@@ -238,27 +252,10 @@ try:
                         if len(results) > 0:
                             results['type_of_ship_or_cargo'] = row[0]
                             results['ship_name'] = row[1]
-                        else:
-                            # print(results)
-                            pass
                 else:
                     if len(results) > 0:
                         results['type_of_ship_or_cargo'] = '-'
                         results['ship_name'] = '-'
-
-            if(ar_mandatory_table_8[ix]=='replay_track_general_setting'):
-                q = "SELECT * FROM " \
-                    "( SELECT " \
-                    "   track_visibility " \
-                    "FROM " + ar_mandatory_table_8[ix] + " " \
-                    "WHERE session_id = " + str(session_id) + " " \
-                    "AND system_track_number = " + str(ready) + " " \
-                    "ORDER BY created_time DESC) aa LIMIT 1 ;"
-                cur.execute(q)
-                for row in cur.fetchall():
-                    if len(results) > 0:
-                        results['track_visibility'] = row[0]
-
         ship_tracks.append([system_track_number, results])
 except psycopg2.Error as e:
     print(e)
@@ -266,4 +263,4 @@ cur.close()
 conn.close()
 
 ship_tracks = np.array(ship_tracks)
-print(ship_tracks[0])
+print(ship_tracks)
