@@ -359,29 +359,15 @@ def area_alert_data():
     cur.close()
     conn.close()
 
-async def send_cached_data():
+async def send_cached_data(states=[]):
     if USERS:
         # send realtime
         # np.array untuk mengambil index ke 1 dari semua row cached data
-        cached_data = np.array(REALTIME_STATE["cached_data"])
-        message = list(cached_data[:, 1])
-        message = json.dumps(message, default=str)
-        await asyncio.wait([user.send(message) for user in USERS])
-
-        # send tactical figure
-        message = TACTICAL_FIGURE_STATE["cached_data"]
-        message = json.dumps(message, default=str)
-        await asyncio.wait([user.send(message) for user in USERS])
-
-        # send reference point
-        message = REFERENCE_POINT_STATE["cached_data"]
-        message = json.dumps(message, default=str)
-        await asyncio.wait([user.send(message) for user in USERS])
-
-        # area alert point
-        message = AREA_ALERT_STATE["cached_data"]
-        message = json.dumps(message, default=str)
-        await asyncio.wait([user.send(message) for user in USERS])
+        for STATE in states:
+            cached_data = np.array(STATE["cached_data"])
+            message = list(cached_data[:, 1])
+            message = json.dumps(message, default=str)
+            await asyncio.wait([user.send(message) for user in USERS])
 
 async def register(websocket):
     USERS.add(websocket)
@@ -600,18 +586,18 @@ async def data_change_detection():
         await data_processing(area_alert_datas, REFERENCE_POINT_STATE, data_category="area alerts", 
                                 mandatory_attr="is_visible", must_remove=["REMOVE"])
 
-        # should be deleted??
-        # if datas_changed > 0:
-        #     await send_cached_data()
-        # print("its sending data!")
-
         # lama tidur
         await asyncio.sleep(3)
 
 async def handler(websocket, path):
     await register(websocket),
     try:
-        await send_cached_data()
+        await send_cached_data(states=[
+            REALTIME_STATE,
+            TACTICAL_FIGURE_STATE,
+            REFERENCE_POINT_STATE,
+            AREA_ALERT_STATE,
+        ])
         async for message in websocket:
             pass
     except websockets.exceptions.ConnectionClosedError:
