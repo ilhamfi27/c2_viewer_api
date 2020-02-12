@@ -251,6 +251,7 @@ def information_data():
 
                 if(ar_mandatory_table_8[ix]=='replay_ais_data'):
                     if(source_data=='AIS_TYPE'):
+                        data_ais = 0
                         q = "SELECT " \
                             "   * " \
                             "FROM " \
@@ -266,13 +267,20 @@ def information_data():
                         cur.execute(q)
                         for row in cur.fetchall():
                             if len(results) > 0:
+                                data_ais += 1
                                 results['type_of_ship_or_cargo'] = row[0]
                                 results['ship_name'] = row[1]
+                        if data_ais > 0:
+                            ship_tracks.append([system_track_number, results])
+                            continue
                     else:
                         if len(results) > 0:
                             results['type_of_ship_or_cargo'] = '-'
                             results['ship_name'] = '-'
-            ship_tracks.append([system_track_number, results])
+                        ship_tracks.append([system_track_number, results])
+                
+                # pengambilan data track diambil dari pengkondisian ais
+                # tidak di kolektif di bawah
         return ship_tracks
     except psycopg2.Error as e:
         print(e)
@@ -378,7 +386,6 @@ async def unregister(websocket):
     USERS.remove(websocket)
 
 async def data_processing(important_data, STATE, data_category="", mandatory_attr="", must_remove=[], debug=True):
-    datas_changed = 0
     # cek apakah datanya berisi?
     if len(important_data) > 0: 
         # variable existing data digunakan untuk mengecek apakah datanya baru atau data lama
@@ -393,12 +400,12 @@ async def data_processing(important_data, STATE, data_category="", mandatory_att
         check_track_number_system = np.setdiff1d(important_data[0:, 0], np.array(existing_data))
 
         if debug:
-            print("new " + data_category +" length", len(check_track_number_system))
-            print("new " + data_category, check_track_number_system)
+            print(data_category + " new track length", len(check_track_number_system))
+            print(data_category + " new track_number_system", check_track_number_system)
 
         # cek apakah datanya lebih dari 0
         if len(check_track_number_system) > 0:
-            
+
             # jika masuk ke kondisi ini, maka ada data yang baru dari database
             new_datas = []
             for i, new_data in enumerate(important_data):
@@ -424,7 +431,7 @@ async def data_processing(important_data, STATE, data_category="", mandatory_att
         if len(check_track_number_system) == 0:
             changed_data = []
             if len(STATE["cached_data"]) > 0:
-                
+
                 # mengecek apakah datanya terdapat pada memori remove ?
                 # jika iya maka data akan di proses dan dikirim sebagai data baru 
                 for i, data in enumerate(important_data):
@@ -433,15 +440,15 @@ async def data_processing(important_data, STATE, data_category="", mandatory_att
                         STATE["existed_data"].append(data[0])
                         STATE["cached_data"].append(data)
                         STATE["removed_data"].remove(data[0])
-                        changed_data.append((data))
+                        changed_data.append(data)
                         if debug:
-                            print("brand new" + data_category)
+                            print(data_category + " brand new")
 
                 for i, data in enumerate(STATE['cached_data']):
                     if data[0] == important_data[i, 0]:
                         # jika data tidak sama dengan data yang baru, 
                         if data[1] != important_data[i, 1]:
-                            
+
                             # maka akan di proses dengan pengecekan apakah statusnya delete atau bukan
                             if important_data[i, 1][mandatory_attr] in must_remove:
 
@@ -450,7 +457,7 @@ async def data_processing(important_data, STATE, data_category="", mandatory_att
                                 STATE["removed_data"].append(data[0])
                                 STATE["existed_data"].remove(data[0])
                                 STATE["cached_data"].pop(i)
-                                
+
                                 # data akan dikirim ke user
                                 changed_data.append(important_data[i, :])
                                 if debug:
@@ -464,20 +471,113 @@ async def data_processing(important_data, STATE, data_category="", mandatory_att
                                     print(data_category + " updated")
 
             if debug:
-                print(data_category + " changed", changed_data)
+                print(data_category + " track changed", changed_data)
             changed = np.array(changed_data)
             if len(changed_data) > 0:
-                datas_changed += 1
                 if USERS:
                     message = json.dumps(list(changed[0:, 1]), default=str)
                     await asyncio.wait([user.send(message) for user in USERS])
+
     if debug:
-        print("\n==", datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), "\n\n")
+        print(data_category + " \n==", datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), "\n\n")
 
 async def data_change_detection():
     while True:
         # shiptrack data ------------------------------------------------------------------------
         shiptrack_data = np.array(information_data())
+        # === old but manjur code
+            # datas_changed = 0
+            # # cek apakah datanya berisi?
+            # if len(shiptrack_data) > 0: 
+            #     # variable existing data digunakan untuk mengecek apakah datanya baru atau data lama
+            #     existing_data = REALTIME_STATE["existed_data"] + REALTIME_STATE["removed_data"]
+
+            #     print("existing ", existing_data)
+            #     print("= clean existing data", REALTIME_STATE["existed_data"])
+            #     print("= removed data", REALTIME_STATE["removed_data"])
+
+            #     # mengambil data selisih dari variable yang sudah ada dan data yang baru
+            #     check_track_number_system = np.setdiff1d(shiptrack_data[0:, 0], np.array(existing_data))
+
+            #     print("new track length", len(check_track_number_system))
+            #     print("new track_number_system", check_track_number_system)
+
+            #     # cek apakah datanya lebih dari 0
+            #     if len(check_track_number_system) > 0:
+
+            #         # jika masuk ke kondisi ini, maka ada data yang baru dari database
+            #         new_datas = []
+            #         for i, new_data in enumerate(shiptrack_data):
+
+            #             # jika data yang diterima statusnya deleted, maka akan dikondisikan ke variable delete
+            #             if new_data[1]['track_phase_type'] == "DELETED_BY_SYSTEM" or\
+            #                 new_data[1]['track_phase_type'] == "DELETED_BY_SENSOR":
+            #                 REALTIME_STATE["removed_data"].append(new_data[0])
+            #             else:
+            #                 # jika data tidak di memori existed data dan removed data
+            #                 # maka akan membuat data baru dan dikirim ke user 
+            #                 if new_data[0] not in REALTIME_STATE["existed_data"] and \
+            #                     new_data[0] not in REALTIME_STATE["removed_data"]:
+            #                     REALTIME_STATE["existed_data"].append(new_data[0])
+
+            #                     # struktur cached data adalah array of 2d arrays
+            #                     REALTIME_STATE["cached_data"].append(new_data)
+            #                     new_datas.append(new_data[1])
+            #         if USERS:
+            #             message = json.dumps(new_datas, default=str)
+            #             await asyncio.wait([user.send(message) for user in USERS])
+
+            #     # jika data tidak ada perubahan jumlah
+            #     if len(check_track_number_system) == 0:
+            #         changed_data = []
+            #         if len(REALTIME_STATE["cached_data"]) > 0:
+
+            #             # mengecek apakah datanya terdapat pada memori remove ?
+            #             # jika iya maka data akan di proses dan dikirim sebagai data baru 
+            #             for i, data in enumerate(shiptrack_data):
+            #                 status = ["DELETED_BY_SYSTEM", "DELETED_BY_SENSOR"]
+            #                 if data[0] in REALTIME_STATE["removed_data"] and \
+            #                     shiptrack_data[i, 1]['track_phase_type'] not in status:
+            #                     REALTIME_STATE["existed_data"].append(data[0])
+            #                     REALTIME_STATE["cached_data"].append(data)
+            #                     REALTIME_STATE["removed_data"].remove(data[0])
+            #                     changed_data.append(data)
+            #                     print("brand new")
+
+            #             for i, data in enumerate(REALTIME_STATE['cached_data']):
+            #                 if data[0] == shiptrack_data[i, 0]:
+            #                     # jika data tidak sama dengan data yang baru, 
+            #                     if data[1] != shiptrack_data[i, 1]:
+
+            #                         # maka akan di proses dengan pengecekan apakah statusnya delete atau bukan
+            #                         if shiptrack_data[i, 1]['track_phase_type'] == "DELETED_BY_SYSTEM" or \
+            #                             shiptrack_data[i, 1]['track_phase_type'] == "DELETED_BY_SENSOR":
+
+            #                             # status delete akan mengganti data dalam memori removed data dan existed data dan 
+            #                             # menghapus data dari memori existed
+            #                             REALTIME_STATE["removed_data"].append(data[0])
+            #                             REALTIME_STATE["existed_data"].remove(data[0])
+            #                             REALTIME_STATE["cached_data"].pop(i)
+
+            #                             # data akan dikirim ke user
+            #                             changed_data.append(shiptrack_data[i, :])
+            #                             print("deleted")
+            #                         else:
+            #                             # jika status data selain deleted maka memori cached data akan direplace dengan data baru
+            #                             # dan dikirim ke user
+            #                             changed_data.append(data)
+            #                             REALTIME_STATE["cached_data"][i][1] = shiptrack_data[i, 1]
+            #                             print("updated")
+
+            #         print("track changed", changed_data)
+            #         changed = np.array(changed_data)
+            #         if len(changed_data) > 0:
+            #             if USERS:
+            #                 message = json.dumps(list(changed[0:, 1]), default=str)
+            #                 await asyncio.wait([user.send(message) for user in USERS])
+
+            # print("\n==", datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), "\n\n")
+        
         await data_processing(shiptrack_data, REALTIME_STATE, data_category="realtime track", 
                                 mandatory_attr="track_phase_type", 
                                 must_remove=["DELETED_BY_SYSTEM", "DELETED_BY_SENSOR"], debug=True)
@@ -485,17 +585,17 @@ async def data_change_detection():
         # tactical figures ------------------------------------------------------------------------
         tactical_figure_datas = np.array(tactical_figure_data())
         await data_processing(tactical_figure_datas, TACTICAL_FIGURE_STATE, data_category="tactical figure", 
-                                mandatory_attr="visibility_type", must_remove=["REMOVE"], debug=True)
+                                mandatory_attr="visibility_type", must_remove=["REMOVE"], debug=False)
 
         # reference points ------------------------------------------------------------------------
         reference_point_datas = np.array(reference_point_data())
         await data_processing(reference_point_datas, REFERENCE_POINT_STATE, data_category="reference point", 
-                                mandatory_attr="visibility_type", must_remove=["REMOVE"], debug=True)
+                                mandatory_attr="visibility_type", must_remove=["REMOVE"], debug=False)
 
         # area alerts ------------------------------------------------------------------------
         area_alert_datas = np.array(area_alert_data())
         await data_processing(area_alert_datas, AREA_ALERT_STATE, data_category="area alerts", 
-                                mandatory_attr="is_visible", must_remove=["REMOVE"], debug=True)
+                                mandatory_attr="is_visible", must_remove=["REMOVE"], debug=False)
 
         # lama tidur
         await asyncio.sleep(3)
