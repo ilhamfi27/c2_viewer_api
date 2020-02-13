@@ -445,12 +445,20 @@ async def data_processing(important_data, STATE, data_category="", mandatory_att
                             print(data_category + " brand new")
 
                 for i, data in enumerate(STATE['cached_data']):
-                    if data[0] == important_data[i, 0]:
+
+                    # cari data dari important data dimana id nya sama dengan id yang ada
+                    # di cached data
+                    important_data_idx = np.where(important_data[:, 0] == data[0])
+
+                    # kalau datanya ada
+                    if len(important_data_idx[0]) > 0:
+
                         # jika data tidak sama dengan data yang baru, 
-                        if data[1] != important_data[i, 1]:
+                        # int(important_data_idx[0]) isinya 1 angka hasil dari pencarian index di atas
+                        if data[1] != important_data[int(important_data_idx[0]), 1]:
 
                             # maka akan di proses dengan pengecekan apakah statusnya delete atau bukan
-                            if important_data[i, 1][mandatory_attr] in must_remove:
+                            if important_data[int(important_data_idx[0]), 1][mandatory_attr] in must_remove:
 
                                 # status delete akan mengganti data dalam memori removed data dan existed data dan 
                                 # menghapus data dari memori existed
@@ -459,17 +467,19 @@ async def data_processing(important_data, STATE, data_category="", mandatory_att
                                 STATE["cached_data"].pop(i)
 
                                 # data akan dikirim ke user
-                                changed_data.append(important_data[i, :])
+                                changed_data.append(important_data[int(important_data_idx[0]), :])
                                 if debug:
                                     print(data_category + " deleted")
                             else:
                                 # jika status data selain deleted maka memori cached data akan direplace dengan data baru
                                 # dan dikirim ke user
                                 changed_data.append(data)
-                                STATE["cached_data"][i][1] = important_data[i, 1]
+                                STATE["cached_data"][i][1] = important_data[int(important_data_idx[0]), 1]
                                 if debug:
                                     print(data_category + " updated")
-
+                    else:
+                        if debug:
+                            print("can't find data", data[0])
             if debug:
                 print(data_category + " track changed", changed_data)
             changed = np.array(changed_data)
@@ -580,7 +590,7 @@ async def data_change_detection():
         
         await data_processing(shiptrack_data, REALTIME_STATE, data_category="realtime track", 
                                 mandatory_attr="track_phase_type", 
-                                must_remove=["DELETED_BY_SYSTEM", "DELETED_BY_SENSOR"], debug=True)
+                                must_remove=["DELETED_BY_SYSTEM", "DELETED_BY_SENSOR"], debug=False)
 
         # tactical figures ------------------------------------------------------------------------
         tactical_figure_datas = np.array(tactical_figure_data())
@@ -590,7 +600,7 @@ async def data_change_detection():
         # reference points ------------------------------------------------------------------------
         reference_point_datas = np.array(reference_point_data())
         await data_processing(reference_point_datas, REFERENCE_POINT_STATE, data_category="reference point", 
-                                mandatory_attr="visibility_type", must_remove=["REMOVE"], debug=False)
+                                mandatory_attr="visibility_type", must_remove=["REMOVE"], debug=True)
 
         # area alerts ------------------------------------------------------------------------
         area_alert_datas = np.array(area_alert_data())
