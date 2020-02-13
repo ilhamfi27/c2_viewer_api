@@ -334,7 +334,6 @@ def reference_point_data():
     conn.close()
 
 def area_alert_data():
-
     try:
         columns = (
             "session_id", "object_type", "object_id", "warning_type",
@@ -358,7 +357,7 @@ def area_alert_data():
         cur.execute(q)
         data = []
         for row in cur.fetchall():
-            object_id = row[3]
+            object_id = row[2]
             results = dict(zip(columns, row))
             data.append([object_id, results])
         return data
@@ -596,17 +595,17 @@ async def data_change_detection():
         
         await data_processing(shiptrack_data, REALTIME_STATE, data_category="realtime track", 
                                 mandatory_attr="track_phase_type", 
-                                must_remove=["DELETED_BY_SYSTEM", "DELETED_BY_SENSOR"], debug=True)
+                                must_remove=["DELETED_BY_SYSTEM", "DELETED_BY_SENSOR"], debug=False)
 
         # tactical figures ------------------------------------------------------------------------
         tactical_figure_datas = np.array(tactical_figure_data())
         await data_processing(tactical_figure_datas, TACTICAL_FIGURE_STATE, data_category="tactical figure", 
-                                mandatory_attr="visibility_type", must_remove=["REMOVE"], debug=True)
+                                mandatory_attr="visibility_type", must_remove=["REMOVE"], debug=False)
 
         # reference points ------------------------------------------------------------------------
         reference_point_datas = np.array(reference_point_data())
         await data_processing(reference_point_datas, REFERENCE_POINT_STATE, data_category="reference point", 
-                                mandatory_attr="visibility_type", must_remove=["REMOVE"], debug=True)
+                                mandatory_attr="visibility_type", must_remove=["REMOVE"], debug=False)
 
         # area alerts ------------------------------------------------------------------------
         area_alert_datas = np.array(area_alert_data())
