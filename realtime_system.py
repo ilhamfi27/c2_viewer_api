@@ -367,23 +367,24 @@ def area_alert_data():
     cur.close()
     conn.close()
 
-async def send_cached_data(states=[]):
-    if USERS:
-        # send realtime
-        # np.array untuk mengambil index ke 1 dari semua row cached data
-        for STATE in states:
-            if len(STATE["cached_data"]) > 0:
-                cached_data = np.array(STATE["cached_data"])
-                message = list(cached_data[:, 1])
-                message = json.dumps(message, default=str)
-                await asyncio.wait([user.send(message) for user in USERS])
+async def send_cached_data(user, states=[]):
+    # send realtime
+    # np.array untuk mengambil index ke 1 dari semua row cached data
+    for STATE in states:
+        if len(STATE["cached_data"]) > 0:
+            cached_data = np.array(STATE["cached_data"])
+            message = list(cached_data[:, 1])
+            message = json.dumps(message, default=str)
+            await user.send(message)
 
 async def register(websocket):
     USERS.add(websocket)
-    # TODO ================================
-        # await websocket.send(
-        #     json.dumps({"message": "YOURE IN!"}, default=str)
-        # )
+    await send_cached_data(websocket, states=[
+        REALTIME_STATE,
+        TACTICAL_FIGURE_STATE,
+        REFERENCE_POINT_STATE,
+        AREA_ALERT_STATE,
+    ])
     print(USERS)
 
 async def unregister(websocket):
@@ -619,12 +620,6 @@ async def data_change_detection():
 async def handler(websocket, path):
     await register(websocket),
     try:
-        await send_cached_data(states=[
-            REALTIME_STATE,
-            TACTICAL_FIGURE_STATE,
-            REFERENCE_POINT_STATE,
-            AREA_ALERT_STATE,
-        ])
         async for message in websocket:
             pass
     except websockets.exceptions.ConnectionClosedError:
