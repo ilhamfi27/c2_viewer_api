@@ -16,7 +16,7 @@ from functools import reduce
 logging.basicConfig()
 
 conn = psycopg2.connect("host=127.0.0.1 \
-    dbname=shiptrack \
+    dbname=c2viewer \
     user=postgres \
     password=bismillah"
 )
