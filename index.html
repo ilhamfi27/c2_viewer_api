@@ -38,8 +38,7 @@
         </div>
         <script>
             var users = document.querySelector('.users'),
-                websocket = new WebSocket("ws://192.168.43.14:14045/");
-                // websocket = new WebSocket("ws://127.0.0.1:8080/");
+                websocket = new WebSocket("ws://127.0.0.1:8080/");
             websocket.onmessage = function (event) {
                 data = JSON.parse(event.data);
                 console.log(data);

@@ -25,6 +25,6 @@ for row in data:
         print(q)
         cur.execute(q)
         conn.commit()
-        time.sleep(1)
+        time.sleep(5)
 conn.commit()
 cur.close()
