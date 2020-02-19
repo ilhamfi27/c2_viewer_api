@@ -16,14 +16,6 @@ from stored_data import *
 
 logging.basicConfig()
 
-conn = psycopg2.connect("host=127.0.0.1 \
-    dbname=c2viewer \
-    user=postgres \
-    password=bismillah"
-)
-
-cur = conn.cursor()
-
 ar_mandatory_table = [
     'replay_system_track_general',
     'replay_system_track_kinetic',
@@ -41,7 +33,7 @@ ar_mandatory_table_8 = [
     'replay_ais_data'
 ]
 
-REALTIME_STATE = {
+TRACK_STATE = {
     "cached_data": [],
     "data_time": [],
     "removed_data": [],
@@ -76,21 +68,23 @@ USERS = set()
 async def send_cached_data(user, states=[]):
     # send realtime
     # np.array untuk mengambil index ke 1 dari semua row cached data
+    data = dict()
     for STATE in states:
-        if len(STATE["cached_data"]) > 0:
-            cached_data = np.array(STATE["cached_data"])
-            message = list(cached_data[:, 1])
-            message = json.dumps(message, default=str)
-            await user.send(message)
+        if len(STATE[1]["cached_data"]) > 0:
+            cached_data = np.array(STATE[1]["cached_data"])
+            data[STATE[0]] = list(cached_data[:, 1])
+    if len(data) > 0:
+        message = json.dumps({'data': data}, default=str)
+        await user.send(message)
 
 async def register(websocket):
     USERS.add(websocket)
     await send_cached_data(websocket, states=[
-        REALTIME_STATE,
-        TACTICAL_FIGURE_STATE,
-        REFERENCE_POINT_STATE,
-        AREA_ALERT_STATE,
-        SESSION_STATE,
+        ['track', TRACK_STATE],
+        ['tactical_figure', TACTICAL_FIGURE_STATE],
+        ['reference_point', REFERENCE_POINT_STATE],
+        ['area_alert', AREA_ALERT_STATE],
+        ['session', SESSION_STATE],
     ])
     print(USERS)
 
@@ -101,28 +95,28 @@ async def data_change_detection():
     while True:
         # shiptrack data ------------------------------------------------------------------------
         shiptrack_data = np.array(information_data())
-        await data_processing(shiptrack_data, REALTIME_STATE, USERS, data_category="realtime track", 
+        await data_processing(shiptrack_data, TRACK_STATE, USERS, data_category="track", 
                         mandatory_attr="track_phase_type", 
                         must_remove=["DELETED_BY_SYSTEM", "DELETED_BY_SENSOR"], debug=True)
 
         # tactical figures ------------------------------------------------------------------------
         tactical_figure_datas = np.array(tactical_figure_data())
-        await data_processing(tactical_figure_datas, TACTICAL_FIGURE_STATE, USERS, data_category="tactical figure", 
+        await data_processing(tactical_figure_datas, TACTICAL_FIGURE_STATE, USERS, data_category="tactical_figure", 
                                 mandatory_attr="visibility_type", must_remove=["REMOVE"], debug=True)
 
         # reference points ------------------------------------------------------------------------
         reference_point_datas = np.array(reference_point_data())
-        await data_processing(reference_point_datas, REFERENCE_POINT_STATE, USERS, data_category="reference point", 
+        await data_processing(reference_point_datas, REFERENCE_POINT_STATE, USERS, data_category="reference_point", 
                                 mandatory_attr="visibility_type", must_remove=["REMOVE"], debug=True)
 
         # area alerts ------------------------------------------------------------------------
         area_alert_datas = np.array(area_alert_data())
-        await data_processing(area_alert_datas, AREA_ALERT_STATE, USERS, data_category="area alerts", 
+        await data_processing(area_alert_datas, AREA_ALERT_STATE, USERS, data_category="area_alert", 
                                 mandatory_attr="is_visible", must_remove=["REMOVE"], debug=True)
 
         # sessions ------------------------------------------------------------------------
         session_datas = np.array(session_data())
-        await non_strict_data_processing(session_datas, SESSION_STATE, USERS, data_category="sessions", 
+        await non_strict_data_processing(session_datas, SESSION_STATE, USERS, data_category="session", 
                                 debug=True)
         print('========================================================================================================================')
         print('========================================================================================================================')

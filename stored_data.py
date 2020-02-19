@@ -367,7 +367,9 @@ async def data_processing(important_data, STATE, USERS, data_category='', mandat
                         STATE['cached_data'].append(new_data)
                         new_datas.append(new_data[1])
             if USERS:
-                message = json.dumps(new_datas, default=str)
+                send_data = dict()
+                send_data[data_category] = new_datas
+                message = json.dumps({'data': send_data}, default=str)
                 await asyncio.wait([user.send(message) for user in USERS])
 
         # jika data tidak ada perubahan jumlah
@@ -428,7 +430,9 @@ async def data_processing(important_data, STATE, USERS, data_category='', mandat
             changed = np.array(changed_data)
             if len(changed_data) > 0:
                 if USERS:
-                    message = json.dumps(list(changed[0:, 1]), default=str)
+                    send_data = dict()
+                    send_data[data_category] = list(changed[0:, 1])
+                    message = json.dumps({'data': send_data}, default=str)
                     await asyncio.wait([user.send(message) for user in USERS])
 
     if debug:
@@ -464,7 +468,9 @@ async def non_strict_data_processing(important_data, STATE, USERS, data_category
                     new_datas.append(new_data[1])
 
             if USERS:
-                message = json.dumps(new_datas, default=str)
+                send_data = dict()
+                send_data[data_category] = new_datas
+                message = json.dumps({'data': send_data}, default=str)
                 await asyncio.wait([user.send(message) for user in USERS])
 
         # jika data tidak ada perubahan jumlah
@@ -496,7 +502,9 @@ async def non_strict_data_processing(important_data, STATE, USERS, data_category
             changed = np.array(changed_data)
             if len(changed_data) > 0:
                 if USERS:
-                    message = json.dumps(list(changed[0:, 1]), default=str)
+                    send_data = dict()
+                    send_data[data_category] = list(changed[0:, 1])
+                    message = json.dumps({'data': send_data}, default=str)
                     await asyncio.wait([user.send(message) for user in USERS])
 
     if debug:
