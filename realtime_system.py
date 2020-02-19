@@ -66,6 +66,11 @@ AREA_ALERT_STATE = {
     "existed_data": [],
 }
 
+SESSION_STATE = {
+    "cached_data": [],
+    "existed_data": [],
+}
+
 USERS = set()
 
 async def send_cached_data(user, states=[]):
@@ -85,6 +90,7 @@ async def register(websocket):
         TACTICAL_FIGURE_STATE,
         REFERENCE_POINT_STATE,
         AREA_ALERT_STATE,
+        SESSION_STATE,
     ])
     print(USERS)
 
@@ -95,24 +101,29 @@ async def data_change_detection():
     while True:
         # shiptrack data ------------------------------------------------------------------------
         shiptrack_data = np.array(information_data())
-        await data_processing(shiptrack_data, REALTIME_STATE, data_category="realtime track", 
+        await data_processing(shiptrack_data, REALTIME_STATE, USERS, data_category="realtime track", 
                         mandatory_attr="track_phase_type", 
-                        must_remove=["DELETED_BY_SYSTEM", "DELETED_BY_SENSOR"], debug=False)
+                        must_remove=["DELETED_BY_SYSTEM", "DELETED_BY_SENSOR"], debug=True)
 
         # tactical figures ------------------------------------------------------------------------
         tactical_figure_datas = np.array(tactical_figure_data())
-        await data_processing(tactical_figure_datas, TACTICAL_FIGURE_STATE, data_category="tactical figure", 
-                                mandatory_attr="visibility_type", must_remove=["REMOVE"], debug=False)
+        await data_processing(tactical_figure_datas, TACTICAL_FIGURE_STATE, USERS, data_category="tactical figure", 
+                                mandatory_attr="visibility_type", must_remove=["REMOVE"], debug=True)
 
         # reference points ------------------------------------------------------------------------
         reference_point_datas = np.array(reference_point_data())
-        await data_processing(reference_point_datas, REFERENCE_POINT_STATE, data_category="reference point", 
-                                mandatory_attr="visibility_type", must_remove=["REMOVE"], debug=False)
+        await data_processing(reference_point_datas, REFERENCE_POINT_STATE, USERS, data_category="reference point", 
+                                mandatory_attr="visibility_type", must_remove=["REMOVE"], debug=True)
 
         # area alerts ------------------------------------------------------------------------
         area_alert_datas = np.array(area_alert_data())
-        await data_processing(area_alert_datas, AREA_ALERT_STATE, data_category="area alerts", 
+        await data_processing(area_alert_datas, AREA_ALERT_STATE, USERS, data_category="area alerts", 
                                 mandatory_attr="is_visible", must_remove=["REMOVE"], debug=True)
+
+        # sessions ------------------------------------------------------------------------
+        session_datas = np.array(session_data())
+        await non_strict_data_processing(session_datas, SESSION_STATE, USERS, data_category="sessions", 
+                                debug=True)
         print('========================================================================================================================')
         print('========================================================================================================================')
         # lama tidur

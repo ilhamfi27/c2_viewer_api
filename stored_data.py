@@ -2,6 +2,9 @@ import random
 import psycopg2
 import numpy as np
 import time
+import datetime
+import asyncio
+import json
 from functools import reduce
 
 conn = psycopg2.connect("host=127.0.0.1 \
@@ -303,7 +306,28 @@ def area_alert_data():
     cur.close()
     conn.close()
 
-async def data_processing(important_data, STATE, data_category='', mandatory_attr='', must_remove=[], debug=True):
+def session_data():
+    try:
+        columns = (
+            'id','name','start_time','end_time'
+        )
+
+        q = "SELECT id, name, start_time, end_time " \
+            "FROM public.sessions " \
+            "WHERE end_time IS NOT NULL;"
+        cur.execute(q)
+        data = []
+        for row in cur.fetchall():
+            object_id = row[0]
+            results = dict(zip(columns, row))
+            data.append([object_id, results])
+        return data
+    except psycopg2.Error as e:
+        print(e)
+    cur.close()
+    conn.close()
+
+async def data_processing(important_data, STATE, USERS, data_category='', mandatory_attr='', must_remove=[], debug=True):
     # cek apakah datanya berisi?
     if len(important_data) > 0: 
         # variable existing data digunakan untuk mengecek apakah datanya baru atau data lama
@@ -396,6 +420,74 @@ async def data_processing(important_data, STATE, data_category='', mandatory_att
                                 STATE['cached_data'][i][1] = important_data[int(important_data_idx[0]), 1]
                                 if debug:
                                     print(data_category + ' updated')
+                    else:
+                        if debug:
+                            print('can\'t find data', data[0])
+            if debug:
+                print(data_category + ' track changed', changed_data)
+            changed = np.array(changed_data)
+            if len(changed_data) > 0:
+                if USERS:
+                    message = json.dumps(list(changed[0:, 1]), default=str)
+                    await asyncio.wait([user.send(message) for user in USERS])
+
+    if debug:
+        print(data_category + ' \n==', datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), '\n\n')
+
+async def non_strict_data_processing(important_data, STATE, USERS, data_category='', debug=True):
+    # cek apakah datanya berisi?
+    if len(important_data) > 0: 
+        # variable existing data digunakan untuk mengecek apakah datanya baru atau data lama
+        existing_data = STATE['existed_data']
+
+        if debug:
+            print(data_category + ' existing ', existing_data)
+
+        # mengambil data selisih dari variable yang sudah ada dan data yang baru
+        check_track_number_system = np.setdiff1d(important_data[0:, 0], np.array(existing_data))
+
+        if debug:
+            print(data_category + ' new track length', len(check_track_number_system))
+            print(data_category + ' new track_number_system', check_track_number_system)
+
+        # cek apakah datanya lebih dari 0
+        if len(check_track_number_system) > 0:
+
+            # jika masuk ke kondisi ini, maka ada data yang baru dari database
+            new_datas = []
+            for i, new_data in enumerate(important_data):
+
+                # struktur cached data adalah array of 2d arrays
+                if new_data[0] not in STATE['existed_data']:
+                    STATE['existed_data'].append(new_data[0])
+                    STATE['cached_data'].append(new_data)
+                    new_datas.append(new_data[1])
+
+            if USERS:
+                message = json.dumps(new_datas, default=str)
+                await asyncio.wait([user.send(message) for user in USERS])
+
+        # jika data tidak ada perubahan jumlah
+        if len(check_track_number_system) == 0:
+            changed_data = []
+
+            if len(STATE['cached_data']) > 0:
+                for i, data in enumerate(STATE['cached_data']):
+
+                    # cari data dari important data dimana id nya sama dengan id yang ada
+                    # di cached data
+                    important_data_idx = np.where(important_data[:, 0] == data[0])
+
+                    # kalau datanya ada
+                    if len(important_data_idx[0]) > 0:
+
+                        # jika data tidak sama dengan data yang baru, 
+                        # int(important_data_idx[0]) isinya 1 angka hasil dari pencarian index di atas
+                        if data[1] != important_data[int(important_data_idx[0]), 1]:
+                            changed_data.append(data)
+                            STATE['cached_data'][i][1] = important_data[int(important_data_idx[0]), 1]
+                            if debug:
+                                print(data_category + ' updated')
                     else:
                         if debug:
                             print('can\'t find data', data[0])
