@@ -396,7 +396,7 @@ def area_alert_data():
             "track_source_type", "is_visible"
         )
 
-        q = "SELECT aa.* " \
+        q = "SELECT DISTINCT aa.* " \
             "    FROM area_alerts aa " \
             "JOIN sessions s ON aa.session_id=s.id " \
             "JOIN " \

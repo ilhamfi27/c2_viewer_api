@@ -102,42 +102,48 @@ async def data_change_detection():
         # shiptrack data ------------------------------------------------------------------------
         shiptrack_data = np.array(information_data())
         await data_processing(shiptrack_data, TRACK_STATE, USERS, NON_REALTIME_USERS, data_category="track", 
-                        mandatory_attr="track_phase_type", must_remove=["DELETED_BY_SYSTEM", "DELETED_BY_SENSOR"], debug=False)
+                        mandatory_attr="track_phase_type", must_remove=["DELETED_BY_SYSTEM", "DELETED_BY_SENSOR"], debug=True)
 
         # tactical figures ------------------------------------------------------------------------
         tactical_figure_datas = np.array(tactical_figure_data())
         await data_processing(tactical_figure_datas, TACTICAL_FIGURE_STATE, USERS, NON_REALTIME_USERS, data_category="tactical_figure", 
-                                mandatory_attr="visibility_type", must_remove=["REMOVE"], debug=False)
+                                mandatory_attr="visibility_type", must_remove=["REMOVE"], debug=True)
 
         # reference points ------------------------------------------------------------------------
         reference_point_datas = np.array(reference_point_data())
         await data_processing(reference_point_datas, REFERENCE_POINT_STATE, USERS, NON_REALTIME_USERS, data_category="reference_point", 
-                                mandatory_attr="visibility_type", must_remove=["REMOVE"], debug=False)
+                                mandatory_attr="visibility_type", must_remove=["REMOVE"], debug=True)
 
         # area alerts ------------------------------------------------------------------------
         area_alert_datas = np.array(area_alert_data())
         await data_processing(area_alert_datas, AREA_ALERT_STATE, USERS, NON_REALTIME_USERS, data_category="area_alert", 
-                                mandatory_attr="is_visible", must_remove=["REMOVE"], debug=False)
+                                mandatory_attr="is_visible", must_remove=["REMOVE"], debug=True)
 
         # sessions ------------------------------------------------------------------------
         session_datas = np.array(session_data())
         await non_strict_data_processing(session_datas, SESSION_STATE, USERS, NON_REALTIME_USERS, data_category="session", 
-                                debug=False)
+                                debug=True)
         print('========================================================================================================================')
         print('========================================================================================================================')
         # lama tidur
         await asyncio.sleep(3)
 
+async def sent_replay_track(session):
+    pass
+
 async def get_websocket_messages(websocket):
     async for message in websocket:
         data = json.loads(message)
         print({'user': websocket, 'data': data})
-        if data['action'] == 'realtime':
-            await realtime_toggle_handler(websocket, data['action'])
-            print('realtime')
-        elif data['action'] == 'replay':
-            await realtime_toggle_handler(websocket, data['action'])
-            print('replay')
+        if 'action' in data:
+            if data['action'] == 'realtime':
+                await realtime_toggle_handler(websocket, data['action'])
+                print('realtime')
+            elif data['action'] == 'replay':
+                await realtime_toggle_handler(websocket, data['action'])
+                print('replay')
+        if 'request' in data:
+            await sent_replay_track(data['request'])
 
 async def realtime_toggle_handler(user, state):
     if state == 'realtime' and \
