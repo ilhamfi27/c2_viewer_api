@@ -63,7 +63,11 @@ SESSION_STATE = {
     "existed_data": [],
 }
 
+# variable penyimpanan realtime user
 USERS = set()
+
+# variable penyimpanan non realtime user
+NON_REALTIME_USERS = set()
 
 async def send_cached_data(user, states=[]):
     # send realtime
@@ -73,6 +77,8 @@ async def send_cached_data(user, states=[]):
         if len(STATE[1]["cached_data"]) > 0:
             cached_data = np.array(STATE[1]["cached_data"])
             data[STATE[0]] = list(cached_data[:, 1])
+        else:
+            data[STATE[0]] = list()
     if len(data) > 0:
         message = json.dumps({'data': data}, default=str)
         await user.send(message)
@@ -95,41 +101,70 @@ async def data_change_detection():
     while True:
         # shiptrack data ------------------------------------------------------------------------
         shiptrack_data = np.array(information_data())
-        await data_processing(shiptrack_data, TRACK_STATE, USERS, data_category="track", 
-                        mandatory_attr="track_phase_type", 
-                        must_remove=["DELETED_BY_SYSTEM", "DELETED_BY_SENSOR"], debug=True)
+        await data_processing(shiptrack_data, TRACK_STATE, USERS, NON_REALTIME_USERS, data_category="track", 
+                        mandatory_attr="track_phase_type", must_remove=["DELETED_BY_SYSTEM", "DELETED_BY_SENSOR"], debug=False)
 
         # tactical figures ------------------------------------------------------------------------
         tactical_figure_datas = np.array(tactical_figure_data())
-        await data_processing(tactical_figure_datas, TACTICAL_FIGURE_STATE, USERS, data_category="tactical_figure", 
-                                mandatory_attr="visibility_type", must_remove=["REMOVE"], debug=True)
+        await data_processing(tactical_figure_datas, TACTICAL_FIGURE_STATE, USERS, NON_REALTIME_USERS, data_category="tactical_figure", 
+                                mandatory_attr="visibility_type", must_remove=["REMOVE"], debug=False)
 
         # reference points ------------------------------------------------------------------------
         reference_point_datas = np.array(reference_point_data())
-        await data_processing(reference_point_datas, REFERENCE_POINT_STATE, USERS, data_category="reference_point", 
-                                mandatory_attr="visibility_type", must_remove=["REMOVE"], debug=True)
+        await data_processing(reference_point_datas, REFERENCE_POINT_STATE, USERS, NON_REALTIME_USERS, data_category="reference_point", 
+                                mandatory_attr="visibility_type", must_remove=["REMOVE"], debug=False)
 
         # area alerts ------------------------------------------------------------------------
         area_alert_datas = np.array(area_alert_data())
-        await data_processing(area_alert_datas, AREA_ALERT_STATE, USERS, data_category="area_alert", 
-                                mandatory_attr="is_visible", must_remove=["REMOVE"], debug=True)
+        await data_processing(area_alert_datas, AREA_ALERT_STATE, USERS, NON_REALTIME_USERS, data_category="area_alert", 
+                                mandatory_attr="is_visible", must_remove=["REMOVE"], debug=False)
 
         # sessions ------------------------------------------------------------------------
         session_datas = np.array(session_data())
-        await non_strict_data_processing(session_datas, SESSION_STATE, USERS, data_category="session", 
-                                debug=True)
+        await non_strict_data_processing(session_datas, SESSION_STATE, USERS, NON_REALTIME_USERS, data_category="session", 
+                                debug=False)
         print('========================================================================================================================')
         print('========================================================================================================================')
         # lama tidur
         await asyncio.sleep(3)
 
+async def get_websocket_messages(websocket):
+    async for message in websocket:
+        data = json.loads(message)
+        print({'user': websocket, 'data': data})
+        if data['action'] == 'realtime':
+            await realtime_toggle_handler(websocket, data['action'])
+            print('realtime')
+        elif data['action'] == 'replay':
+            await realtime_toggle_handler(websocket, data['action'])
+            print('replay')
+
+async def realtime_toggle_handler(user, state):
+    if state == 'realtime' and \
+        user in NON_REALTIME_USERS:
+        NON_REALTIME_USERS.remove(user)
+        USERS.add(user)
+    elif state == 'replay' and \
+        user in USERS:
+        USERS.remove(user)
+        NON_REALTIME_USERS.add(user)
+
 async def handler(websocket, path):
-    await register(websocket),
     try:
-        async for message in websocket:
-            pass
-    except websockets.exceptions.ConnectionClosedError:
-        print("connection error")
+        # -- event yang harus di jalankan oleh web socket --
+
+        # meregister user ketika terkoneksi dengan web socket
+        await register(websocket)
+
+        # menghendle message dari client
+        await get_websocket_messages(websocket)
+
+    except websockets.exceptions.ConnectionClosedOK as e:
+        print("connection closed ok but error", e)
+
+    except websockets.exceptions.ConnectionClosedError as e:
+        print("connection closed error", e)
+
     finally:
         await unregister(websocket)
 

@@ -6,12 +6,9 @@ import datetime
 import asyncio
 import json
 from functools import reduce
+from connection import getconn 
 
-conn = psycopg2.connect("host=127.0.0.1 \
-    dbname=c2viewer \
-    user=postgres \
-    password=bismillah"
-)
+conn = getconn()
 
 cur = conn.cursor()
 
@@ -31,6 +28,20 @@ ar_mandatory_table_8 = [
     'replay_track_general_setting',
     'replay_ais_data'
 ]
+
+async def send_message(USERS, message_data, data_category):
+    if USERS:
+        send_data = dict()
+        send_data[data_category] = message_data
+        message = json.dumps({'data': send_data, 'data_type': 'realtime'}, default=str)
+        await asyncio.wait([user.send(message) for user in USERS])
+
+async def send_notification(USERS, message_data, data_category):
+    if USERS:
+        send_data = dict()
+        send_data[data_category] = message_data
+        message = json.dumps({'data': send_data, 'data_type': 'notification'}, default=str)
+        await asyncio.wait([user.send(message) for user in USERS])
 
 def information_data():
     try:
@@ -186,7 +197,7 @@ def information_data():
                         "   track_fusion_status," \
                         "   track_phase_type, " \
                         "   track_suspect_level, " \
-                        "   created_time, " \
+                        "   created_time " \
                         "FROM " + ar_mandatory_table_8[ix] + " " \
                         "WHERE session_id = " + str(session_id) + " " \
                         "AND system_track_number = " + str(ready) + " " \
@@ -431,7 +442,8 @@ def session_data():
     cur.close()
     conn.close()
 
-async def data_processing(important_data, STATE, USERS, data_category='', mandatory_attr='', must_remove=[], debug=True):
+async def data_processing(important_data, STATE, USERS, NON_REALTIME_USERS, 
+                             data_category='', mandatory_attr='', must_remove=[], debug=True):
     # cek apakah datanya berisi?
     if len(important_data) > 0: 
         # variable existing data digunakan untuk mengecek apakah datanya baru atau data lama
@@ -470,11 +482,8 @@ async def data_processing(important_data, STATE, USERS, data_category='', mandat
                         # struktur cached data adalah array of 2d arrays
                         STATE['cached_data'].append(new_data)
                         new_datas.append(new_data[1])
-            if USERS:
-                send_data = dict()
-                send_data[data_category] = new_datas
-                message = json.dumps({'data': send_data}, default=str)
-                await asyncio.wait([user.send(message) for user in USERS])
+            await send_message(USERS, new_datas ,data_category)
+            await send_notification(NON_REALTIME_USERS, new_datas ,data_category)
 
         # jika data tidak ada perubahan jumlah
         if len(check_track_number_system) == 0:
@@ -533,16 +542,13 @@ async def data_processing(important_data, STATE, USERS, data_category='', mandat
                 print(data_category + ' track changed', changed_data)
             changed = np.array(changed_data)
             if len(changed_data) > 0:
-                if USERS:
-                    send_data = dict()
-                    send_data[data_category] = list(changed[0:, 1])
-                    message = json.dumps({'data': send_data}, default=str)
-                    await asyncio.wait([user.send(message) for user in USERS])
+                await send_message(USERS, list(changed[0:, 1]) ,data_category)
+                await send_notification(NON_REALTIME_USERS, list(changed[0:, 1]) ,data_category)
 
     if debug:
         print(data_category + ' \n==', datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), '\n\n')
 
-async def non_strict_data_processing(important_data, STATE, USERS, data_category='', debug=True):
+async def non_strict_data_processing(important_data, STATE, USERS, NON_REALTIME_USERS, data_category='', debug=True):
     # cek apakah datanya berisi?
     if len(important_data) > 0: 
         # variable existing data digunakan untuk mengecek apakah datanya baru atau data lama
@@ -570,12 +576,8 @@ async def non_strict_data_processing(important_data, STATE, USERS, data_category
                     STATE['existed_data'].append(new_data[0])
                     STATE['cached_data'].append(new_data)
                     new_datas.append(new_data[1])
-
-            if USERS:
-                send_data = dict()
-                send_data[data_category] = new_datas
-                message = json.dumps({'data': send_data}, default=str)
-                await asyncio.wait([user.send(message) for user in USERS])
+            await send_message(USERS, new_datas ,data_category)
+            await send_notification(NON_REALTIME_USERS, new_datas ,data_category)
 
         # jika data tidak ada perubahan jumlah
         if len(check_track_number_system) == 0:
@@ -605,11 +607,8 @@ async def non_strict_data_processing(important_data, STATE, USERS, data_category
                 print(data_category + ' track changed', changed_data)
             changed = np.array(changed_data)
             if len(changed_data) > 0:
-                if USERS:
-                    send_data = dict()
-                    send_data[data_category] = list(changed[0:, 1])
-                    message = json.dumps({'data': send_data}, default=str)
-                    await asyncio.wait([user.send(message) for user in USERS])
+                await send_message(USERS, list(changed[0:, 1]) ,data_category)
+                await send_notification(NON_REALTIME_USERS, list(changed[0:, 1]) ,data_category)
 
     if debug:
         print(data_category + ' \n==', datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'), '\n\n')
