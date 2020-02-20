@@ -129,7 +129,12 @@ async def data_change_detection():
         await asyncio.sleep(3)
 
 async def sent_replay_track(session):
-    pass
+    print(session)
+    with open('dummy_replay.json') as f:
+        data = json.load(f)
+    
+    message = json.dumps({'replay_data': data}, default=str)
+    await asyncio.wait([user.send(message) for user in USERS])
 
 async def get_websocket_messages(websocket):
     async for message in websocket:
