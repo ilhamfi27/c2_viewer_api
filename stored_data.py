@@ -118,7 +118,8 @@ def information_data():
             # loop += 1
             # if loop == 5:
             #     break
-            columns = ('system_track_number','created_time','identity','environment','source','track_name','iu_indicator','airborne_indicator')
+            columns = ('system_track_number','created_time','identity','environment',
+                        'source','track_name','iu_indicator','airborne_indicator')
             results = {}
             for ix in range(len(ar_mandatory_table_8)):
                 #dapatkan created time yang terakhir per 8 tabel tersebut
@@ -157,27 +158,35 @@ def information_data():
                 if(ar_mandatory_table_8[ix]=='replay_system_track_kinetic'):
                     q = "SELECT * FROM" \
                         "( SELECT " \
+                        "   heading," \
                         "   latitude," \
                         "   longitude," \
+                        "   height_depth," \
                         "   speed_over_ground," \
-                        "   course_over_ground " \
+                        "   course_over_ground, " \
+                        "   last_update_time " \
                         "FROM " + ar_mandatory_table_8[ix] + " " \
                         "WHERE session_id = " + str(session_id) + " " \
                         "AND system_track_number = " + str(ready) + " " \
                         "ORDER BY created_time DESC) aa LIMIT 1;"
                     cur.execute(q)
                     for row in cur.fetchall():
-                        results['latitude'] = row[0]
-                        results['longitude'] = row[1]
-                        results['speed_over_ground'] = row[2]
-                        results['course_over_ground'] = row[3]
+                        results['heading'] = row[0]
+                        results['latitude'] = row[1]
+                        results['longitude'] = row[2]
+                        results['height_depth'] = row[3]
+                        results['speed_over_ground'] = row[4]
+                        results['course_over_ground'] = row[5]
+                        results['last_update_time'] = row[6]
 
                 if(ar_mandatory_table_8[ix]=='replay_system_track_processing'):
                     q = "SELECT * FROM" \
                         "( SELECT " \
                         "   track_join_status," \
                         "   track_fusion_status," \
-                        "   track_phase_type " \
+                        "   track_phase_type, " \
+                        "   track_suspect_level, " \
+                        "   created_time, " \
                         "FROM " + ar_mandatory_table_8[ix] + " " \
                         "WHERE session_id = " + str(session_id) + " " \
                         "AND system_track_number = " + str(ready) + " " \
@@ -188,6 +197,80 @@ def information_data():
                             results['track_join_status'] = row[0]
                             results['track_fusion_status'] = row[1]
                             results['track_phase_type'] = row[2]
+                            results['track_suspect_level'] = row[3]
+                            results['created_time'] = row[4]
+                
+                if(ar_mandatory_table_8[ix]=='replay_system_track_link'):
+                    q = "SELECT * FROM" \
+                        "( SELECT " \
+                        "   network_track_number," \
+                        "   originator_address," \
+                        "   link_status " \
+                        "FROM " + ar_mandatory_table_8[ix] + " " \
+                        "WHERE session_id = " + str(session_id) + " " \
+                        "AND system_track_number = " + str(ready) + " " \
+                        "ORDER BY created_time DESC) aa LIMIT 1;"
+                    cur.execute(q)
+                    for row in cur.fetchall():
+                        if len(results) > 0:
+                            results['network_track_number'] = row[0]
+                            results['originator_address'] = row[1]
+                            results['link_status'] = row[2]
+                
+                if(ar_mandatory_table_8[ix]=='replay_system_track_mission'):
+                    q = "SELECT * FROM" \
+                        "( SELECT " \
+                        "   mission_name," \
+                        "   route," \
+                        "   voice_call_sign, " \
+                        "   voice_frequency_channel, " \
+                        "   fuel_status, " \
+                        "   start_time, " \
+                        "   end_time " \
+                        "FROM " + ar_mandatory_table_8[ix] + " " \
+                        "WHERE session_id = " + str(session_id) + " " \
+                        "AND system_track_number = " + str(ready) + " " \
+                        "ORDER BY created_time DESC) aa LIMIT 1;"
+                    cur.execute(q)
+                    for row in cur.fetchall():
+                        if len(results) > 0:
+                            results['mission_name'] = row[0]
+                            results['route'] = row[1]
+                            results['voice_call_sign'] = row[2]
+                            results['voice_frequency_channel'] = row[3]
+                            results['fuel_status'] = row[4]
+                            results['start_time'] = row[5]
+                            results['end_time'] = row[6]
+                            results['link_status'] = row[2]
+                
+                if(ar_mandatory_table_8[ix]=='replay_system_track_identification'):
+                    q = "SELECT * FROM" \
+                        "( SELECT " \
+                        "   air_platform," \
+                        "   surf_platform," \
+                        "   land_platform, " \
+                        "   air_platform_activity, " \
+                        "   surf_platform_activity, " \
+                        "   land_platform_activity, " \
+                        "   air_specific, " \
+                        "   surf_specific, " \
+                        "   land_specific " \
+                        "FROM " + ar_mandatory_table_8[ix] + " " \
+                        "WHERE session_id = " + str(session_id) + " " \
+                        "AND system_track_number = " + str(ready) + " " \
+                        "ORDER BY created_time DESC) aa LIMIT 1;"
+                    cur.execute(q)
+                    for row in cur.fetchall():
+                        if len(results) > 0:
+                            results['air_platform'] = row[0]
+                            results['surf_platform'] = row[1]
+                            results['land_platform'] = row[2]
+                            results['air_platform_activity'] = row[3]
+                            results['surf_platform_activity'] = row[4]
+                            results['land_platform_activity'] = row[5]
+                            results['air_specific'] = row[6]
+                            results['surf_specific'] = row[7]
+                            results['land_specific'] = row[8]
 
                 if(ar_mandatory_table_8[ix]=='replay_ais_data'):
                     if(source_data=='AIS_TYPE'):
@@ -197,8 +280,19 @@ def information_data():
                             "FROM " \
                             "(" \
                             "   SELECT " \
-                            "       type_of_ship_or_cargo," \
-                            "       name as ship_name " \
+                            "       mmsi_number, " \
+                            "       name as ship_name, " \
+                            "       radio_call_sign, " \
+                            "       imo_number, " \
+                            "       navigation_status, " \
+                            "       destination, " \
+                            "       dimensions_of_ship, " \
+                            "       type_of_ship_or_cargo, " \
+                            "       rate_of_turn, " \
+                            "       gross_tonnage, " \
+                            "       ship_country, " \
+                            "       eta_at_destination, " \
+                            "       vendor_id " \
                             "   FROM " + ar_mandatory_table_8[ix] +" " \
                             "   WHERE session_id = " + str(session_id) +" " \
                             "   AND system_track_number = " + str(ready) +" " \
@@ -208,8 +302,19 @@ def information_data():
                         for row in cur.fetchall():
                             if len(results) > 0:
                                 data_ais += 1
-                                results['type_of_ship_or_cargo'] = row[0]
+                                results['mmsi_number'] = row[0]
                                 results['ship_name'] = row[1]
+                                results['radio_call_sign'] = row[2]
+                                results['imo_number'] = row[3]
+                                results['navigation_status'] = row[4]
+                                results['destination'] = row[5]
+                                results['dimensions_of_ship'] = row[6]
+                                results['type_of_ship_or_cargo'] = row[7]
+                                results['rate_of_turn'] = row[8]
+                                results['gross_tonnage'] = row[9]
+                                results['ship_country'] = row[10]
+                                results['eta_at_destination'] = row[11]
+                                results['vendor_id'] = row[12]
                         if data_ais > 0:
                             ship_tracks.append([system_track_number, results])
                             continue
@@ -218,7 +323,6 @@ def information_data():
                             results['type_of_ship_or_cargo'] = '-'
                             results['ship_name'] = '-'
                         ship_tracks.append([system_track_number, results])
-                
                 # pengambilan data track diambil dari pengkondisian ais
                 # tidak di kolektif di bawah
         return ship_tracks
