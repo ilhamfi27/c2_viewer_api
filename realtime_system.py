@@ -80,7 +80,7 @@ async def send_cached_data(user, states=[]):
         else:
             data[STATE[0]] = list()
     if len(data) > 0:
-        message = json.dumps({'data': data}, default=str)
+        message = json.dumps({'data': data, 'data_type': 'realtime'}, default=str)
         await user.send(message)
 
 async def register(websocket):

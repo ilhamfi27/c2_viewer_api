@@ -1,236 +1,278 @@
 [
   {
     "session_id":1,
+    "name":"Rec Session 1",
+    "start_time":"2020-01-10 14:12:21.666",
     "update_rate":5,
     "durasi_session":50,
     "track_play":{
       "0":{
         "start_segment":"2020-01-10 14:05:21",
         "end_segment":"2020-01-10 14:05:26",
-        "data":[
-          {
-            "system_track_number":100,
-            "identity":"UNKNOWN",
-            "environment":"SURFACE",
-            "latitude":-5.16190724326617,
-            "longitude":119.325505768851,
-            "speed_over_ground":10,
-            "course_over_ground":2,
-            "track_join_status":"NOT_JOINED_TRACK",
-            "track_fusion_status":"AIS_ONLY",
-            "source":"AIS_TYPE",
-            "track_name":"AS0101",
-            "track_phase_type":"TRACKING",
-            "airborne_indicator":"FALSE",
-            "iu_indicator":"FALSE",
-            "type_of_ship_or_cargo":"MEDICAL_TRANS",
-            "ship_name":"MUI WO 1"
-          },
-          {
-            "system_track_number":101,
-            "identity":"UNKNOWN",
-            "environment":"SURFACE",
-            "latitude":-5.16190724326617,
-            "longitude":120.325505768851,
-            "speed_over_ground":10,
-            "course_over_ground":2.34,
-            "track_join_status":"NOT_JOINED_TRACK",
-            "track_fusion_status":"AIS_ONLY",
-            "source":"AIS_TYPE",
-            "track_name":"AS0102",
-            "track_phase_type":"TRACKING",
-            "airborne_indicator":"FALSE",
-            "iu_indicator":"FALSE",
-            "type_of_ship_or_cargo":"CARGO_2",
-            "ship_name":"MUI WO 1"
-          }
-        ]
+        "data":{
+          "track":[
+            {
+              "system_track_number":100,
+              "identity":"UNKNOWN",
+              "environment":"SURFACE",
+              "latitude":-5.16190724326617,
+              "longitude":119.325505768851,
+              "speed_over_ground":10,
+              "course_over_ground":4.71239,
+              "track_join_status":"NOT_JOINED_TRACK",
+              "track_fusion_status":"AIS_ONLY",
+              "source":"AIS_TYPE",
+              "track_name":"AS0101",
+              "track_phase_type":"TRACKING",
+              "airborne_indicator":"FALSE",
+              "iu_indicator":"FALSE",
+              "type_of_ship_or_cargo":"MEDICAL_TRANS",
+              "ship_name":"MUI WO 1"
+            },
+            {
+              "system_track_number":101,
+              "identity":"UNKNOWN",
+              "environment":"SURFACE",
+              "latitude":-5.16190724326617,
+              "longitude":120.325505768851,
+              "speed_over_ground":10,
+              "course_over_ground":4.71239,
+              "track_join_status":"NOT_JOINED_TRACK",
+              "track_fusion_status":"AIS_ONLY",
+              "source":"AIS_TYPE",
+              "track_name":"AS0102",
+              "track_phase_type":"TRACKING",
+              "airborne_indicator":"FALSE",
+              "iu_indicator":"FALSE",
+              "type_of_ship_or_cargo":"CARGO_2",
+              "ship_name":"MUI WO 1"
+            }
+          ],
+          "tactical_figure":[],
+          "reference_point":[],
+          "area_alert":[]
+        }
       },
       "1":{
         "start_segment":"2020-01-10 14:05:26",
         "end_segment":"2020-01-10 14:05:31",
-        "data":[
-          {
-            "system_track_number":100,
-            "identity":"UNKNOWN",
-            "environment":"SURFACE",
-            "latitude":-5.16190724326617,
-            "longitude":118.325505768851,
-            "speed_over_ground":10,
-            "course_over_ground":2,
-            "track_join_status":"NOT_JOINED_TRACK",
-            "track_fusion_status":"AIS_ONLY",
-            "source":"AIS_TYPE",
-            "track_name":"AS0101",
-            "track_phase_type":"TRACKING",
-            "airborne_indicator":"FALSE",
-            "iu_indicator":"FALSE",
-            "type_of_ship_or_cargo":"MEDICAL_TRANS",
-            "ship_name":"MUI WO 1"
-          }
-        ]
+        "data":{
+          "track":[
+            {
+              "system_track_number":100,
+              "identity":"UNKNOWN",
+              "environment":"SURFACE",
+              "latitude":-5.16190724326617,
+              "longitude":118.325505768851,
+              "speed_over_ground":10,
+              "course_over_ground":4.71239,
+              "track_join_status":"NOT_JOINED_TRACK",
+              "track_fusion_status":"AIS_ONLY",
+              "source":"AIS_TYPE",
+              "track_name":"AS0101",
+              "track_phase_type":"TRACKING",
+              "airborne_indicator":"FALSE",
+              "iu_indicator":"FALSE",
+              "type_of_ship_or_cargo":"MEDICAL_TRANS",
+              "ship_name":"MUI WO 1"
+            }
+          ],
+          "tactical_figure":[],
+          "reference_point":[],
+          "area_alert":[]
+        }
       },
       "2":{
         "start_segment":"2020-01-10 14:05:31",
         "end_segment":"2020-01-10 14:05:36",
-        "data":[
-          {
-            "system_track_number":100,
-            "identity":"UNKNOWN",
-            "environment":"SURFACE",
-            "latitude":-5.16190724326617,
-            "longitude":117.325505768851,
-            "speed_over_ground":10,
-            "course_over_ground":2,
-            "track_join_status":"NOT_JOINED_TRACK",
-            "track_fusion_status":"AIS_ONLY",
-            "source":"AIS_TYPE",
-            "track_name":"AS0101",
-            "track_phase_type":"TRACKING",
-            "airborne_indicator":"FALSE",
-            "iu_indicator":"FALSE",
-            "type_of_ship_or_cargo":"MEDICAL_TRANS",
-            "ship_name":"MUI WO 1"
-          },
-          {
-            "system_track_number":101,
-            "identity":"UNKNOWN",
-            "environment":"SURFACE",
-            "latitude":-5.16190724326617,
-            "longitude":119.325505768851,
-            "speed_over_ground":10,
-            "course_over_ground":2.34,
-            "track_join_status":"NOT_JOINED_TRACK",
-            "track_fusion_status":"AIS_ONLY",
-            "source":"AIS_TYPE",
-            "track_name":"AS0102",
-            "track_phase_type":"TRACKING",
-            "airborne_indicator":"FALSE",
-            "iu_indicator":"FALSE",
-            "type_of_ship_or_cargo":"CARGO_2",
-            "ship_name":"MUI WO 1"
-          }
-        ]
+        "data":{
+          "track":[
+            {
+              "system_track_number":100,
+              "identity":"UNKNOWN",
+              "environment":"SURFACE",
+              "latitude":-5.16190724326617,
+              "longitude":117.325505768851,
+              "speed_over_ground":10,
+              "course_over_ground":4.71239,
+              "track_join_status":"NOT_JOINED_TRACK",
+              "track_fusion_status":"AIS_ONLY",
+              "source":"AIS_TYPE",
+              "track_name":"AS0101",
+              "track_phase_type":"TRACKING",
+              "airborne_indicator":"FALSE",
+              "iu_indicator":"FALSE",
+              "type_of_ship_or_cargo":"MEDICAL_TRANS",
+              "ship_name":"MUI WO 1"
+            },
+            {
+              "system_track_number":101,
+              "identity":"UNKNOWN",
+              "environment":"SURFACE",
+              "latitude":-5.16190724326617,
+              "longitude":119.325505768851,
+              "speed_over_ground":10,
+              "course_over_ground":4.71239,
+              "track_join_status":"NOT_JOINED_TRACK",
+              "track_fusion_status":"AIS_ONLY",
+              "source":"AIS_TYPE",
+              "track_name":"AS0102",
+              "track_phase_type":"TRACKING",
+              "airborne_indicator":"FALSE",
+              "iu_indicator":"FALSE",
+              "type_of_ship_or_cargo":"CARGO_2",
+              "ship_name":"MUI WO 1"
+            }
+          ],
+          "tactical_figure":[],
+          "reference_point":[],
+          "area_alert":[]
+        }
       },
       "3":{
         "start_segment":"2020-01-10 14:05:36",
         "end_segment":"2020-01-10 14:05:41",
-        "data":[
-          {
-            "system_track_number":100,
-            "identity":"UNKNOWN",
-            "environment":"SURFACE",
-            "latitude":-5.16190724326617,
-            "longitude":116.325505768851,
-            "speed_over_ground":10,
-            "course_over_ground":2,
-            "track_join_status":"NOT_JOINED_TRACK",
-            "track_fusion_status":"AIS_ONLY",
-            "source":"AIS_TYPE",
-            "track_name":"AS0101",
-            "track_phase_type":"TRACKING",
-            "airborne_indicator":"FALSE",
-            "iu_indicator":"FALSE",
-            "type_of_ship_or_cargo":"MEDICAL_TRANS",
-            "ship_name":"MUI WO 1"
-          }
-        ]
+        "data":{
+          "track":[
+            {
+              "system_track_number":100,
+              "identity":"UNKNOWN",
+              "environment":"SURFACE",
+              "latitude":-5.16190724326617,
+              "longitude":116.325505768851,
+              "speed_over_ground":10,
+              "course_over_ground":4.71239,
+              "track_join_status":"NOT_JOINED_TRACK",
+              "track_fusion_status":"AIS_ONLY",
+              "source":"AIS_TYPE",
+              "track_name":"AS0101",
+              "track_phase_type":"TRACKING",
+              "airborne_indicator":"FALSE",
+              "iu_indicator":"FALSE",
+              "type_of_ship_or_cargo":"MEDICAL_TRANS",
+              "ship_name":"MUI WO 1"
+            }
+          ],
+          "tactical_figure":[],
+          "reference_point":[],
+          "area_alert":[]
+        }
       },
       "4":{
         "start_segment":"2020-01-10 14:05:41",
         "end_segment":"2020-01-10 14:05:46",
-        "data":[
-          {
-            "system_track_number":100,
-            "identity":"UNKNOWN",
-            "environment":"SURFACE",
-            "latitude":-5.16190724326617,
-            "longitude":115.325505768851,
-            "speed_over_ground":10,
-            "course_over_ground":2,
-            "track_join_status":"NOT_JOINED_TRACK",
-            "track_fusion_status":"AIS_ONLY",
-            "source":"AIS_TYPE",
-            "track_name":"AS0101",
-            "track_phase_type":"TRACKING",
-            "airborne_indicator":"FALSE",
-            "iu_indicator":"FALSE",
-            "type_of_ship_or_cargo":"MEDICAL_TRANS",
-            "ship_name":"MUI WO 1"
-          }
-        ]
+        "data":{
+          "track":[
+            {
+              "system_track_number":100,
+              "identity":"UNKNOWN",
+              "environment":"SURFACE",
+              "latitude":-5.16190724326617,
+              "longitude":115.325505768851,
+              "speed_over_ground":10,
+              "course_over_ground":4.71239,
+              "track_join_status":"NOT_JOINED_TRACK",
+              "track_fusion_status":"AIS_ONLY",
+              "source":"AIS_TYPE",
+              "track_name":"AS0101",
+              "track_phase_type":"TRACKING",
+              "airborne_indicator":"FALSE",
+              "iu_indicator":"FALSE",
+              "type_of_ship_or_cargo":"MEDICAL_TRANS",
+              "ship_name":"MUI WO 1"
+            }
+          ],
+          "tactical_figure":[],
+          "reference_point":[],
+          "area_alert":[]
+        }
       },
       "5":{
         "start_segment":"2020-01-10 14:05:46",
         "end_segment":"2020-01-10 14:05:51",
-        "data":[
-          {
-            "system_track_number":101,
-            "identity":"UNKNOWN",
-            "environment":"SURFACE",
-            "latitude":-5.16190724326617,
-            "longitude":118.325505768851,
-            "speed_over_ground":10,
-            "course_over_ground":2.34,
-            "track_join_status":"NOT_JOINED_TRACK",
-            "track_fusion_status":"AIS_ONLY",
-            "source":"AIS_TYPE",
-            "track_name":"AS0102",
-            "track_phase_type":"TRACKING",
-            "airborne_indicator":"FALSE",
-            "iu_indicator":"FALSE",
-            "type_of_ship_or_cargo":"CARGO_2",
-            "ship_name":"MUI WO 1"
-          }
-        ]
+        "data":{
+          "track":[
+            {
+              "system_track_number":101,
+              "identity":"UNKNOWN",
+              "environment":"SURFACE",
+              "latitude":-5.16190724326617,
+              "longitude":118.325505768851,
+              "speed_over_ground":10,
+              "course_over_ground":4.71239,
+              "track_join_status":"NOT_JOINED_TRACK",
+              "track_fusion_status":"AIS_ONLY",
+              "source":"AIS_TYPE",
+              "track_name":"AS0102",
+              "track_phase_type":"TRACKING",
+              "airborne_indicator":"FALSE",
+              "iu_indicator":"FALSE",
+              "type_of_ship_or_cargo":"CARGO_2",
+              "ship_name":"MUI WO 1"
+            }
+          ],
+          "tactical_figure":[],
+          "reference_point":[],
+          "area_alert":[]
+        }
       },
       "6":{
         "start_segment":"2020-01-10 14:05:51",
         "end_segment":"2020-01-10 14:05:56",
-        "data":[
-          {
-            "system_track_number":101,
-            "identity":"UNKNOWN",
-            "environment":"SURFACE",
-            "latitude":-5.16190724326617,
-            "longitude":117.325505768851,
-            "speed_over_ground":10,
-            "course_over_ground":2.34,
-            "track_join_status":"NOT_JOINED_TRACK",
-            "track_fusion_status":"AIS_ONLY",
-            "source":"AIS_TYPE",
-            "track_name":"AS0102",
-            "track_phase_type":"TRACKING",
-            "airborne_indicator":"FALSE",
-            "iu_indicator":"FALSE",
-            "type_of_ship_or_cargo":"CARGO_2",
-            "ship_name":"MUI WO 1"
-          }
-        ]
+        "data":{
+          "track":[
+            {
+              "system_track_number":101,
+              "identity":"UNKNOWN",
+              "environment":"SURFACE",
+              "latitude":-5.16190724326617,
+              "longitude":117.325505768851,
+              "speed_over_ground":10,
+              "course_over_ground":4.71239,
+              "track_join_status":"NOT_JOINED_TRACK",
+              "track_fusion_status":"AIS_ONLY",
+              "source":"AIS_TYPE",
+              "track_name":"AS0102",
+              "track_phase_type":"TRACKING",
+              "airborne_indicator":"FALSE",
+              "iu_indicator":"FALSE",
+              "type_of_ship_or_cargo":"CARGO_2",
+              "ship_name":"MUI WO 1"
+            }
+          ],
+          "tactical_figure":[],
+          "reference_point":[],
+          "area_alert":[]
+        }
       },
       "7":{
         "start_segment":"2020-01-10 14:05:56",
         "end_segment":"2020-01-10 14:06:01",
-        "data":[
-          {
-            "system_track_number":100,
-            "identity":"UNKNOWN",
-            "environment":"SURFACE",
-            "latitude":-5.16190724326617,
-            "longitude":114.325505768851,
-            "speed_over_ground":100,
-            "course_over_ground":2,
-            "track_join_status":"NOT_JOINED_TRACK",
-            "track_fusion_status":"AIS_ONLY",
-            "source":"AIS_TYPE",
-            "track_name":"AS0101",
-            "track_phase_type":"TRACKING",
-            "airborne_indicator":"FALSE",
-            "iu_indicator":"FALSE",
-            "type_of_ship_or_cargo":"MEDICAL_TRANS",
-            "ship_name":"MUI WO 1"
-          }
-        ]
+        "data":{
+          "track":[
+            {
+              "system_track_number":100,
+              "identity":"UNKNOWN",
+              "environment":"SURFACE",
+              "latitude":-5.16190724326617,
+              "longitude":114.325505768851,
+              "speed_over_ground":100,
+              "course_over_ground":4.71239,
+              "track_join_status":"NOT_JOINED_TRACK",
+              "track_fusion_status":"AIS_ONLY",
+              "source":"AIS_TYPE",
+              "track_name":"AS0101",
+              "track_phase_type":"TRACKING",
+              "airborne_indicator":"FALSE",
+              "iu_indicator":"FALSE",
+              "type_of_ship_or_cargo":"MEDICAL_TRANS",
+              "ship_name":"MUI WO 1"
+            }
+          ],
+          "tactical_figure":[],
+          "reference_point":[],
+          "area_alert":[]
+        }
       },
       "8":{
         "start_segment":"2020-01-10 14:06:01",
@@ -240,26 +282,31 @@
       "9":{
         "start_segment":"2020-01-10 14:06:06",
         "end_segment":"2020-01-10 14:06:11",
-        "data":[
-          {
-            "system_track_number":101,
-            "identity":"UNKNOWN",
-            "environment":"SURFACE",
-            "latitude":-5.16190724326617,
-            "longitude":116.325505768851,
-            "speed_over_ground":10,
-            "course_over_ground":2.34,
-            "track_join_status":"NOT_JOINED_TRACK",
-            "track_fusion_status":"AIS_ONLY",
-            "source":"AIS_TYPE",
-            "track_name":"AS0102",
-            "track_phase_type":"TRACKING",
-            "airborne_indicator":"FALSE",
-            "iu_indicator":"FALSE",
-            "type_of_ship_or_cargo":"CARGO_2",
-            "ship_name":"MUI WO 1"
-          }
-        ]
+        "data":{
+          "track":[
+            {
+              "system_track_number":101,
+              "identity":"UNKNOWN",
+              "environment":"SURFACE",
+              "latitude":-5.16190724326617,
+              "longitude":116.325505768851,
+              "speed_over_ground":10,
+              "course_over_ground":4.71239,
+              "track_join_status":"NOT_JOINED_TRACK",
+              "track_fusion_status":"AIS_ONLY",
+              "source":"AIS_TYPE",
+              "track_name":"AS0102",
+              "track_phase_type":"TRACKING",
+              "airborne_indicator":"FALSE",
+              "iu_indicator":"FALSE",
+              "type_of_ship_or_cargo":"CARGO_2",
+              "ship_name":"MUI WO 1"
+            }
+          ],
+          "tactical_figure":[],
+          "reference_point":[],
+          "area_alert":[]
+        }
       }
     }
   }
