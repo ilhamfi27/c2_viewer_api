@@ -145,13 +145,13 @@ async def data_change_detection():
         # lama tidur
         await asyncio.sleep(3)
 
-async def sent_replay_track(session):
-    print(session)
+async def send_replay_track(session, user):
+    print(session, " send to ", user)
     with open('dummy_replay.json') as f:
         data = json.load(f)
 
     message = json.dumps({'data': data, 'data_type': 'replay'}, default=str)
-    await asyncio.wait([user.send(message) for user in USERS])
+    await user.send(message)
 
 async def get_websocket_messages(websocket):
     async for message in websocket:
@@ -165,7 +165,7 @@ async def get_websocket_messages(websocket):
                 await realtime_toggle_handler(websocket, data['action'])
                 print('replay')
         if 'request' in data:
-            await sent_replay_track(data['request'])
+            await send_replay_track(data['request'], websocket)
 
 async def realtime_toggle_handler(user, state):
     if state == 'realtime' and \
