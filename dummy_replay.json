@@ -1,7 +1,7 @@
 [
   {
     "session_id":1,
-    "name":"Rec Session 1",
+    "session_name":"Rec Session 1",
     "start_time":"2020-01-10 14:12:21.666",
     "update_rate":5,
     "durasi_session":50,
