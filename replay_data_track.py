@@ -364,7 +364,7 @@ async def get_replay():
     '''Get data session yang sudah selesai'''
     sql = "select id, to_char (start_time::timestamp, 'YYYY-MM-DD HH24:MI:SS') start_time, " \
                   " to_char (end_time::timestamp, 'YYYY-MM-DD HH24:MI:SS') end_time, " \
-                  "extract(epoch from (end_time::timestamp - start_time::timestamp)) as durasi " \
+                  "extract(epoch from (end_time::timestamp - start_time::timestamp)) as durasi, name " \
                   " from sessions " \
                   "WHERE end_time IS NOT null"
 
@@ -376,15 +376,19 @@ async def get_replay():
         start_time  = data[1]
         end_time    = data[2]
         durasi      = data[3]
+        name        = data[4]
         '''Buat panjang durasi dibagi dengan UPDATE_RATE. Buat list sesuai dengan panjang_replay'''
         panjang_replay = durasi / UPDATE_RATE
         track_list = [i for i in range(int(panjang_replay))]
         track_list = dict.fromkeys(track_list, "")
         result={
-                        'session_id'        : session_id,
-                        'update_rate'       : UPDATE_RATE,
-                        'durasi_session'    : durasi,
-                        'track_play'        : track_list
+                        "session_id"        : session_id,
+                        "start_time"        : start_time,
+                        "end_time"          : end_time,
+                        "session_name"      : name,
+                        "update_rate"       : UPDATE_RATE,
+                        "durasi_session"    : durasi,
+                        "track_play"        : track_list
                 }
         start_time  = (datetime.strptime(str(start_time), '%Y-%m-%d %H:%M:%S'))
         end_time    = (datetime.strptime(str(end_time), '%Y-%m-%d %H:%M:%S'))
@@ -532,11 +536,14 @@ async def get_replay():
 
             result['track_play'][t] = track_data
 
-
         track.append(result)
+        q_store_replay = "INSERT INTO stored_replay(update_rate, session_id, data)" \
+                         "	VALUES ("+str(UPDATE_RATE)+", "+str(session_id)+", '"+json.dumps(track)+"' )"
+        print(q_store_replay)
+        cur.execute(q_store_replay)
 
     replay_data_send.append(result)
-    print(json.dumps(replay_data_send))
+    # print(json.dumps(replay_data_send))
     if USERS:
         message = json.dumps(replay_data_send, default=str)
         await asyncio.wait([user.send(message) for user in USERS])
@@ -568,8 +575,8 @@ async def handler(websocket, path):
 start_server = websockets.serve(handler, "127.0.0.1", 8081)
 
 tasks = [
-    asyncio.ensure_future(get_replay()),
-    asyncio.ensure_future(start_server)
+    asyncio.ensure_future(start_server),
+    asyncio.ensure_future(get_replay())
 ]
 
 asyncio.get_event_loop().run_until_complete(asyncio.gather(*tasks))

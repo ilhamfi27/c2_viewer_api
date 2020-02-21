@@ -35,7 +35,6 @@ ar_mandatory_table_8 = [
 
 TRACK_STATE = {
     "cached_data": [],
-    "data_time": [],
     "removed_data": [],
     "existed_data": [],
 }
@@ -61,6 +60,7 @@ AREA_ALERT_STATE = {
 SESSION_STATE = {
     "cached_data": [],
     "existed_data": [],
+    "existed_data_count": 0,
 }
 
 # variable penyimpanan realtime user
@@ -97,8 +97,25 @@ async def register(websocket):
 async def unregister(websocket):
     USERS.remove(websocket)
 
+def check_if_state_must_be_emptied(states):
+    if SESSION_STATE['existed_data_count'] == 0:
+        print("***********************************NGISI*******************************************")
+        SESSION_STATE['existed_data_count'] = len(SESSION_STATE['existed_data'])
+
+    # kalo misal sessionnya nambah, maka kosongkan data memory
+    if SESSION_STATE['existed_data_count'] < len(SESSION_STATE['existed_data']):
+        print("***********************************KOSONGKANN*******************************************")
+        for state in states:
+            for key in state.keys():
+                state[key] = []
+        SESSION_STATE['existed_data_count'] = len(SESSION_STATE['existed_data'])
+
 async def data_change_detection():
     while True:
+        # mengecek apakah data cached tersebut butuh dikosongkan
+        # akan dikosongkan ketika sesi berganti
+        check_if_state_must_be_emptied([TRACK_STATE, AREA_ALERT_STATE])
+
         # shiptrack data ------------------------------------------------------------------------
         shiptrack_data = np.array(information_data())
         await data_processing(shiptrack_data, TRACK_STATE, USERS, NON_REALTIME_USERS, data_category="track", 
@@ -132,7 +149,7 @@ async def sent_replay_track(session):
     print(session)
     with open('dummy_replay.json') as f:
         data = json.load(f)
-    
+
     message = json.dumps({'data': data, 'data_type': 'replay'}, default=str)
     await asyncio.wait([user.send(message) for user in USERS])
 
@@ -155,6 +172,13 @@ async def realtime_toggle_handler(user, state):
         user in NON_REALTIME_USERS:
         NON_REALTIME_USERS.remove(user)
         USERS.add(user)
+        await send_cached_data(user, states=[
+            ['track', TRACK_STATE],
+            ['tactical_figure', TACTICAL_FIGURE_STATE],
+            ['reference_point', REFERENCE_POINT_STATE],
+            ['area_alert', AREA_ALERT_STATE],
+            ['session', SESSION_STATE],
+        ])
     elif state == 'replay' and \
         user in USERS:
         USERS.remove(user)
@@ -179,13 +203,13 @@ async def handler(websocket, path):
     finally:
         await unregister(websocket)
 
-# start_server = websockets.serve(handler, "192.168.43.14", 14045)
-start_server = websockets.serve(handler, "127.0.0.1", 8080) 
+if __name__ == '__main__':
+    start_server = websockets.serve(handler, "127.0.0.1", 8080)
 
-tasks = [
-    asyncio.ensure_future(data_change_detection()),
-    asyncio.ensure_future(start_server)
-]
+    tasks = [
+        asyncio.ensure_future(data_change_detection()),
+        asyncio.ensure_future(start_server)
+    ]
 
-asyncio.get_event_loop().run_until_complete(asyncio.gather(*tasks))
-asyncio.get_event_loop().run_forever()
+    asyncio.get_event_loop().run_until_complete(asyncio.gather(*tasks))
+    asyncio.get_event_loop().run_forever()

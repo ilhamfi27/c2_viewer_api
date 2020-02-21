@@ -130,7 +130,7 @@ def information_data():
             # if loop == 5:
             #     break
             columns = ('system_track_number','created_time','identity','environment',
-                        'source','track_name','iu_indicator','airborne_indicator')
+                        'source','track_name','iu_indicator','airborne_indicator', 'initiation_time')
             results = {}
             for ix in range(len(ar_mandatory_table_8)):
                 #dapatkan created time yang terakhir per 8 tabel tersebut
@@ -157,7 +157,8 @@ def information_data():
                         "   source," \
                         "   track_name," \
                         "   iu_indicator, " \
-                        "   airborne_indicator " \
+                        "   airborne_indicator," \
+                        "   initiation_time " \
                         "FROM   " + ar_mandatory_table_8[ix] + " " \
                         "WHERE session_id = " + str(session_id) + " " \
                         "AND system_track_number = " + str(ready) + " ORDER BY created_time DESC) ss LIMIT 1"
