@@ -28,7 +28,7 @@ q = q+" GROUP BY session_id,system_track_number ORDER BY 1,2"
 cur.execute(q)
 data = cur.fetchall()
 print(q)
-for x in range(1):
+for x in range(12):
     for row in data:
         for i in range(len(ar_mandatory_table_8)):
             q = "INSERT INTO "+ar_mandatory_table_8[i]
