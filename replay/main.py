@@ -8,4 +8,3 @@ conn = psycopg2.connect("host=127.0.0.1 \
 
 UPDATE_RATE = 5
 cur = conn.cursor()
-
