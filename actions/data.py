@@ -1,7 +1,7 @@
 import numpy as np
 import time
 import datetime
-from actions.user import *
+from actions.user import send_message, send_notification
 
 async def data_processing(important_data, STATE, USERS, NON_REALTIME_USERS,
                              data_category='', mandatory_attr='', must_remove=[], debug=True):

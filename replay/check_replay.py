@@ -334,13 +334,13 @@ def replay_track(session_id, start_time, end_time, added_track):
 
 # q = "SELECT aa.session_id as id, aa.*  FROM area_alerts aa  JOIN (    SELECT object_id,max(last_update_time) last_update_time     FROM area_alerts     WHERE session_id = '1' AND last_update_time > '2020-01-10 14:14:31' AND last_update_time < '2020-01-10 14:14:41'     GROUP BY object_id ) mx ON aa.object_id=mx.object_id and aa.last_update_time=mx.last_update_time  WHERE aa.session_id = '1'  AND aa.last_update_time > '2020-01-10 14:14:31' AND aa.last_update_time < '2020-01-10 14:14:41'  ORDER BY aa.object_id"
 
-def get_replay():
+def get_replay(session_id):
     '''Get data session yang sudah selesai'''
     sql = "select id, to_char (start_time::timestamp, 'YYYY-MM-DD HH24:MI:SS') start_time, " \
                   " to_char (end_time::timestamp, 'YYYY-MM-DD HH24:MI:SS') end_time, " \
                   "extract(epoch from (end_time::timestamp - start_time::timestamp)) as durasi, name " \
                   " from sessions " \
-                  "WHERE end_time IS NOT null"
+                  "WHERE end_time IS NOT null AND id="+str(session_id)+" "
 
     cur.execute(sql)
     query = cur.fetchall()
@@ -371,7 +371,7 @@ def get_replay():
         for t in range(len(track_list)+1):
             print(t, "/", len(track_list)+1)
             '''Buat start_time dan end_time untuk setiap segmen replay.
-                        Segmen durasi adalah satuan  replay track, 
+                        Segmen durasi adalah satuan  replay track,
                         contoh 2020-01-10 14:45:31 sampai dengan 2020-01-10 14:45:41
                         disebut sebagai 1 segmen durasi'''
 
@@ -576,17 +576,17 @@ def get_replay():
     print(json.dumps(replay_data_send))
 
 if __name__ == "__main__":
-    
+
     query = "SELECT id FROM sessions where end_time is not null";
     cur.execute(query)
     session = cur.fetchall()
     if(len(session)>0):
         print("checking replay")
         for s in session:
-            query = "SELECT * FROM stored_replay WHERE session_id="+str(s[0])+" AND update_rate= "+str(UPDATE_RATE)+" "
+            query = "SELECT * FROM stored_replay WHERE session_id="+str(s[0])+" AND update_rate="+str(UPDATE_RATE)+" "
             print(query)
             cur.execute(query)
             recorded = cur.fetchall()
             if(len(recorded) == 0):
                 print("generating replay")
-                get_replay()
+                get_replay(s[0])
