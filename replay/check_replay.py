@@ -1,17 +1,14 @@
 #!/usr/bin/env python
 
 # WS server example that synchronizes REALTIME_state across clients
-import psycopg2, json, asyncio, json, logging, websockets
-from datetime import timedelta, datetime
+import json
 import datetime as dt
-from functools import reduce
 import numpy as np
+from datetime import datetime
+from functools import reduce
+from base.db_connection import getconn
 
-conn = psycopg2.connect("host=127.0.0.1 \
-    dbname=c2viewer_test \
-    user=admin \
-    password=c2viewerdb123"
-)
+conn = getconn()
 
 UPDATE_RATE = 5
 cur = conn.cursor()
