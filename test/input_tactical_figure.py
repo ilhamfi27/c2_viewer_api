@@ -1,7 +1,7 @@
 import pandas as pd
 import psycopg2
 import time
-from connection import getconn 
+from base.db_connection import getconn
 
 conn = getconn()
 cur = conn.cursor()
