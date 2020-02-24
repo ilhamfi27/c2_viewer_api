@@ -147,8 +147,7 @@ async def data_change_detection():
 
 async def send_replay_track(session, user):
     print(session, " send to ", user)
-    with open('dummy_replay.json') as f:
-        data = json.load(f)
+    data = replay_data(session)
 
     message = json.dumps({'data': data, 'data_type': 'replay'}, default=str)
     await user.send(message)

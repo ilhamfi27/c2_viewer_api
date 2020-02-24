@@ -443,6 +443,35 @@ def session_data():
     cur.close()
     conn.close()
 
+def replay_data(session_id):
+
+    try:
+        columns = (
+            'rp.id',
+            'session_id',
+            'update_rate',
+            'name',
+            'start_time',
+            'end_time',
+            'data'
+        )
+
+        q = "SELECT rp.id, session_id, update_rate, name, start_time, end_time, data " \
+            "FROM stored_replay rp " \
+            "JOIN sessions s ON s.id = rp.session_id " \
+            "WHERE session_id = {};".format(session_id)
+        cur.execute(q)
+        data = []
+        for row in cur.fetchall():
+            object_id = row[0]
+            results = dict(zip(columns, row))
+            data.append([object_id, results])
+        return data
+    except psycopg2.Error as e:
+        print(e)
+    cur.close()
+    conn.close()
+
 async def data_processing(important_data, STATE, USERS, NON_REALTIME_USERS, 
                              data_category='', mandatory_attr='', must_remove=[], debug=True):
     # cek apakah datanya berisi?
