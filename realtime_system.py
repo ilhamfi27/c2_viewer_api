@@ -2,10 +2,14 @@
 
 # WS server example that synchronizes REALTIME_state across clients
 
+import asyncio
+import json
 import logging
 import websockets
+import numpy as np
 from stored_data import information_data, tactical_figure_data, reference_point_data, \
                             area_alert_data, session_data, replay_data
+from actions.data import data_processing, non_strict_data_processing
 
 logging.basicConfig()
 
