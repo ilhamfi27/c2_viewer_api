@@ -16,7 +16,8 @@ cur = conn.cursor()
 
 replay_data_send = []
 
-def replay_track(session_id, start_time, end_time, added_track):
+def replay_track(session_id, start_time, end_time, added_track, data_lengkap):
+    print("MASOOK")
     # print(start_time, end_time, added_track)
     return_data = []
     track_data = []
@@ -36,7 +37,7 @@ def replay_track(session_id, start_time, end_time, added_track):
         'replay_system_track_processing'
     ]
 
-    data_lengkap = [[], [], []]
+
     # BUTUH PERBAIKAN
     i = 0
     for table in ar_mandatory_table:
@@ -59,10 +60,12 @@ def replay_track(session_id, start_time, end_time, added_track):
         if len(data) > 0:
             for d in data:
                 data_lengkap[i].append(d[0])
+        i = i+1
         # print(data_lengkap)
-        data_ready = reduce(np.intersect1d, data_lengkap)
-        # print(data_ready)
-    if len(data_ready) < 3:
+    # Cek kelengkapan data, isi list tiap elemen, apakah lebih besar dar 0 di tiap listnya
+    data_ready = reduce(np.intersect1d, data_lengkap)
+    # print(data_ready)
+    if len(data_ready) > 0:
         recorded_track  = {}
         track_final =  {}
         for ready in data_ready:
@@ -314,8 +317,7 @@ def replay_track(session_id, start_time, end_time, added_track):
                 cur.execute(sql_status)
                 data_status = cur.fetchall()
                 track_phase_type = data_status[0][2]
-                if len(
-                        track_phase_type) > 0 and track_phase_type == 'DELETED_BY_SYSTEM' or track_phase_type == 'DELETED_BY_SENSOR':
+                if len(track_phase_type) > 0 and track_phase_type == 'DELETED_BY_SYSTEM' or track_phase_type == 'DELETED_BY_SENSOR':
                     added_track.remove(tf_status)
                     track_data[i] = track_data[i] + 'R'
                 else:
@@ -327,6 +329,7 @@ def replay_track(session_id, start_time, end_time, added_track):
     # print(start_time, ", " ,  end_time, ", ",track_data)
     return_data.append(track_final)
     return_data.append(added_track)
+    return_data.append(data_lengkap)
     # print(len(return_data[0]), len(return_data[1]))
     return return_data
 
@@ -368,6 +371,7 @@ def get_replay(session_id):
         end_time    = (datetime.strptime(str(end_time), '%Y-%m-%d %H:%M:%S'))
         added_track = []
         '''Looping sebanyak panjang replay'''
+        data_lengkap = [[], [], []]
         for t in range(len(track_list)+1):
             print(t, "/", len(track_list)+1)
             '''Buat start_time dan end_time untuk setiap segmen replay.
@@ -397,12 +401,13 @@ def get_replay(session_id):
             }
             '''Jalankan query untuk setiap tabel per setiap segmen durasi'''
 
-            track_replay_data = replay_track(session_id, str(start_time), str(end_time), added_track)
+            track_replay_data = replay_track(session_id, str(start_time), str(end_time), added_track, data_lengkap)
             if len(track_replay_data[0]) > 0:
                 track_data['data']['track'].append(track_replay_data[0])
             else:
                 track_data['data']['track'] = []
             added_track = track_replay_data[1]
+            data_lengkap = track_replay_data[2]
             # print(track_replay_data[1])
             # for i in track_replay_data[1]:
             #     if i not in added_track :
