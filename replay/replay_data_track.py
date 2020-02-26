@@ -7,7 +7,7 @@ from main import *
 USERS = set()
 replay_data_send = []
 
-def replay_track(session_id, start_time, end_time, added_track):
+def replay_track(session_id, start_time, end_time, added_track, data_lengkap):
     # print(start_time, end_time, added_track)
     return_data = []
     track_data = []
@@ -27,7 +27,7 @@ def replay_track(session_id, start_time, end_time, added_track):
         'replay_system_track_processing'
     ]
 
-    data_lengkap = [[], [], []]
+    # data_lengkap = [[], [], []]
     # BUTUH PERBAIKAN
     i = 0
     for table in ar_mandatory_table:
@@ -50,12 +50,14 @@ def replay_track(session_id, start_time, end_time, added_track):
         if len(data) > 0:
             for d in data:
                 data_lengkap[i].append(d[0])
-        # print(data_lengkap)
-        data_ready = reduce(np.intersect1d, data_lengkap)
+        i = i +1
+    print(start_time, end_time, data_lengkap)
+    data_ready = reduce(np.intersect1d, data_lengkap)
         # print(data_ready)
-    if len(data_ready) < 3:
+    track_final = {}
+    if len(data_ready) > 0:
         recorded_track  = {}
-        track_final =  {}
+
         for ready in data_ready:
             track_name = ""
             # General
@@ -282,7 +284,7 @@ def replay_track(session_id, start_time, end_time, added_track):
                                 "course_over_ground": course_over_ground,
                                 "last_update_time": last_update_time,
                                 "mmsi_number": mmsi_number,
-                                "ship_na": ship_na,
+                                "ship_name": ship_name,
                                 "radio_call_sign": radio_call_sign,
                                 "imo_number": imo_number,
                                 "navigation_status": navigation_status,
@@ -298,8 +300,8 @@ def replay_track(session_id, start_time, end_time, added_track):
                                 "originator": originator,
                                 "link_status": link_status,
                                 "mission_name": mission_name,
-                                "mission_rou": mission_rou,
-                                "voice_call_s": voice_call_s,
+                                "mission_route": mission_route,
+                                "voice_call_sig": voice_call_sig,
                                 "voice_frequency_channel": voice_frequency_channel,
                                 "fuel_status": fuel_status,
                                 "mission_start": mission_start,
@@ -320,25 +322,30 @@ def replay_track(session_id, start_time, end_time, added_track):
                             FROM replay_system_track_processing st \
                             WHERE st.session_id = " + str(session_id) + " \
                             AND st.created_time > '" + start_time + "' AND st.created_time < '" + end_time + "' \
-                            AND st.system_track_number = " + track_data[i] + " \
-                            ORDER BY st.system_track_number " \
-                                                                             "GROUP BY st.system_track_number"
+                            AND st.system_track_number = " + str(ready) + " \
+                            GROUP BY st.system_track_number, st.track_phase_type  \
+                            "
+                print(sql_status)
                 cur.execute(sql_status)
                 data_status = cur.fetchall()
-                track_phase_type = data_status[0][2]
-                if len(
-                        track_phase_type) > 0 and track_phase_type == 'DELETED_BY_SYSTEM' or track_phase_type == 'DELETED_BY_SENSOR':
-                    added_track.remove(tf_status)
-                    track_data[i] = track_data[i] + 'R'
-                else:
-                    track_data[i] = track_data[i] + 'U'
-            track_final[index]['system_track_number'] = track_data[i]
+                if len(data_status)>0:
+                    track_phase_type = data_status[0][2]
+                    if len(track_phase_type) > 0 and track_phase_type == 'DELETED_BY_SYSTEM' or track_phase_type == 'DELETED_BY_SENSOR':
+                        added_track.remove(tf_status)
+                        track_data[i] = track_data[i] + 'R'
+                    else:
+                        track_data[i] = track_data[i] + 'U'
+            if index not in track_final:
+                track_final[index] = {'system_track_number' : track_data[i]}
+            else:
+                track_final[index]['system_track_number'] = track_data[i]
 
         # print(start_time, end_time, track_data)
 
     # print(start_time, ", " ,  end_time, ", ",track_data)
     return_data.append(track_final)
     return_data.append(added_track)
+    return_data.append(data_lengkap)
     # print(len(return_data[0]), len(return_data[1]))
     return return_data
 
@@ -357,6 +364,7 @@ async def get_replay():
     cur.execute(sql)
     query = cur.fetchall()
     track = []
+    data_lengkap = [[],[],[]]
     for data in query:
         session_id  = data[0]
         start_time  = data[1]
@@ -408,12 +416,13 @@ async def get_replay():
             }
             '''Jalankan query untuk setiap tabel per setiap segmen durasi'''
 
-            track_replay_data = replay_track(session_id, str(start_time), str(end_time), added_track)
+            track_replay_data = replay_track(session_id, str(start_time), str(end_time), added_track, data_lengkap)
             if len(track_replay_data[0]) > 0:
                 track_data['data']['track'].append(track_replay_data[0])
             else:
                 track_data['data']['track'] = []
             added_track = track_replay_data[1]
+            data_lengkap = track_replay_data[2]
             # print(track_replay_data[1])
             # for i in track_replay_data[1]:
             #     if i not in added_track :
