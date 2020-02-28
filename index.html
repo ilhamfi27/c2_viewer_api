@@ -43,6 +43,7 @@
             <div class="realtime button">Realtime</div>
             <div class="replay button">Replay</div>
             <div class="session button">Session 1</div>
+            <div class="dot button">Get Dot 1</div>
         </div>
         <div class="state">
             <span class="users">?</span> online
@@ -51,6 +52,7 @@
             var realtime = document.querySelector('.realtime'),
                 replay = document.querySelector('.replay'),
                 session = document.querySelector('.session'),
+                dot = document.querySelector('.dot'),
                 value = document.querySelector('.value'),
                 users = document.querySelector('.users'),
                 websocket = new WebSocket("ws://127.0.0.1:8080/");
@@ -61,7 +63,10 @@
                 websocket.send(JSON.stringify({action: 'replay'}));
             }
             session.onclick = function (event) {
-                websocket.send(JSON.stringify({action: 'replay', request: 1}));
+                websocket.send(JSON.stringify({action: 'replay', request: 6}));
+            }
+            dot.onclick = function (event) {
+                websocket.send(JSON.stringify({request_dots: 1}));
             }
             websocket.onmessage = function (event) {
                 data = JSON.parse(event.data);

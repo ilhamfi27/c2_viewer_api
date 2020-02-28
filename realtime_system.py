@@ -8,7 +8,7 @@ import logging
 import websockets
 import numpy as np
 from stored_data import information_data, tactical_figure_data, reference_point_data, \
-                            area_alert_data, session_data, replay_data
+                            area_alert_data, session_data, replay_data, history_dots
 from actions.data import data_processing, non_strict_data_processing
 
 logging.basicConfig()
@@ -149,6 +149,13 @@ async def send_replay_track(session, user):
     message = json.dumps({'data': data, 'data_type': 'replay'}, default=str)
     await user.send(message)
 
+async def send_history_dot(system_track_number, user):
+    print(system_track_number, " send to ", user)
+    data = history_dots(system_track_number)
+
+    message = json.dumps({'data': data, 'data_type': 'history_dots'}, default=str)
+    await user.send(message)
+
 async def get_websocket_messages(websocket):
     async for message in websocket:
         data = json.loads(message)
@@ -162,6 +169,8 @@ async def get_websocket_messages(websocket):
                 print('replay')
         if 'request' in data:
             await send_replay_track(data['request'], websocket)
+        if 'request_dots' in data:
+            await send_history_dot(data['request_dots'], websocket)
 
 async def realtime_toggle_handler(user, state):
     if state == 'realtime' and \

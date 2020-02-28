@@ -452,3 +452,30 @@ def replay_data(session_id):
         print(e)
     cur.close()
     conn.close()
+
+def history_dots(system_track_number):
+    try:
+        columns = (
+            'latitude',
+            'longitude',
+            'last_update_time',
+        )
+        the_query = "select " \
+                    "   max(latitude), " \
+                    "   max(longitude), " \
+                    "   last_update_time " \
+                    "from public.replay_system_track_kinetic " \
+                    "where system_track_number = {} " \
+                    "group by last_update_time " \
+                    "order by last_update_time asc;" \
+                    .format(system_track_number)
+        cur.execute(the_query)
+        data = []
+        for row in cur.fetchall():
+            results = dict(zip(columns, row))
+            data.append(results)
+        return data
+    except psycopg2.Error as e:
+        print(e)
+    cur.close()
+    conn.close()
