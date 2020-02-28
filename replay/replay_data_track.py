@@ -1,11 +1,25 @@
 #!/usr/bin/env python
 
 # WS server example that synchronizes REALTIME_state across clients
-from main import *
+import json
+import datetime
+import numpy as np
+import asyncio
+import datetime as dt
+from functools import reduce
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from base.db_connection import getconn
+
+conn = getconn()
+cur = conn.cursor()
 
 
 USERS = set()
 replay_data_send = []
+UPDATE_RATE = 10
+
 class DatesToStrings(json.JSONEncoder):
     def _encode(self, obj):
         if isinstance(obj, dict):
@@ -38,7 +52,6 @@ def replay_track(session_id, start_time, end_time, added_track, data_lengkap):
         'replay_system_track_processing'
     ]
 
-    # data_lengkap = [[], [], []]
     # BUTUH PERBAIKAN
     i = 0
     for table in ar_mandatory_table:
@@ -61,10 +74,10 @@ def replay_track(session_id, start_time, end_time, added_track, data_lengkap):
         if len(data) > 0:
             for d in data:
                 data_lengkap[i].append(d[0])
-        i = i +1
+        i = i + 1
 
     data_ready = reduce(np.intersect1d, data_lengkap)
-    print(data_ready, start_time, end_time)
+    print("data ready and time from replay_track", data_ready, start_time, end_time)
         # print(data_ready)
     track_final = {}
     if len(data_ready) > 0:
@@ -302,7 +315,7 @@ def replay_track(session_id, start_time, end_time, added_track, data_lengkap):
                                 "platform_activity": platform_activity,
                                 "specific_type": specific_type}
 
-        print(recorded_track)
+        print("recorded track from replay_track", recorded_track)
         track_data = [key for key in recorded_track]
         for i in range(len(track_data)):
             index = track_data[i][1:]
@@ -338,8 +351,6 @@ def replay_track(session_id, start_time, end_time, added_track, data_lengkap):
     # print(len(return_data[0]), len(return_data[1]))
     return return_data
 
-
-
 # q = "SELECT aa.session_id as id, aa.*  FROM area_alerts aa  JOIN (    SELECT object_id,max(last_update_time) last_update_time     FROM area_alerts     WHERE session_id = '1' AND last_update_time > '2020-01-10 14:14:31' AND last_update_time < '2020-01-10 14:14:41'     GROUP BY object_id ) mx ON aa.object_id=mx.object_id and aa.last_update_time=mx.last_update_time  WHERE aa.session_id = '1'  AND aa.last_update_time > '2020-01-10 14:14:31' AND aa.last_update_time < '2020-01-10 14:14:41'  ORDER BY aa.object_id"
 
 async def get_replay():
@@ -373,20 +384,20 @@ async def get_replay():
                         "durasi_session"    : str(durasi),
                         "track_play"        : str(track_list)
                 }
-        start_time  = (datetime.strptime(str(start_time), '%Y-%m-%d %H:%M:%S'))
-        end_time    = (datetime.strptime(str(end_time), '%Y-%m-%d %H:%M:%S'))
+        start_time  = (datetime.datetime.strptime(str(start_time), '%Y-%m-%d %H:%M:%S'))
+        end_time    = (datetime.datetime.strptime(str(end_time), '%Y-%m-%d %H:%M:%S'))
         added_track = []
         '''Looping sebanyak panjang replay'''
         for t in range(len(track_list)+1):
             '''Buat start_time dan end_time untuk setiap segmen replay.
-                        Segmen durasi adalah satuan  replay track, 
+                        Segmen durasi adalah satuan  replay track,
                         contoh 2020-01-10 14:45:31 sampai dengan 2020-01-10 14:45:41
                         disebut sebagai 1 segmen durasi'''
 
                     # print(t)
                     # print(str(start_time) + " sampai dengan " + str(end_time))
             if t == 0:
-                    tmp_time = (datetime.strptime(str(start_time), '%Y-%m-%d %H:%M:%S'))
+                    tmp_time = (datetime.datetime.strptime(str(start_time), '%Y-%m-%d %H:%M:%S'))
                     tmp_time += dt.timedelta(seconds=UPDATE_RATE)
                     end_time = tmp_time
             else:
@@ -571,57 +582,26 @@ async def get_replay():
 
             result['track_play'] ={str(t):track_data}
 
-        track.append(result)
-        # q_store_replay = "INSERT INTO stored_replay(update_rate, session_id, data)" \
-        #                  "	VALUES ("+str(UPDATE_RATE)+", "+str(session_id)+", '"+str(json.dumps(track))+"' )"
-        # cur.execute(q_store_replay)
-        # conn.commit()
-        # print(q_store_replay)
+            track.append(result)
+            q_store_replay = "INSERT INTO stored_replay(update_rate, session_id, data)" \
+                             "	VALUES ("+str(UPDATE_RATE)+", "+str(session_id)+", '"+str(json.dumps(track))+"' )"
+            cur.execute(q_store_replay)
+            conn.commit()
+            print(q_store_replay)
     # print(json.dumps(result))
-    replay_data_send.append(result)
-    print(replay_data_send)
-    print(json.dumps(replay_data_send, cls=DatesToStrings))
-    q_store_replay = "INSERT INTO stored_replay(update_rate, session_id, data) \
-                     	VALUES ("+str(UPDATE_RATE)+", "+str(session_id)+", '"+str(json.dumps(result))+"' )"
-    cur.execute(q_store_replay)
-    conn.commit()
-    
+    # replay_data_send.append(result)
+    # print("send data replay from get_replay", replay_data_send)
+    # print("send json from get_replay", json.dumps(replay_data_send, cls=DatesToStrings))
+    # q_store_replay = "INSERT INTO stored_replay(update_rate, session_id, data) \
+    #                     VALUES ("+str(UPDATE_RATE)+", "+str(session_id)+", '"+str(json.dumps(result))+"' )"
+    # cur.execute(q_store_replay)
+    # conn.commit()
 
-    if USERS:
-        message = json.dumps(replay_data_send, default=str)
-        await asyncio.wait([user.send(message) for user in USERS])
+if __name__ == '__main__':
+    get_replay()
+    tasks = [
+        asyncio.ensure_future(get_replay()),
+    ]
 
-async def send_reply_data():
-    if USERS:
-        message = json.dumps(replay_data_send, default=str)
-        await asyncio.wait([user.send(message) for user in USERS])
-
-async def register(websocket):
-    USERS.add(websocket)
-    print(USERS)
-
-async def unregister(websocket):
-    USERS.remove(websocket)
-async def handler(websocket, path):
-    await register(websocket),
-    try:
-        await send_reply_data()
-        async for message in websocket:
-            pass
-    except websockets.exceptions.ConnectionClosedError:
-        print("connection error")
-    finally:
-        await unregister(websocket)
-
-# start_server = websockets.serve(handler, "10.20.112.217", 8080)
-# start_server = websockets.serve(handler, "192.168.43.14", 14045)
-start_server = websockets.serve(handler, "127.0.0.1", 8082)
-
-tasks = [
-    asyncio.ensure_future(start_server),
-    asyncio.ensure_future(get_replay())
-]
-
-asyncio.get_event_loop().run_until_complete(asyncio.gather(*tasks))
-asyncio.get_event_loop().run_forever()
-
+    asyncio.get_event_loop().run_until_complete(asyncio.gather(*tasks))
+    # asyncio.get_event_loop().run_forever()
