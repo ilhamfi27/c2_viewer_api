@@ -72,7 +72,56 @@ def replay_track(session_id, start_time, end_time, added_track, data_lengkap):
         for ready in data_ready:
             recorded_track  = {}
             if ready not in track_final:
-                track_final[str(ready)] = {}
+                track_final[str(ready)] = {            "track_name" : "",
+            # :eneral,
+            "environment" : "",
+            "source_data" : "",
+            "iu_indicator" : "",
+            "identity" : "",
+            "fusion_status" : "",
+            "join_status" : "",
+            "track_phase" : "",
+            "suspect_level" : "",
+            "initiation_time" : "",
+            # :inetic,
+            "heading" : "",
+            "latitude" : "",
+            "longitude" : "",
+            "altitude" : "",
+            "speed_over_ground" : "",
+            "course_over_ground" : "",
+            "last_update_time" : "",
+            # :is Data,
+            "mmsi_number" : "",
+            "ship_name" : "",
+            "radio_call_sign" : "",
+            "imo_number" : "",
+            "navigation_status" : "",
+            "destination" : "",
+            "dimension_of_ship" : "",
+            "ship_type" : "",
+            "rate_of_turn" : "",
+            "gross_tonnage" : "",
+            "country" : "",
+            "eta" : "",
+            "vendor_id" : "",
+            # :rack link,
+            "network_track_number" : "",
+            "originator" : "",
+            "link_status" : "",
+            # :ission,
+            "mission_name" : "",
+            "mission_route" : "",
+            "voice_call_sig" : "",
+            "voice_frequency_channel" : "",
+            "fuel_status" : "",
+            "mission_start" : "",
+            "mission_finish" : "",
+            # :dentification,
+            "platform_type" : "",
+            "platform_activity" : "",
+            "specific_type" : "",
+            "sql_track" : "",}
         
             for table in ar_mandatory_table_8:
                 sql_track = "SELECT * FROM " + table + " st \
@@ -290,7 +339,7 @@ async def get_replay():
         added_track = []
         
         '''Looping sebanyak panjang replay'''
-        for t in range(len(track_list)+1):
+        for t in range(len(track_list)):
             result["track_play"][str(t)] = {
                                 "track"             : [],
                                 "reference_point"   : [],
@@ -497,10 +546,10 @@ async def get_replay():
     replay_data_send.append(result)
     # print(replay_data_send)
     print(json.dumps(replay_data_send, default=str))
-    # q_store_replay = "INSERT INTO stored_replay(update_rate, session_id, data) \
-    #                  	VALUES ("+str(UPDATE_RATE)+", "+str(session_id)+", '"+str(json.dumps(result))+"' )"
-    # cur.execute(q_store_replay)
-    # conn.commit()
+    q_store_replay = "INSERT INTO stored_replay(update_rate, session_id, data) \
+                      	VALUES ("+str(UPDATE_RATE)+", "+str(session_id)+", '"+str(json.dumps(result))+"' )"
+    cur.execute(q_store_replay)
+    conn.commit()
     
 
     if USERS:
