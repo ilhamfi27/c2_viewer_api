@@ -66,13 +66,16 @@ def replay_track(session_id, start_time, end_time, added_track, data_lengkap):
     data_ready = reduce(np.intersect1d, data_lengkap)
     # print(data_ready, start_time, end_time)
         # print(data_ready)
-    track_final = {}
+    track_final = []
     if len(data_ready) > 0:
         
         for ready in data_ready:
+            track = {}
             recorded_track  = {}
             if ready not in track_final:
-                track_final[str(ready)] = {            "track_name" : "",
+                track = {            
+                    "system_track_number" : str(ready),
+                    "track_name" : "",
             # :eneral,
             "environment" : "",
             "source_data" : "",
@@ -145,12 +148,12 @@ def replay_track(session_id, start_time, end_time, added_track, data_lengkap):
                     
                     if table == 'replay_system_track_general':
                         # print(sql_track)
-                        track_final[str(ready)]['created_time']        = str(d[1])
-                        track_final[str(ready)]['source_data']         = str(d[2])
-                        track_final[str(ready)]['environment']         = str(d[5])
-                        track_final[str(ready)]['iu_indicator']        = str(d[12])
-                        track_final[str(ready)]['identity']            = str(d[4])
-                        track_final[str(ready)]['initiation_time']     = str(d[19])
+                        track['created_time']        = str(d[1])
+                        track['source_data']         = str(d[2])
+                        track['environment']         = str(d[5])
+                        track['iu_indicator']        = str(d[12])
+                        track['identity']            = str(d[4])
+                        track['initiation_time']     = str(d[19])
                         
                         if (str(d[2]) == 'AIS_TYPE' or str(d[2]) == 'DATALINK'):
                             q_ais_data = "SELECT  * \
@@ -167,21 +170,21 @@ def replay_track(session_id, start_time, end_time, added_track, data_lengkap):
                             cur.execute(q_ais_data)
                             data = cur.fetchall()
                             if len(data) > 0:
-                                track_final[str(ready)]['mmsi_number']         = str(d[2])
-                                track_final[str(ready)]['ship_name']       = str(d[3])
-                                track_final[str(ready)]['radio_call_sign'] = str(d[4])
-                                track_final[str(ready)]['imo_number'] = str(d[5])
-                                track_final[str(ready)]['navigation_status'] = str(d[6])
-                                track_final[str(ready)]['destination'] = str(d[7])
-                                track_final[str(ready)]['dimension_of_ship'] = str(d[8])
-                                track_final[str(ready)]['ship_type'] = str(d[9])
-                                track_final[str(ready)]['rate_of_turn'] = str([10])
-                                track_final[str(ready)]['gross_tonnage'] = str([12])
-                                track_final[str(ready)]['country'] = str([13])
-                                track_final[str(ready)]['eta'] = str([15])
-                                track_final[str(ready)]['vendor_id'] = str([16])
+                                track['mmsi_number']         = str(d[2])
+                                track['ship_name']       = str(d[3])
+                                track['radio_call_sign'] = str(d[4])
+                                track['imo_number'] = str(d[5])
+                                track['navigation_status'] = str(d[6])
+                                track['destination'] = str(d[7])
+                                track['dimension_of_ship'] = str(d[8])
+                                track['ship_type'] = str(d[9])
+                                track['rate_of_turn'] = str([10])
+                                track['gross_tonnage'] = str([12])
+                                track['country'] = str([13])
+                                track['eta'] = str([15])
+                                track['vendor_id'] = str([16])
 
-                        if track_final[str(ready)]['iu_indicator']:    
+                        if track['iu_indicator']:    
                             sql_mission = "SELECT * FROM replay_system_track_mission st \
                                         JOIN (" \
                                             "SELECT system_track_number,max(created_time) created_time " \
@@ -198,57 +201,57 @@ def replay_track(session_id, start_time, end_time, added_track, data_lengkap):
                             cur.execute(sql_mission)
                             data = cur.fetchall()  
                             for d in data:                      
-                                track_final[str(ready)]['mission_name']            = str(d[2])
-                                track_final[str(ready)]['mission_route']           = str(d[3])
-                                track_final[str(ready)]['voice_call_sig']          = str(d[4])
-                                track_final[str(ready)]['voice_frequency_channel'] = str(d[5])
-                                track_final[str(ready)]['fuel_status']             = str(d[6])
-                                track_final[str(ready)]['mission_start']           = str(d[8])
-                                track_final[str(ready)]['mission_finish']          = str(d[9])
-                                track_final[str(ready)]['created_time'] = str(d[10])
+                                track['mission_name']            = str(d[2])
+                                track['mission_route']           = str(d[3])
+                                track['voice_call_sig']          = str(d[4])
+                                track['voice_frequency_channel'] = str(d[5])
+                                track['fuel_status']             = str(d[6])
+                                track['mission_start']           = str(d[8])
+                                track['mission_finish']          = str(d[9])
+                                track['created_time'] = str(d[10])
 
                     if table == 'replay_system_track_processing':
-                        track_final[str(ready)]['fusion_status']       = str(d[2])
-                        track_final[str(ready)]['join_status']         = str(d[3])
-                        track_final[str(ready)]['track_phase']         = str(d[5])
-                        track_final[str(ready)]['suspect_level']       = str(d[6])
-                        track_final[str(ready)]['created_time'] = str(d[7])
+                        track['fusion_status']       = str(d[2])
+                        track['join_status']         = str(d[3])
+                        track['track_phase']         = str(d[5])
+                        track['suspect_level']       = str(d[6])
+                        track['created_time'] = str(d[7])
 
    
 
                     if table == 'replay_system_track_kinetic':
-                        track_final[str(ready)]['heading']             = str(d[3])
-                        track_final[str(ready)]['latitude']            = str(d[4])
-                        track_final[str(ready)]['longitude']           = str(d[5])
-                        track_final[str(ready)]['altitude']            = str(d[8])
-                        track_final[str(ready)]['speed_over_ground']   = str(d[9])
-                        track_final[str(ready)]['course_over_ground']  = str(d[10])
-                        track_final[str(ready)]['last_update_time']    = str(d[11])
-                        track_final[str(ready)]['created_time'] = str(d[12])
+                        track['heading']             = str(d[3])
+                        track['latitude']            = str(d[4])
+                        track['longitude']           = str(d[5])
+                        track['altitude']            = str(d[8])
+                        track['speed_over_ground']   = str(d[9])
+                        track['course_over_ground']  = str(d[10])
+                        track['last_update_time']    = str(d[11])
+                        track['created_time'] = str(d[12])
                         
                     if table == 'replay_system_track_link':
-                        track_final[str(ready)]['network_track_number']    = str(d[3])
-                        track_final[str(ready)]['originator']              = str(d[5])
-                        track_final[str(ready)]['link_status']             = str(d[8])
-                        track_final[str(ready)]['created_time'] = str(d[9])
+                        track['network_track_number']    = str(d[3])
+                        track['originator']              = str(d[5])
+                        track['link_status']             = str(d[8])
+                        track['created_time'] = str(d[9])
                     
                     
                      
                     if table == 'replay_system_track_identification':
-                        track_final[str(ready)]['environment'] = d[3]
+                        track['environment'] = d[3]
                         if d[3] == 'AIR':
-                            track_final[str(ready)]['platform_type']       = str(d[4])
-                            track_final[str(ready)]['platform_activity']   = str(d[7])
-                            track_final[str(ready)]['specific_type']       = str(d[10])
+                            track['platform_type']       = str(d[4])
+                            track['platform_activity']   = str(d[7])
+                            track['specific_type']       = str(d[10])
                         elif d[3] == 'SURFACE':
-                            track_final[str(ready)]['platform_type']       = str(d[5])
-                            track_final[str(ready)]['platform_activity']   = str(d[8])
-                            track_final[str(ready)]['specific_type']       = str(d[11])
+                            track['platform_type']       = str(d[5])
+                            track['platform_activity']   = str(d[8])
+                            track['specific_type']       = str(d[11])
                         else:
-                            track_final[str(ready)]['platform_type']       = str(d[6])
-                            track_final[str(ready)]['platform_activity']   = str(d[9])
-                            track_final[str(ready)]['specific_type']       = str(d[12])
-                        track_final[str(ready)]['created_time'] = str(d[13])
+                            track['platform_type']       = str(d[6])
+                            track['platform_activity']   = str(d[9])
+                            track['specific_type']       = str(d[12])
+                        track['created_time'] = str(d[13])
                       
 
 
@@ -257,7 +260,7 @@ def replay_track(session_id, start_time, end_time, added_track, data_lengkap):
                     # else:
                     #     if created_time > str(recorded_track[t_status]):
                     #         recorded_track[t_status] = str(created_time)
-            
+            track_final.append(track)        
     print(track_final)
             
 
