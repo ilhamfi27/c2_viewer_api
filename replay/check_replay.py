@@ -1,23 +1,14 @@
 #!/usr/bin/env python
 
 # WS server example that synchronizes REALTIME_state across clients
-import json
-import datetime as dt
-import numpy as np
-from datetime import datetime
-from functools import reduce
-from base.db_connection import getconn
 
-conn = getconn()
 
-UPDATE_RATE = 5
-cur = conn.cursor()
+from main import *
 
 
 replay_data_send = []
 
-def replay_track(session_id, start_time, end_time, added_track, data_lengkap):
-    print("MASOOK")
+def replay_track(session_id, start_time, end_time, added_track):
     # print(start_time, end_time, added_track)
     return_data = []
     track_data = []
@@ -37,7 +28,7 @@ def replay_track(session_id, start_time, end_time, added_track, data_lengkap):
         'replay_system_track_processing'
     ]
 
-
+    data_lengkap = [[], [], []]
     # BUTUH PERBAIKAN
     i = 0
     for table in ar_mandatory_table:
@@ -60,12 +51,10 @@ def replay_track(session_id, start_time, end_time, added_track, data_lengkap):
         if len(data) > 0:
             for d in data:
                 data_lengkap[i].append(d[0])
-        i = i+1
         # print(data_lengkap)
-    # Cek kelengkapan data, isi list tiap elemen, apakah lebih besar dar 0 di tiap listnya
-    data_ready = reduce(np.intersect1d, data_lengkap)
-    # print(data_ready)
-    if len(data_ready) > 0:
+        data_ready = reduce(np.intersect1d, data_lengkap)
+        # print(data_ready)
+    if len(data_ready) < 3:
         recorded_track  = {}
         track_final =  {}
         for ready in data_ready:
@@ -317,7 +306,8 @@ def replay_track(session_id, start_time, end_time, added_track, data_lengkap):
                 cur.execute(sql_status)
                 data_status = cur.fetchall()
                 track_phase_type = data_status[0][2]
-                if len(track_phase_type) > 0 and track_phase_type == 'DELETED_BY_SYSTEM' or track_phase_type == 'DELETED_BY_SENSOR':
+                if len(
+                        track_phase_type) > 0 and track_phase_type == 'DELETED_BY_SYSTEM' or track_phase_type == 'DELETED_BY_SENSOR':
                     added_track.remove(tf_status)
                     track_data[i] = track_data[i] + 'R'
                 else:
@@ -329,7 +319,6 @@ def replay_track(session_id, start_time, end_time, added_track, data_lengkap):
     # print(start_time, ", " ,  end_time, ", ",track_data)
     return_data.append(track_final)
     return_data.append(added_track)
-    return_data.append(data_lengkap)
     # print(len(return_data[0]), len(return_data[1]))
     return return_data
 
@@ -337,13 +326,13 @@ def replay_track(session_id, start_time, end_time, added_track, data_lengkap):
 
 # q = "SELECT aa.session_id as id, aa.*  FROM area_alerts aa  JOIN (    SELECT object_id,max(last_update_time) last_update_time     FROM area_alerts     WHERE session_id = '1' AND last_update_time > '2020-01-10 14:14:31' AND last_update_time < '2020-01-10 14:14:41'     GROUP BY object_id ) mx ON aa.object_id=mx.object_id and aa.last_update_time=mx.last_update_time  WHERE aa.session_id = '1'  AND aa.last_update_time > '2020-01-10 14:14:31' AND aa.last_update_time < '2020-01-10 14:14:41'  ORDER BY aa.object_id"
 
-def get_replay(session_id):
+def get_replay():
     '''Get data session yang sudah selesai'''
     sql = "select id, to_char (start_time::timestamp, 'YYYY-MM-DD HH24:MI:SS') start_time, " \
                   " to_char (end_time::timestamp, 'YYYY-MM-DD HH24:MI:SS') end_time, " \
                   "extract(epoch from (end_time::timestamp - start_time::timestamp)) as durasi, name " \
                   " from sessions " \
-                  "WHERE end_time IS NOT null AND id="+str(session_id)+" "
+                  "WHERE end_time IS NOT null"
 
     cur.execute(sql)
     query = cur.fetchall()
@@ -371,11 +360,9 @@ def get_replay(session_id):
         end_time    = (datetime.strptime(str(end_time), '%Y-%m-%d %H:%M:%S'))
         added_track = []
         '''Looping sebanyak panjang replay'''
-        data_lengkap = [[], [], []]
         for t in range(len(track_list)+1):
-            print(t, "/", len(track_list)+1)
             '''Buat start_time dan end_time untuk setiap segmen replay.
-                        Segmen durasi adalah satuan  replay track,
+                        Segmen durasi adalah satuan  replay track, 
                         contoh 2020-01-10 14:45:31 sampai dengan 2020-01-10 14:45:41
                         disebut sebagai 1 segmen durasi'''
 
@@ -401,13 +388,12 @@ def get_replay(session_id):
             }
             '''Jalankan query untuk setiap tabel per setiap segmen durasi'''
 
-            track_replay_data = replay_track(session_id, str(start_time), str(end_time), added_track, data_lengkap)
+            track_replay_data = replay_track(session_id, str(start_time), str(end_time), added_track)
             if len(track_replay_data[0]) > 0:
                 track_data['data']['track'].append(track_replay_data[0])
             else:
                 track_data['data']['track'] = []
             added_track = track_replay_data[1]
-            data_lengkap = track_replay_data[2]
             # print(track_replay_data[1])
             # for i in track_replay_data[1]:
             #     if i not in added_track :
@@ -581,17 +567,21 @@ def get_replay(session_id):
     print(json.dumps(replay_data_send))
 
 if __name__ == "__main__":
-
+    
     query = "SELECT id FROM sessions where end_time is not null";
     cur.execute(query)
     session = cur.fetchall()
     if(len(session)>0):
         print("checking replay")
         for s in session:
-            query = "SELECT * FROM stored_replay WHERE session_id="+str(s[0])+" AND update_rate="+str(UPDATE_RATE)+" "
+            query = "SELECT * FROM stored_replay WHERE session_id="+str(s[0])+" AND update_rate= "+str(UPDATE_RATE)+" "
             print(query)
             cur.execute(query)
             recorded = cur.fetchall()
             if(len(recorded) == 0):
                 print("generating replay")
-                get_replay(s[0])
+                get_replay()
+
+
+
+
