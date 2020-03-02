@@ -359,10 +359,10 @@ async def get_replay():
             added_track = track_replay_data[1]
             data_lengkap = track_replay_data[2]
             # print(track_replay_data[1])
-            for i in track_replay_data[1]:
-                if i not in added_track :
-                    added_track.append(i)
-            added_track.extend(track_replay_data[1])
+            # for i in track_replay_data[1]:
+            #     if i not in added_track :
+            #         added_track.append(i)
+            # added_track.extend(track_replay_data[1])
             # track_data.append(track_replay_data)
             query_tf = "SELECT tf.* " \
                                    "FROM tactical_figures tf " \

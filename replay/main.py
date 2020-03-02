@@ -6,7 +6,7 @@ import numpy as np
 from collections import Counter
 
 conn = psycopg2.connect("host=127.0.0.1 \
-    dbname=shiptrack \
+    dbname=shiptrack_test \
     user=postgres \
     password=1234"
 )
