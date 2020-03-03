@@ -514,14 +514,13 @@ async def get_replay():
                             "track_source_type": track_source_type,
                             "is_visible": is_visible}
                 
-                result["track_play"][str(t)]["area_alert"].append(aa_track)  
-                
+                result["track_play"][str(t)]["area_alert"].append(aa_track)        
 
             
 
         track.append(result)
         q_store_replay = "INSERT INTO stored_replay(update_rate, session_id, data)" \
-                         "	VALUES ("+str(UPDATE_RATE)+", "+str(session_id)+", '"+str(json.dumps(track))+"' )"
+                         "	VALUES ("+str(UPDATE_RATE)+", "+str(session_id)+", '"+str(json.dumps(result))+"' )"
         cur.execute(q_store_replay)
         conn.commit()
         # print(q_store_replay)
@@ -529,9 +528,7 @@ async def get_replay():
     replay_data_send.append(result)
     # print(replay_data_send)
     print(json.dumps(replay_data_send, default=str))
-    q_store_replay = "INSERT INTO stored_replay(update_rate, session_id, data) \
-                      	VALUES ("+str(UPDATE_RATE)+", "+str(session_id)+", '"+str(json.dumps(result))+"' )"
-    cur.execute(q_store_replay)
+
     conn.commit()
     
 
