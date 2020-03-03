@@ -520,10 +520,10 @@ async def get_replay():
             
 
         track.append(result)
-        # q_store_replay = "INSERT INTO stored_replay(update_rate, session_id, data)" \
-        #                  "	VALUES ("+str(UPDATE_RATE)+", "+str(session_id)+", '"+str(json.dumps(track))+"' )"
-        # cur.execute(q_store_replay)
-        # conn.commit()
+        q_store_replay = "INSERT INTO stored_replay(update_rate, session_id, data)" \
+                         "	VALUES ("+str(UPDATE_RATE)+", "+str(session_id)+", '"+str(json.dumps(track))+"' )"
+        cur.execute(q_store_replay)
+        conn.commit()
         # print(q_store_replay)
     # print(json.dumps(result))
     replay_data_send.append(result)
