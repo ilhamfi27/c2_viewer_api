@@ -192,7 +192,7 @@ def information_data():
                             results['track_phase_type'] = row[2]
                             results['track_suspect_level'] = row[3]
                             results['created_time'] = row[4]
-                
+
                 if(ar_mandatory_table_8[ix]=='replay_system_track_link'):
                     q = "SELECT * FROM" \
                         "( SELECT " \
@@ -209,7 +209,7 @@ def information_data():
                             results['network_track_number'] = row[0]
                             results['originator_address'] = row[1]
                             results['link_status'] = row[2]
-                
+
                 if(ar_mandatory_table_8[ix]=='replay_system_track_mission'):
                     q = "SELECT * FROM" \
                         "( SELECT " \
@@ -235,7 +235,7 @@ def information_data():
                             results['start_time'] = row[5]
                             results['end_time'] = row[6]
                             results['link_status'] = row[2]
-                
+
                 if(ar_mandatory_table_8[ix]=='replay_system_track_identification'):
                     q = "SELECT * FROM" \
                         "( SELECT " \
@@ -444,10 +444,9 @@ def replay_data(session_id):
         cur.execute(q)
         data = []
         for row in cur.fetchall():
-            object_id = row[0]
             results = dict(zip(columns, row))
-            data.append([object_id, results])
-        return data
+            data.append(results)
+        return results
     except psycopg2.Error as e:
         print(e)
     cur.close()
