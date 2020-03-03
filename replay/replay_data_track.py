@@ -42,7 +42,8 @@ def replay_track(session_id, start_time, end_time, added_track, data_lengkap):
     # BUTUH PERBAIKAN
     i = 0
     for table in ar_mandatory_table:
-        sql_mandatory = "SELECT st.system_track_number \
+        column = "st.system_track_number, st.track_phase_type" if table == 'replay_system_track_processing' else "st.system_track_number"
+        sql_mandatory = "SELECT "+ column +" \
                         FROM " + table + " st \
                         JOIN( \
                             SELECT system_track_number,max(created_time) created_time \
@@ -60,7 +61,16 @@ def replay_track(session_id, start_time, end_time, added_track, data_lengkap):
 
         if len(data) > 0:
             for d in data:
-                data_lengkap[i].append(d[0])
+                if d[0] not in data_lengkap[i]:
+                    data_lengkap[i].append(d[0])
+                if table == 'replay_system_track_processing':
+                    track_phase_type = str(d[1])
+                    if track_phase_type in ['DELETED_BY_SYSTEM', 'DELETED_BY_SYSTEM']:
+                        data_lengkap[0].remove(d[0])
+                        data_lengkap[1].remove(d[0])
+                        data_lengkap[2].remove(d[0])
+                
+                
         i = i +1
 
     data_ready = reduce(np.intersect1d, data_lengkap)
@@ -72,212 +82,236 @@ def replay_track(session_id, start_time, end_time, added_track, data_lengkap):
         for ready in data_ready:
             track = {}
             recorded_track  = {}
-            if ready not in track_final:
-                track = {            
-                    "system_track_number" : str(ready),
-                    "track_name" : "",
-                    "track_status" : "",
-            # :eneral,
-            "environment" : "",
-            "source_data" : "",
-            "iu_indicator" : "",
-            "identity" : "",
-            "fusion_status" : "",
-            "join_status" : "",
-            "track_phase" : "",
-            "suspect_level" : "",
-            "initiation_time" : "",
-            "airbone_indicator" : "",
-            # :inetic,
-            "heading" : "",
-            "latitude" : "",
-            "longitude" : "",
-            "altitude" : "",
-            "speed_over_ground" : "",
-            "course_over_ground" : "",
-            "last_update_time" : "",
-            # :is Data,
-            "mmsi_number" : "",
-            "ship_name" : "",
-            "radio_call_sign" : "",
-            "imo_number" : "",
-            "navigation_status" : "",
-            "destination" : "",
-            "dimension_of_ship" : "",
-            "ship_type" : "",
-            "rate_of_turn" : "",
-            "gross_tonnage" : "",
-            "country" : "",
-            "eta" : "",
-            "vendor_id" : "",
-            # :rack link,
-            "network_track_number" : "",
-            "originator" : "",
-            "link_status" : "",
-            # :ission,
-            "mission_name" : "",
-            "mission_route" : "",
-            "voice_call_sig" : "",
-            "voice_frequency_channel" : "",
-            "fuel_status" : "",
-            "mission_start" : "",
-            "mission_finish" : "",
-            # :dentification,
-            "platform_type" : "",
-            "platform_activity" : "",
-            "specific_type" : "",
-            "sql_track" : "",}
-        
+            is_exist = False
             for table in ar_mandatory_table_8:
-                sql_track = "SELECT * FROM " + table + " st \
-                                        JOIN (" \
-                                            "SELECT system_track_number,max(created_time) created_time " \
-                                            "FROM " + table + " " \
-                                            "WHERE session_id = '" + str(session_id) + "' \
-                                                AND created_time > '" + start_time + "' AND created_time < '" + end_time + "' \
-                                                GROUP BY system_track_number \
-                                        ) mx ON st.system_track_number = mx.system_track_number and st.created_time = mx.created_time \
-                                        WHERE st.session_id = " + str(session_id) + " " \
-                                                "AND st.created_time > '" + start_time + "' AND st.created_time < '" + end_time + "' \
-                                                AND st.system_track_number = " + str(ready) + " \
-                                                ORDER BY st.system_track_number"
-                
-                cur.execute(sql_track)
+                column = "st.system_track_number, st.iu_indicator" if table == 'replay_system_track_general' else "st.system_track_number"
+                check_exist = "SELECT "+column+ " \
+                            FROM " + table + " st \
+                            WHERE st.session_id = " + str(session_id) + " AND st.system_track_number = "+str(ready)+" AND st.created_time > '" + str(
+                start_time) + "' AND st.created_time < '" + str(end_time) + "' \
+                            ORDER BY st.system_track_number"
+                cur.execute(check_exist)
                 data = cur.fetchall()
-                for d in data:
-                    # print(cur.description[0])
-                    t_status = "T" + str(ready)
-                    
-                    if table == 'replay_system_track_general':
-                        # print(sql_track)
-                        track['created_time']        = str(d[1])
-                        track['source_data']         = str(d[10])
-                        track['track_name']         = str(d[2])
-                        track['environment']         = str(d[5])
-                        track['iu_indicator']        = str(d[12])
-                        track['identity']            = str(d[4])
-                        track['initiation_time']     = str(d[19])
-                        track['airbone_indicator']     = str(d[21])
-                        
-                        if (str(d[2]) == 'AIS_TYPE' or str(d[2]) == 'DATALINK'):
-                            q_ais_data = "SELECT  * \
-                                        FROM  \
-                                        ( \
-                                           SELECT * \
-                                            FROM replay_ais_data  \
-                                           WHERE session_id = " + str(session_id) + "   \
-                                           AND system_track_number = " + str(ready) + "  \
-                                            AND created_time > '" + start_time + "'  \
-                                            AND created_time < '" + end_time + "'  \
-                                           ORDER BY created_time DESC  \
-                                        ) aa LIMIT 1;"
-                            cur.execute(q_ais_data)
-                            data = cur.fetchall()
-                            if len(data) > 0:
-                                track['mmsi_number']         = str(d[2])
-                                track['ship_name']       = str(d[3])
-                                track['radio_call_sign'] = str(d[4])
-                                track['imo_number'] = str(d[5])
-                                track['navigation_status'] = str(d[6])
-                                track['destination'] = str(d[7])
-                                track['dimension_of_ship'] = str(d[8])
-                                track['ship_type'] = str(d[9])
-                                track['rate_of_turn'] = str([10])
-                                track['gross_tonnage'] = str([12])
-                                track['country'] = str([13])
-                                track['eta'] = str([15])
-                                track['vendor_id'] = str([16])
-
-                        if track['iu_indicator']:    
-                            sql_mission = "SELECT * FROM replay_system_track_mission st \
-                                        JOIN (" \
-                                            "SELECT system_track_number,max(created_time) created_time " \
-                                            "FROM replay_system_track_mission " \
-                                            "WHERE session_id = '" + str(session_id) + "' \
-                                                AND created_time > '" + start_time + "' AND created_time < '" + end_time + "' \
-                                                GROUP BY system_track_number \
-                                        ) mx ON st.system_track_number = mx.system_track_number and st.created_time = mx.created_time \
-                                        WHERE st.session_id = " + str(session_id) + " " \
-                                                "AND st.created_time > '" + start_time + "' AND st.created_time < '" + end_time + "' \
-                                                AND st.system_track_number = " + str(ready) + " \
-                                                ORDER BY st.system_track_number"
                 
-                            cur.execute(sql_mission)
-                            data = cur.fetchall()  
-                            for d in data:                      
-                                track['mission_name']            = str(d[2])
-                                track['mission_route']           = str(d[3])
-                                track['voice_call_sig']          = str(d[4])
-                                track['voice_frequency_channel'] = str(d[5])
-                                track['fuel_status']             = str(d[6])
-                                track['mission_start']           = str(d[8])
-                                track['mission_finish']          = str(d[9])
-                                track['created_time'] = str(d[10])
-
-                    if table == 'replay_system_track_processing':
-                        track['fusion_status']       = str(d[2])
-                        track['join_status']         = str(d[3])
-                        track['track_phase']         = str(d[5])
-                        track['suspect_level']       = str(d[6])
-                        track['created_time']        = str(d[7])
-                        track_status = "T" + str(ready)
-                        if track_status not in added_track:
-                            track["track_status"] = track_status+ "A"
-                            added_track.append(track_status)
-                        else:
-                            if track['track_phase'] == 'DELETED_BY_SYSTEM' or track['track_phase'] == 'DELETED_BY_SYSTEM':
-                                track["track_status"] = track_status + "R"
-                                added_track.remove(track_status)
-                            else:
-                                track["track_status"] = track_status + "U"
-
-
-
-   
-
-                    if table == 'replay_system_track_kinetic':
-                        track['heading']             = str(d[3])
-                        track['latitude']            = str(d[4])
-                        track['longitude']           = str(d[5])
-                        track['altitude']            = str(d[8])
-                        track['speed_over_ground']   = str(d[9])
-                        track['course_over_ground']  = str(d[10])
-                        track['last_update_time']    = str(d[11])
-                        track['created_time'] = str(d[12])
+                if table == 'replay_system_track_general':
+                    if len(data) > 0:
+                        for d in data:
+                            if d[1]:
+                                check_mission = "SELECT * \
+                                    FROM " + table + " st \
+                                    WHERE st.session_id = " + str(session_id) + " AND st.system_track_number = "+str(ready)+" AND st.created_time > '" + str(
+                        start_time) + "' AND st.created_time < '" + str(end_time) + "' \
+                                    ORDER BY st.system_track_number"
+                                cur.execute(check_mission)
+                                mission_data = cur.fetchall()
+                                if len(mission_data):
+                                    is_exist = True
+                                    break
+                    else:
+                        if len(data) > 0:
+                            is_exist = True
+                            break
+            
+            if is_exist:
+                if ready not in track_final:
+                    track = {            
+                     "system_track_number" : str(ready),
+                     "track_name" : "",
+                     "track_status" : "",
+                     # :eneral,
+                     "environment" : "",
+                     "source_data" : "",
+                     "iu_indicator" : "",
+                     "identity" : "",
+                     "fusion_status" : "",
+                     "join_status" : "",
+                     "track_phase" : "",
+                     "suspect_level" : "",
+                     "initiation_time" : "",
+                     "airbone_indicator" : "",
+                     # :inetic,
+                     "heading" : "",
+                     "latitude" : "",
+                     "longitude" : "",
+                     "altitude" : "",
+                     "speed_over_ground" : "",
+                     "course_over_ground" : "",
+                     "last_update_time" : "",
+                     # :is Data,
+                     "mmsi_number" : "",
+                     "ship_name" : "",
+                     "radio_call_sign" : "",
+                     "imo_number" : "",
+                     "navigation_status" : "",
+                     "destination" : "",
+                     "dimension_of_ship" : "",
+                     "ship_type" : "",
+                     "rate_of_turn" : "",
+                     "gross_tonnage" : "",
+                     "country" : "",
+                     "eta" : "",
+                     "vendor_id" : "",
+                     # :rack link,
+                     "network_track_number" : "",
+                     "originator" : "",
+                     "link_status" : "",
+                     # :ission,
+                     "mission_name" : "",
+                     "mission_route" : "",
+                     "voice_call_sig" : "",
+                     "voice_frequency_channel" : "",
+                     "fuel_status" : "",
+                     "mission_start" : "",
+                     "mission_finish" : "",
+                     # :dentification,
+                     "platform_type" : "",
+                     "platform_activity" : "",
+                     "specific_type" : "",
+                     "sql_track" : "",}
+                for table in ar_mandatory_table_8:
+                    sql_track = "SELECT * FROM " + table + " st \
+                                            JOIN (" \
+                                                "SELECT system_track_number,max(created_time) created_time " \
+                                                "FROM " + table + " " \
+                                                "WHERE session_id = '" + str(session_id) + "' \
+                                                    AND created_time > '" + start_time + "' AND created_time < '" + end_time + "' \
+                                                    GROUP BY system_track_number \
+                                            ) mx ON st.system_track_number = mx.system_track_number and st.created_time = mx.created_time \
+                                            WHERE st.session_id = " + str(session_id) + " " \
+                                                    "AND st.created_time > '" + start_time + "' AND st.created_time < '" + end_time + "' \
+                                                    AND st.system_track_number = " + str(ready) + " \
+                                                    ORDER BY st.system_track_number"
+                    
+                    cur.execute(sql_track)
+                    data = cur.fetchall()
+                    for d in data:
+                        # print(cur.description[0])
+                        t_status = "T" + str(ready)
                         
-                    if table == 'replay_system_track_link':
-                        track['network_track_number']    = str(d[3])
-                        track['originator']              = str(d[5])
-                        track['link_status']             = str(d[8])
-                        track['created_time'] = str(d[9])
+                        if table == 'replay_system_track_general':
+                            # print(sql_track)
+                            track['created_time']        = str(d[1])
+                            track['source_data']         = str(d[10])
+                            track['track_name']         = str(d[2])
+                            track['environment']         = str(d[5])
+                            track['iu_indicator']        = str(d[12])
+                            track['identity']            = str(d[4])
+                            track['initiation_time']     = str(d[19])
+                            track['airbone_indicator']     = str(d[21])
+                            
+                            if (str(d[2]) == 'AIS_TYPE' or str(d[2]) == 'DATALINK'):
+                                q_ais_data = "SELECT  * \
+                                            FROM  \
+                                            ( \
+                                            SELECT * \
+                                                FROM replay_ais_data  \
+                                            WHERE session_id = " + str(session_id) + "   \
+                                            AND system_track_number = " + str(ready) + "  \
+                                                AND created_time > '" + start_time + "'  \
+                                                AND created_time < '" + end_time + "'  \
+                                            ORDER BY created_time DESC  \
+                                            ) aa LIMIT 1;"
+                                cur.execute(q_ais_data)
+                                data = cur.fetchall()
+                                if len(data) > 0:
+                                    track['mmsi_number']         = str(d[2])
+                                    track['ship_name']       = str(d[3])
+                                    track['radio_call_sign'] = str(d[4])
+                                    track['imo_number'] = str(d[5])
+                                    track['navigation_status'] = str(d[6])
+                                    track['destination'] = str(d[7])
+                                    track['dimension_of_ship'] = str(d[8])
+                                    track['ship_type'] = str(d[9])
+                                    track['rate_of_turn'] = str([10])
+                                    track['gross_tonnage'] = str([12])
+                                    track['country'] = str([13])
+                                    track['eta'] = str([15])
+                                    track['vendor_id'] = str([16])
+
+                            if track['iu_indicator']:    
+                                sql_mission = "SELECT * FROM replay_system_track_mission st \
+                                            JOIN (" \
+                                                "SELECT system_track_number,max(created_time) created_time " \
+                                                "FROM replay_system_track_mission " \
+                                                "WHERE session_id = '" + str(session_id) + "' \
+                                                    AND created_time > '" + start_time + "' AND created_time < '" + end_time + "' \
+                                                    GROUP BY system_track_number \
+                                            ) mx ON st.system_track_number = mx.system_track_number and st.created_time = mx.created_time \
+                                            WHERE st.session_id = " + str(session_id) + " " \
+                                                    "AND st.created_time > '" + start_time + "' AND st.created_time < '" + end_time + "' \
+                                                    AND st.system_track_number = " + str(ready) + " \
+                                                    ORDER BY st.system_track_number"
                     
-                    
-                     
-                    if table == 'replay_system_track_identification':
-                        track['environment'] = d[3]
-                        if d[3] == 'AIR':
-                            track['platform_type']       = str(d[4])
-                            track['platform_activity']   = str(d[7])
-                            track['specific_type']       = str(d[10])
-                        elif d[3] == 'SURFACE':
-                            track['platform_type']       = str(d[5])
-                            track['platform_activity']   = str(d[8])
-                            track['specific_type']       = str(d[11])
-                        else:
-                            track['platform_type']       = str(d[6])
-                            track['platform_activity']   = str(d[9])
-                            track['specific_type']       = str(d[12])
-                        track['created_time'] = str(d[13])
-                      
+                                cur.execute(sql_mission)
+                                data = cur.fetchall()  
+                                for d in data:                      
+                                    track['mission_name']            = str(d[2])
+                                    track['mission_route']           = str(d[3])
+                                    track['voice_call_sig']          = str(d[4])
+                                    track['voice_frequency_channel'] = str(d[5])
+                                    track['fuel_status']             = str(d[6])
+                                    track['mission_start']           = str(d[8])
+                                    track['mission_finish']          = str(d[9])
+                                    track['created_time'] = str(d[10])
+
+                        if table == 'replay_system_track_processing':
+                            track['fusion_status']       = str(d[2])
+                            track['join_status']         = str(d[3])
+                            track['track_phase']         = str(d[5])
+                            track['suspect_level']       = str(d[6])
+                            track['created_time']        = str(d[7])
+                            track_status = "T" + str(ready)
+                            if track_status not in added_track:
+                                track["track_status"] = track_status+ "A"
+                                added_track.append(track_status)
+                            else:
+                                if track['track_phase'] == 'DELETED_BY_SYSTEM' or track['track_phase'] == 'DELETED_BY_SYSTEM':
+                                    track["track_status"] = track_status + "R"
+                                    added_track.remove(track_status)
+                                else:
+                                    track["track_status"] = track_status + "U"
+
+                        if table == 'replay_system_track_kinetic':
+                            track['heading']             = str(d[3])
+                            track['latitude']            = str(d[4])
+                            track['longitude']           = str(d[5])
+                            track['altitude']            = str(d[8])
+                            track['speed_over_ground']   = str(d[9])
+                            track['course_over_ground']  = str(d[10])
+                            track['last_update_time']    = str(d[11])
+                            track['created_time'] = str(d[12])
+                            
+                        if table == 'replay_system_track_link':
+                            track['network_track_number']    = str(d[3])
+                            track['originator']              = str(d[5])
+                            track['link_status']             = str(d[8])
+                            track['created_time'] = str(d[9])                
+                                            
+                        if table == 'replay_system_track_identification':
+                            track['environment'] = d[3]
+                            if d[3] == 'AIR':
+                                track['platform_type']       = str(d[4])
+                                track['platform_activity']   = str(d[7])
+                                track['specific_type']       = str(d[10])
+                            elif d[3] == 'SURFACE':
+                                track['platform_type']       = str(d[5])
+                                track['platform_activity']   = str(d[8])
+                                track['specific_type']       = str(d[11])
+                            else:
+                                track['platform_type']       = str(d[6])
+                                track['platform_activity']   = str(d[9])
+                                track['specific_type']       = str(d[12])
+                            track['created_time'] = str(d[13])
+                        
 
 
-                    # if t_status not in recorded_track:
-                    #     recorded_track[t_status] = str(created_time)
-                    # else:
-                    #     if created_time > str(recorded_track[t_status]):
-                    #         recorded_track[t_status] = str(created_time)
-            track_final.append(track)        
-    print(track_final)
+                        # if t_status not in recorded_track:
+                        #     recorded_track[t_status] = str(created_time)
+                        # else:
+                        #     if created_time > str(recorded_track[t_status]):
+                        #         recorded_track[t_status] = str(created_time)
+                track_final.append(track)        
+    # print(track_final)
   
 
     # print(start_time, ", " ,  end_time, ", ",track_data)
