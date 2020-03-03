@@ -343,18 +343,10 @@ def get_replay():
             }
             '''Jalankan query untuk setiap tabel per setiap segmen durasi'''
 
-            track_replay_data = replay_track(session_id, str(start_time), str(end_time), added_track)
-            if len(track_replay_data[0]) > 0:
-                track_data['data']['track'].append(track_replay_data[0])
-            else:
-                track_data['data']['track'] = []
+            track_replay_data = replay_track(session_id, str(start_time), str(end_time), added_track, data_lengkap)
+            result["track_play"][str(t)]["track"].append(track_replay_data[0])            
             added_track = track_replay_data[1]
-            # print(track_replay_data[1])
-            # for i in track_replay_data[1]:
-            #     if i not in added_track :
-            #         added_track.append(i)
-            # added_track.extend(track_replay_data[1])
-            # track_data.append(track_replay_data)
+            data_lengkap = track_replay_data[2]
             query_tf = "SELECT tf.* " \
                                    "FROM tactical_figures tf " \
                                     "JOIN(" \
