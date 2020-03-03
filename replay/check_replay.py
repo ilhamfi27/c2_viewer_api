@@ -52,15 +52,7 @@ def replay_track(session_id, start_time, end_time, added_track, data_lengkap):
         if len(data) > 0:
             for d in data:
                 if d[0] not in data_lengkap[i]:
-                    data_lengkap[i].append(d[0])
-                if table == 'replay_system_track_processing':
-                    track_phase_type = str(d[1])
-                    if track_phase_type in ['DELETED_BY_SYSTEM', 'DELETED_BY_SYSTEM']:
-                        data_lengkap[0].remove(d[0])
-                        data_lengkap[1].remove(d[0])
-                        data_lengkap[2].remove(d[0])
-                
-                
+                    data_lengkap[i].append(d[0])    
         i = i +1
 
     data_ready = reduce(np.intersect1d, data_lengkap)
@@ -255,9 +247,10 @@ def replay_track(session_id, start_time, end_time, added_track, data_lengkap):
                                 track["track_status"] = track_status+ "A"
                                 added_track.append(track_status)
                             else:
-                                if track['track_phase'] == 'DELETED_BY_SYSTEM' or track['track_phase'] == 'DELETED_BY_SYSTEM':
-                                    track["track_status"] = track_status + "R"
-                                    added_track.remove(track_status)
+                                if track['track_phase'] in ['DELETED_BY_SYSTEM', 'DELETED_BY_SYSTEM']: 
+                                    for track_lengkap in data_lengkap: 
+                                        if ready in track_lengkap:                                  
+                                            track_lengkap.remove(ready)
                                 else:
                                     track["track_status"] = track_status + "U"
 
@@ -301,15 +294,11 @@ def replay_track(session_id, start_time, end_time, added_track, data_lengkap):
                         #     if created_time > str(recorded_track[t_status]):
                         #         recorded_track[t_status] = str(created_time)
                 track_final.append(track)        
-    # print(track_final)
-  
-
-    # print(start_time, ", " ,  end_time, ", ",track_data)
     return_data.append(track_final)
     return_data.append(added_track)
     return_data.append(data_lengkap)
-    # print(len(return_data[0]), len(return_data[1]))
-    # print(return_data)
+    return return_data
+
 
 
 # q = "SELECT aa.session_id as id, aa.*  FROM area_alerts aa  JOIN (    SELECT object_id,max(last_update_time) last_update_time     FROM area_alerts     WHERE session_id = '1' AND last_update_time > '2020-01-10 14:14:31' AND last_update_time < '2020-01-10 14:14:41'     GROUP BY object_id ) mx ON aa.object_id=mx.object_id and aa.last_update_time=mx.last_update_time  WHERE aa.session_id = '1'  AND aa.last_update_time > '2020-01-10 14:14:31' AND aa.last_update_time < '2020-01-10 14:14:41'  ORDER BY aa.object_id"
