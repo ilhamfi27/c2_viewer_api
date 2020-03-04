@@ -460,10 +460,9 @@ def replay_data(session_id):
         cur.execute(q)
         data = []
         for row in cur.fetchall():
-            object_id = row[0]
             results = dict(zip(columns, row))
-            data.append([object_id, results])
-        return data
+            data.append(results)
+        return results
     except psycopg2.Error as e:
         print(e)
     cur.close()
