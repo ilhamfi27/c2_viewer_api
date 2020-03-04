@@ -583,11 +583,11 @@ async def get_replay():
             result['track_play'] ={str(t):track_data}
 
             track.append(result)
-            q_store_replay = "INSERT INTO stored_replay(update_rate, session_id, data)" \
-                             "	VALUES ("+str(UPDATE_RATE)+", "+str(session_id)+", '"+str(json.dumps(track))+"' )"
-            cur.execute(q_store_replay)
-            conn.commit()
-            print(q_store_replay)
+        q_store_replay = "INSERT INTO stored_replay(update_rate, session_id, data)" \
+                         "	VALUES ("+str(UPDATE_RATE)+", "+str(session_id)+", '"+str(json.dumps(track))+"' )"
+        cur.execute(q_store_replay)
+        conn.commit()
+        print(q_store_replay)
     # print(json.dumps(result))
     # replay_data_send.append(result)
     # print("send data replay from get_replay", replay_data_send)
