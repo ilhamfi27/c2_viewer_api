@@ -425,9 +425,18 @@ def session_data():
             'id', 'name', 'start_time', 'end_time'
         )
 
-        q = "SELECT id, name, start_time, end_time " \
-            "FROM public.sessions " \
-            "WHERE end_time IS NOT NULL;"
+        q = "SELECT " \
+            "   id, " \
+            "   name, " \
+            "   start_time, " \
+            "   end_time " \
+            "FROM public.sessions s " \
+            "JOIN ( " \
+            "	select session_id " \
+            "	from public.stored_replay " \
+            "	group by 1 " \
+            ") sr on sr.session_id = s.id " \
+            "WHERE end_time IS NOT NULL; "
         cur.execute(q)
         data = []
         for row in cur.fetchall():
@@ -480,10 +489,15 @@ def history_dots(system_track_number):
                     "   max(latitude), " \
                     "   max(longitude), " \
                     "   last_update_time " \
-                    "from public.replay_system_track_kinetic " \
+                    "from public.replay_system_track_kinetic k " \
+                    "JOIN ( " \
+                    "	select id " \
+                    "	from sessions " \
+                    "	where end_time is not null " \
+                    ") s on s.id = k.session_id " \
                     "where system_track_number = {} " \
                     "group by last_update_time " \
-                    "order by last_update_time asc;" \
+                    "order by last_update_time asc; " \
                     .format(system_track_number)
         cur.execute(the_query)
         data = []

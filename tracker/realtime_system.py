@@ -125,22 +125,22 @@ async def data_change_detection():
         # tactical figures ------------------------------------------------------------------------
         tactical_figure_datas = np.array(tactical_figure_data())
         await data_processing(tactical_figure_datas, TACTICAL_FIGURE_STATE, USERS, NON_REALTIME_USERS, data_category="tactical_figure",
-                                mandatory_attr="visibility_type", must_remove=["REMOVE"], debug=True)
+                                mandatory_attr="visibility_type", must_remove=["REMOVE"], debug=False)
 
         # reference points ------------------------------------------------------------------------
         reference_point_datas = np.array(reference_point_data())
         await data_processing(reference_point_datas, REFERENCE_POINT_STATE, USERS, NON_REALTIME_USERS, data_category="reference_point",
-                                mandatory_attr="visibility_type", must_remove=["REMOVE"], debug=True)
+                                mandatory_attr="visibility_type", must_remove=["REMOVE"], debug=False)
 
         # area alerts ------------------------------------------------------------------------
         area_alert_datas = np.array(area_alert_data())
         await data_processing(area_alert_datas, AREA_ALERT_STATE, USERS, NON_REALTIME_USERS, data_category="area_alert",
-                                mandatory_attr="is_visible", must_remove=["REMOVE"], debug=True)
+                                mandatory_attr="is_visible", must_remove=["REMOVE"], debug=False)
 
         # sessions ------------------------------------------------------------------------
         session_datas = np.array(session_data())
         await non_strict_data_processing(session_datas, SESSION_STATE, USERS, NON_REALTIME_USERS, data_category="session",
-                                debug=True)
+                                debug=False)
         print('========================================================================================================================')
         print('========================================================================================================================')
         # lama tidur
