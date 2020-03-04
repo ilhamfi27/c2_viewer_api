@@ -7,9 +7,13 @@ import json
 import logging
 import websockets
 import numpy as np
+import sys
+import os
 from tracker.models import information_data, tactical_figure_data, reference_point_data, \
                             area_alert_data, session_data, replay_data, history_dots
 from tracker.actions import data_processing, non_strict_data_processing
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from config.config import WS_HOST, WS_PORT
 
 logging.basicConfig()
 
@@ -208,7 +212,7 @@ async def handler(websocket, path):
 
 def _main_():
     # 0.0.0.0 for global ip
-    start_server = websockets.serve(handler, "0.0.0.0", 8080)
+    start_server = websockets.serve(handler, WS_HOST, WS_PORT)
 
     tasks = [
         asyncio.ensure_future(data_change_detection()),
