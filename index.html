@@ -55,7 +55,7 @@
                 dot = document.querySelector('.dot'),
                 value = document.querySelector('.value'),
                 users = document.querySelector('.users'),
-                websocket = new WebSocket("ws://127.0.0.1:8080/");
+                websocket = new WebSocket("ws://127.0.0.1:5679/");
             realtime.onclick = function (event) {
                 websocket.send(JSON.stringify({action: 'realtime'}));
             }
@@ -71,7 +71,7 @@
             websocket.onmessage = function (event) {
                 data = JSON.parse(event.data);
                 console.log(data);
-                
+
                 switch (data.type) {
                     case 'users':
                         users.textContent = (
