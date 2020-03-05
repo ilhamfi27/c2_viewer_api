@@ -483,6 +483,7 @@ def history_dots(system_track_number):
         columns = (
             'latitude',
             'longitude',
+            'latlng',
             'last_update_time',
         )
         the_query = "select " \
@@ -502,7 +503,11 @@ def history_dots(system_track_number):
         cur.execute(the_query)
         data = []
         for row in cur.fetchall():
-            results = dict(zip(columns, row))
+            results = dict()
+            results['latitude'] = row[0]
+            results['longitude'] = row[1]
+            results['latlng'] = [row[0], row[1]]
+            results['last_update_time'] = row[2]
             data.append(results)
         return data
     except psycopg2.Error as e:
