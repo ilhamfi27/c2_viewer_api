@@ -493,7 +493,7 @@ def history_dots(system_track_number):
                     "JOIN ( " \
                     "	select id " \
                     "	from sessions " \
-                    "	where end_time is not null " \
+                    "	where end_time is null " \
                     ") s on s.id = k.session_id " \
                     "where system_track_number = {} " \
                     "group by last_update_time " \
