@@ -6,8 +6,7 @@
 from main import *
 from replay_generator import *
 
-if __name__ == "__main__":
-    
+if __name__ == "__main__":    
     query = "SELECT id FROM sessions where end_time is not null";
     cur.execute(query)
     session = cur.fetchall()

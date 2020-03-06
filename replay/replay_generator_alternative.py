@@ -1,9 +1,11 @@
 from main import *
 
+
 replay_data_send = []
 
-def replay_track(session_id, start_time, end_time, added_track, data_lengkap):
+def replay_track(session_id, start_time, end_time, added_track, data_lengkap, data_ais):
     # print(start_time, end_time, added_track)
+    
     return_data = []
     track_data = []
     ar_mandatory_table_8 = [
@@ -27,6 +29,7 @@ def replay_track(session_id, start_time, end_time, added_track, data_lengkap):
     just_added = []
     i = 0
     for table in ar_mandatory_table:
+        
         # column = "st.system_track_number, st.track_phase_type" if table == 'replay_system_track_processing' else "st.system_track_number"
         sql_mandatory = "SELECT * \
                         FROM " + table + " st \
@@ -40,18 +43,18 @@ def replay_track(session_id, start_time, end_time, added_track, data_lengkap):
                         WHERE st.session_id = " + str(session_id) + " AND st.created_time > '" + str(
             start_time) + "' AND st.created_time < '" + str(end_time) + "' \
                         ORDER BY st.system_track_number"
-        # print(sql_mandatory)
+        # print(t, sql_mandatory)
         cur.execute(sql_mandatory)
-        data = cur.fetchall()
+        data_mandatory = cur.fetchall()
 
-        if len(data) > 0:
-            for d in data:
+        if len(data_mandatory) > 0:
+            for d in data_mandatory:
                 # if d[0] not in data_lengkap[i]:
                 if table == 'replay_system_track_general':
-                    if d[10] in ['AIS_TYPE', 'DATALINK']:
+                    if str(d[10]) == 'AIS_TYPE':
                         q_ais_data = "SELECT  * \
-                                            FROM  \
-                                            ( \
+                                        FROM  \
+                                        ( \
                                             SELECT * \
                                                 FROM replay_ais_data  \
                                             WHERE session_id = " + str(session_id) + "   \
@@ -59,17 +62,23 @@ def replay_track(session_id, start_time, end_time, added_track, data_lengkap):
                                                 AND created_time > '" + start_time + "'  \
                                                 AND created_time < '" + end_time + "'  \
                                             ORDER BY created_time DESC  \
-                                            ) aa LIMIT 1;"                                    
+                                        ) aa LIMIT 1;"                                                         
                         cur.execute(q_ais_data)
                         ais_data = cur.fetchall()
-                        if len(ais_data) > 0:
+                        
+                        if len(ais_data) > 0:                            
                             data_lengkap[i][d[1]] = d 
+                            data_ais[d[1]] = [ais_data[0]]
+                            # print(data_lengkap[0][d[1]])
+
+                            
+                        conn.commit()
                     else:
-                        data_lengkap[i][d[1]] = d
+                        data_lengkap[0][d[1]] = d
                 else:
                     data_lengkap[i][d[1]] = d
                 
-
+        conn.commit()
                     # if d[0] not in just_added:
                     #     just_added.append(d[0])
         i = i +1
@@ -172,9 +181,7 @@ def replay_track(session_id, start_time, end_time, added_track, data_lengkap):
                     #     print(table_data) 
                     # else:
                     #     print(table_data) 
-                    for td in table_data:  
-                        # print(td)
-                                                             
+                    for td in table_data:                       
                         track['created_time']        = str(td[1])
                         track['source_data']         = str(td[10])
                         track['track_name']          = str(td[2])
@@ -183,8 +190,7 @@ def replay_track(session_id, start_time, end_time, added_track, data_lengkap):
                         track['identity']            = str(td[4])
                         track['initiation_time']     = str(td[19])
                         track['airbone_indicator']   = str(td[21])
-                            
-                        if str(track['source_data']) in ['AIS_TYPE', 'DATALINK']:
+                        if str(track['source_data']) == 'AIS_TYPE':
                             q_ais_data = "SELECT  * \
                                             FROM  \
                                             ( \
@@ -197,10 +203,15 @@ def replay_track(session_id, start_time, end_time, added_track, data_lengkap):
                                             ORDER BY created_time DESC  \
                                             ) aa LIMIT 1;"                                    
                             cur.execute(q_ais_data)
-                            ais_data = cur.fetchall()
-                            print(ais_data)
-                            if len(data) > 0:
-                                for ais in ais_data:
+                            ais_data = []                        
+                           
+                            if len(ais_data) > 0:
+                                ais_data = cur.fetchall()
+                            else:
+                                # print(data_ais[ready])
+                                ais_data = data_ais[ready]
+                            
+                            for ais in ais_data:
                                     track['mmsi_number']            = str(ais[2])
                                     track['ship_name']              = str(ais[3])
                                     track['radio_call_sign']        = str(ais[4])
@@ -214,6 +225,15 @@ def replay_track(session_id, start_time, end_time, added_track, data_lengkap):
                                     track['country']                = str(ais[13])
                                     track['eta']                    = str(ais[15])
                                     track['vendor_id']              = str(ais[16])
+                        else:
+                            track['created_time']        = str(td[1])
+                            track['source_data']         = str(td[10])
+                            track['track_name']          = str(td[2])
+                            track['environment']         = str(td[5])
+                            track['iu_indicator']        = str(td[12])
+                            track['identity']            = str(td[4])
+                            track['initiation_time']     = str(td[19])
+                            track['airbone_indicator']   = str(td[21])
                         if track['iu_indicator']:    
                             sql_mission = "SELECT * FROM replay_system_track_mission st \
                                             JOIN (" \
@@ -296,16 +316,31 @@ def replay_track(session_id, start_time, end_time, added_track, data_lengkap):
                             track['platform_activity']   = str(td[9])
                             track['specific_type']       = str(td[12])
                         track['created_time'] = str(td[13])
-                    
+                conn.commit()    
                     # if t_status not in recorded_track:
                     #     recorded_track[t_status] = str(created_time)
                     # else:
                     #     if created_time > str(recorded_track[t_status]):
                     #         recorded_track[t_status] = str(created_time)
-            track_final.append(track)        
+            ''' Check Hash, kalau beda baru append'''
+            redis_key           = str(session_id) + "T" + str(ready)
+            redis_value         = reduce(concat, track.values()) 
+            hashed_redis_value  = hashlib.md5(redis_value.encode('utf-8')).hexdigest()
+            if r.exists(str(redis_key)):
+                data_from_hashmap = r.get(str(redis_key))
+                if data_from_hashmap != hashed_redis_value:
+                    print(ready, data_from_hashmap)
+                    track_final.append(track)
+                    r.set(str(redis_key), hashed_redis_value)
+            else:
+                r.set(str(redis_key), hashed_redis_value)
+                track_final.append(track)
+
+            
     return_data.append(track_final)
     return_data.append(added_track)
     return_data.append(data_lengkap)
+    return_data.append(data_ais)
     
     return return_data
 
@@ -328,6 +363,7 @@ def get_replay():
     
     for data in query:
         data_lengkap = [{},{},{}]
+        ais_data    = {}
         session_id  = data[0]
         start_time  = data[1]
         end_time    = data[2]
@@ -353,13 +389,8 @@ def get_replay():
         
         '''Looping sebanyak panjang replay'''
         for t in range(len(track_list)):
-            result["track_play"][str(t)] = {
-                                "track"             : [],
-                                "reference_point"   : [],
-                                "tactical_figures"  : [],
-                                "area_alert"        : []
-
-            }
+            
+            
             '''Buat start_time dan end_time untuk setiap segmen replay.
                         Segmen durasi adalah satuan  replay track, 
                         contoh 2020-01-10 14:45:31 sampai dengan 2020-01-10 14:45:41
@@ -368,20 +399,31 @@ def get_replay():
                     # print(t)
                     # print(str(start_time) + " sampai dengan " + str(end_time))
             if t == 0:
-                    tmp_time = (datetime.strptime(str(start_time), '%Y-%m-%d %H:%M:%S'))
-                    tmp_time += dt.timedelta(seconds=UPDATE_RATE)
-                    end_time = tmp_time
+                tmp_time = (datetime.strptime(str(start_time), '%Y-%m-%d %H:%M:%S'))
+                tmp_time += dt.timedelta(seconds=UPDATE_RATE)
+                end_time = tmp_time
             else:
-                    start_time += dt.timedelta(seconds=UPDATE_RATE)
-                    end_time += dt.timedelta(seconds=UPDATE_RATE)
+                start_time += dt.timedelta(seconds=UPDATE_RATE)
+                end_time += dt.timedelta(seconds=UPDATE_RATE)
             
+            result["track_play"][str(t)] = {
+                                "start_time"        : str(start_time),
+                                "end_time"          : str(end_time),
+                                "track"             : [],
+                                "reference_point"   : [],
+                                "tactical_figures"  : [],
+                                "area_alert"        : []
+
+            }
             '''Jalankan query untuk setiap tabel per setiap segmen durasi'''
 
-            track_replay_data = replay_track(session_id, str(start_time), str(end_time), added_track, data_lengkap)
+            track_replay_data = replay_track(session_id, str(start_time), str(end_time), added_track, data_lengkap, ais_data)
             result["track_play"][str(t)]["track"].append(track_replay_data[0])            
             added_track = track_replay_data[1]
             data_lengkap = track_replay_data[2]
-            
+            ais_data = track_replay_data[3]
+            # print(t, len(data_lengkap[0]))
+            # print(result["track_play"], start_time, end_time)
             # print(track_replay_data[1])
             # for i in track_replay_data[1]:
             #     if i not in added_track :
@@ -439,7 +481,8 @@ def get_replay():
                             "point_keys": tf[14],
                             "points": tf[15]
                             }
-                result["track_play"][str(t)]["tactical_figures"].append(tf_track)                
+                result["track_play"][str(t)]["tactical_figures"].append(tf_track)  
+            conn.commit()              
 
             query_rp = "SELECT rrp.* " \
                                "FROM replay_reference_point rrp \
@@ -491,7 +534,8 @@ def get_replay():
                 rp_track["link_status_type"] = rp_link_status
                 rp_track["last_update_time"] = str(rp_last_update_time)
                 # print(rp_track)
-                result["track_play"][str(t)]["reference_point"].append(rp_track)                
+                result["track_play"][str(t)]["reference_point"].append(rp_track)  
+            conn.commit()              
                 
 
             query_aa = "SELECT  aa.* " \
@@ -536,9 +580,10 @@ def get_replay():
                             "mmsi_number": mmsi_number,
                             "ship_name": ship_name,
                             "track_source_type": track_source_type,
-                            "is_visible": is_visible}
+                            "is_visible": is_visible}            
                 
                 result["track_play"][str(t)]["area_alert"].append(aa_track)      
+            conn.commit()
 
         track.append(result)
         check_stored = "SELECT * FROM stored_replay WHERE session_id="+str(session_id)+" AND update_rate="+str(UPDATE_RATE)+" "
@@ -549,10 +594,12 @@ def get_replay():
         if len(data) == 0:            
             cur.execute(q_store_replay)
             conn.commit()
+        print("Done")
         # print(q_store_replay)
     # print(json.dumps(result))
     replay_data_send.append(result)
     # print(replay_data_send)
+    
     # print(json.dumps(replay_data_send, default=str))
 
     conn.commit()
