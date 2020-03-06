@@ -154,7 +154,7 @@ async def send_history_dot(system_track_number, user):
     print(system_track_number, " send to ", user)
     data = history_dots(system_track_number)
 
-    message = json.dumps({'data': data, 'data_type': 'history_dots'}, default=str)
+    message = json.dumps({'data': data, 'data_type': 'history_dots', 'system_track_number': system_track_number}, default=str)
     await user.send(message)
 
 async def get_websocket_messages(websocket):
@@ -170,6 +170,8 @@ async def get_websocket_messages(websocket):
                 print('replay')
         if 'request' in data:
             await send_replay_track(data['request'], websocket)
+        if 'request_dots' in data:
+            await send_history_dot(data['request_dots'], websocket)
 
 async def realtime_toggle_handler(user, state):
     if state == 'realtime' and \
