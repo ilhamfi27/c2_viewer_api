@@ -1,10 +1,7 @@
 import psycopg2
 import numpy as np
 from functools import reduce
-import sys
-import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from config.config import getconn
+from tracker.config import getconn
 
 conn = getconn()
 

@@ -11,12 +11,6 @@ from config.config import getconn
 
 conn = getconn()
 
-# conn = psycopg2.connect("host=127.0.0.1 \
-#     dbname=shiptrack_test \
-#     user=postgres \
-#     password=1234"
-# )
-
 UPDATE_RATE = 600
 cur = conn.cursor()
 
