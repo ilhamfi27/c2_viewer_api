@@ -8,28 +8,12 @@ import logging
 import websockets
 import numpy as np
 from tracker.models import information_data, tactical_figure_data, reference_point_data, \
-                            area_alert_data, session_data, replay_data, history_dots
-from tracker.actions import data_processing, non_strict_data_processing
+                            area_alert_data, session_data, replay_data
+from tracker.actions import data_processing, non_strict_data_processing, send_history_dot, \
+                            all_history_dot, send_all_history_dot
 from tracker.config import WS_HOST, WS_PORT
 
 logging.basicConfig()
-
-ar_mandatory_table = [
-    'replay_system_track_general',
-    'replay_system_track_kinetic',
-    'replay_system_track_processing',
-    # 'replay_track_general_setting'
-]
-ar_mandatory_table_8 = [
-    'replay_system_track_general',
-    'replay_system_track_kinetic',
-    'replay_system_track_processing',
-    'replay_system_track_identification',
-    'replay_system_track_link',
-    'replay_system_track_mission',
-    'replay_track_general_setting',
-    'replay_ais_data'
-]
 
 TRACK_STATE = {
     "cached_data": [],
@@ -58,6 +42,10 @@ AREA_ALERT_STATE = {
 SESSION_STATE = {
     "cached_data": [],
     "existed_data": [],
+    "existed_data_count": 0,
+}
+
+HISTORY_DOT_STATE = {
     "existed_data_count": 0,
 }
 
@@ -90,6 +78,7 @@ async def register(websocket):
         ['area_alert', AREA_ALERT_STATE],
         ['session', SESSION_STATE],
     ])
+    await send_all_history_dot(TRACK_STATE['existed_data'], websocket)
     print(USERS)
 
 async def unregister(websocket):
@@ -138,6 +127,9 @@ async def data_change_detection():
         session_datas = np.array(session_data())
         await non_strict_data_processing(session_datas, SESSION_STATE, USERS, NON_REALTIME_USERS, data_category="session",
                                 debug=False)
+
+        # all history dot
+        await all_history_dot(TRACK_STATE['existed_data'], HISTORY_DOT_STATE, USERS)
         print('========================================================================================================================')
         print('========================================================================================================================')
         # lama tidur
@@ -148,13 +140,6 @@ async def send_replay_track(session, user):
     data = replay_data(session)
 
     message = json.dumps({'data': data, 'data_type': 'replay'}, default=str)
-    await user.send(message)
-
-async def send_history_dot(system_track_number, user):
-    print(system_track_number, " send to ", user)
-    data = history_dots(system_track_number)
-
-    message = json.dumps({'data': data, 'data_type': 'history_dots', 'system_track_number': system_track_number}, default=str)
     await user.send(message)
 
 async def get_websocket_messages(websocket):

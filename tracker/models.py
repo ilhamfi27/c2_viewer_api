@@ -477,12 +477,6 @@ def replay_data(session_id):
 
 def history_dots(system_track_number):
     try:
-        columns = (
-            'latitude',
-            'longitude',
-            'latlng',
-            'last_update_time',
-        )
         the_query = "select " \
                     "   max(latitude), " \
                     "   max(longitude), " \
@@ -507,6 +501,42 @@ def history_dots(system_track_number):
             results['last_update_time'] = row[2]
             data.append(results)
         return data
+    except psycopg2.Error as e:
+        print(e)
+    cur.close()
+    conn.close()
+
+def all_history_dots(system_track_numbers = []):
+    if system_track_numbers == []:
+        return []
+    try:
+        track_dots = []
+        for track in system_track_numbers:
+            the_query = "select " \
+                        "   max(latitude), " \
+                        "   max(longitude), " \
+                        "   last_update_time " \
+                        "from public.replay_system_track_kinetic k " \
+                        "JOIN ( " \
+                        "	select id " \
+                        "	from sessions " \
+                        "	where end_time is null " \
+                        ") s on s.id = k.session_id " \
+                        "where system_track_number = {} " \
+                        "group by last_update_time " \
+                        "order by last_update_time asc; " \
+                        .format(track)
+            cur.execute(the_query)
+            data = []
+            for row in cur.fetchall():
+                results = dict()
+                results['latitude'] = row[0]
+                results['longitude'] = row[1]
+                results['latlng'] = [row[0], row[1]]
+                results['last_update_time'] = row[2]
+                data.append(results)
+            track_dots.append({track: data})
+        return track_dots
     except psycopg2.Error as e:
         print(e)
     cur.close()

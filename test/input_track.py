@@ -1,6 +1,9 @@
 import psycopg2
 import time
-from base.db_connection import getconn
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from config.config import getconn
 
 conn = getconn()
 cur = conn.cursor()
@@ -39,7 +42,7 @@ for x in range(12):
             elif(ar_mandatory_table_8[i]=='replay_system_track_kinetic'):
                 q = q+" SELECT "+str(id_baru)+"," + \
                     "system_track_number + (SELECT MAX(system_track_number) FROM "+ar_mandatory_table_8[i]+" WHERE session_id = "+str(row[0])+") * "+str(x)+"," + \
-                    " track_name, heading, latitude  + ("+ str(i * 0.1) +"), longitude, range, bearing, height_depth, speed_over_ground, course_over_ground, last_update_time, CURRENT_TIMESTAMP as created_time"
+                    " track_name, heading, latitude  + ("+ str(i * 0.1) +"), longitude, range, bearing, height_depth, speed_over_ground, course_over_ground, CURRENT_TIMESTAMP as last_update_time, CURRENT_TIMESTAMP as created_time"
             elif(ar_mandatory_table_8[i]=='replay_system_track_processing'):
                 q = q+" SELECT "+str(id_baru)+"," + \
                     "system_track_number + (SELECT MAX(system_track_number) FROM "+ar_mandatory_table_8[i]+" WHERE session_id = "+str(row[0])+") * "+str(x)+"," + \
@@ -80,7 +83,7 @@ for x in range(12):
         for gerak in data_gerak:
             qd_gerak = "INSERT INTO replay_system_track_kinetic"
             qd_gerak = qd_gerak+" SELECT "+str(gerak[0])+"," + \
-                        "system_track_number, track_name, heading, aa.latitude  + ("+ str(0.4) +"), longitude, range, bearing, height_depth, speed_over_ground, course_over_ground, last_update_time, CURRENT_TIMESTAMP as created_time"
+                        "system_track_number, track_name, heading, aa.latitude  + ("+ str(0.4) +"), longitude, range, bearing, height_depth, speed_over_ground, course_over_ground, CURRENT_TIMESTAMP as last_update_time, CURRENT_TIMESTAMP as created_time"
             qd_gerak = qd_gerak + " FROM (SELECT * FROM replay_system_track_kinetic WHERE system_track_number = "+str(gerak[1])+" ORDER BY created_time DESC LIMIT 1) aa "
             qd_gerak = qd_gerak + " WHERE session_id = "+str(gerak[0])+" AND system_track_number = "+str(gerak[1])
             qd_gerak = qd_gerak + " ORDER BY aa.created_time DESC LIMIT 1"
