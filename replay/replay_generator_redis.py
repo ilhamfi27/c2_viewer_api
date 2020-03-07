@@ -3,7 +3,7 @@ from main import *
 
 replay_data_send = []
 
-def replay_track(session_id, start_time, end_time, added_track, data_lengkap, data_ais, check_ais_later):
+def replay_track(session_id, start_time, end_time, added_track, data_lengkap, data_ais):
     # print(start_time, end_time, added_track)
     
     return_data = []
@@ -26,7 +26,7 @@ def replay_track(session_id, start_time, end_time, added_track, data_lengkap, da
 
     # data_lengkap = [[], [], []]
     # BUTUH PERBAIKAN
-    
+    just_added = []
     i = 0
     for table in ar_mandatory_table:
         
@@ -46,17 +46,12 @@ def replay_track(session_id, start_time, end_time, added_track, data_lengkap, da
         # print(t, sql_mandatory)
         cur.execute(sql_mandatory)
         data_mandatory = cur.fetchall()
-        if session_id == 19:
-            print(start_time, data_mandatory)
-        
 
         if len(data_mandatory) > 0:
             for d in data_mandatory:
                 # if d[0] not in data_lengkap[i]:
                 if table == 'replay_system_track_general':
-                    data_lengkap[i].update({d[1]:d})
                     if str(d[10]) == 'AIS_TYPE':
-                        check_ais_later_key = str(session_id) +"AIS_TYPE" + str(d[1])                                                    
                         q_ais_data = "SELECT  * \
                                         FROM  \
                                         ( \
@@ -71,55 +66,36 @@ def replay_track(session_id, start_time, end_time, added_track, data_lengkap, da
                         cur.execute(q_ais_data)
                         ais_data = cur.fetchall()
                         
-                        if len(ais_data) > 0:                                                        
+                        if len(ais_data) > 0:                            
+                            data_lengkap[i][d[1]] = d 
                             redis_ais_key = "AIS"+str(d[1])
                             r.set(str(redis_ais_key), str(ais_data[0]))
-                            data_ais[d[1]] = [ais_data[0]]                            
-                        else:                                                   
-                            check_ais_later.append(d[1])
-                            # print(print(d[1]), check_ais_later, data_mandatory)
+                            data_ais[d[1]] = [ais_data[0]]
+                            # print(data_lengkap[0][d[1]])
+
                             
-                        
+                        conn.commit()
                     else:
                         data_lengkap[0][d[1]] = d
                 else:
                     data_lengkap[i][d[1]] = d
+                
+        conn.commit()
+                    # if d[0] not in just_added:
+                    #     just_added.append(d[0])
         i = i +1
-    data_lengkap_index    = [[],[],[]]    
 
-
-    
+    data_lengkap_index    = [[],[],[]]
     [data_lengkap_index[i].append(key) for i in range(len(data_lengkap)) for key, value in data_lengkap[i].items()]
     data_ready          = reduce(np.intersect1d, data_lengkap_index)
-    if len(check_ais_later) > 0 :
-        for check_ais_stn in check_ais_later:
-            q_ais_data = "SELECT  * \
-                                        FROM  \
-                                        ( \
-                                            SELECT * \
-                                                FROM replay_ais_data  \
-                                            WHERE session_id = " + str(session_id) + "   \
-                                            AND system_track_number = " + str(check_ais_stn) + "  \
-                                                AND created_time > '" + start_time + "'  \
-                                                AND created_time < '" + end_time + "'  \
-                                            ORDER BY created_time DESC  \
-                                        ) aa LIMIT 1;"                                                         
-            cur.execute(q_ais_data)
-            ais_data = cur.fetchall()   
-            
-            if len(ais_data) == 0:                
-                if check_ais_stn in data_ready:
-                    # data_ready.remove(check_ais_stn)
-                    index = np.argwhere(data_ready==check_ais_stn)
-                    data_ready = np.delete(data_ready, index)
-                    print(check_ais_stn, len(ais_data), data_ready)
-            else:
-                if check_ais_stn in check_ais_later:
-                    check_ais_later.remove(check_ais_stn)
-                data_ais[check_ais_stn] = [ais_data[0]]
+    # just_completed      = np.intersect1d(data_ready, just_added)
+    # print(just_completed, start_time, end_time)
+    # print(data_ready, start_time, end_time)
+        # print(data_ready)
     track_final = []
     # print(data_ready)
-    if len(data_ready) > 0:              
+    if len(data_ready) > 0:  
+            
         for ready in data_ready:            
             track = {}
             recorded_track  = {}                          
@@ -233,25 +209,25 @@ def replay_track(session_id, start_time, end_time, added_track, data_lengkap, da
                            
                             if len(ais_data) > 0:
                                 ais_data = cur.fetchall()
-                            else:                               
+                            else:
+                                # print(data_ais[ready])
+                                # ais_data = [r.get("AIS"+str(ready))]
                                 ais_data = data_ais[ready]
-                                
-                                
                             
                             for ais in ais_data:
-                                track['mmsi_number']            = str(ais[2])
-                                track['ship_name']              = str(ais[3])
-                                track['radio_call_sign']        = str(ais[4])
-                                track['imo_number']             = str(ais[5])
-                                track['navigation_status']      = str(ais[6])
-                                track['destination']            = str(ais[7])
-                                track['dimension_of_ship']      = str(ais[8])
-                                track['ship_type']              = str(ais[9])
-                                track['rate_of_turn']           = str(ais[10])
-                                track['gross_tonnage']          = str(ais[12])
-                                track['country']                = str(ais[13])
-                                track['eta']                    = str(ais[15])
-                                track['vendor_id']              = str(ais[16])
+                                    track['mmsi_number']            = str(ais[2])
+                                    track['ship_name']              = str(ais[3])
+                                    track['radio_call_sign']        = str(ais[4])
+                                    track['imo_number']             = str(ais[5])
+                                    track['navigation_status']      = str(ais[6])
+                                    track['destination']            = str(ais[7])
+                                    track['dimension_of_ship']      = str(ais[8])
+                                    track['ship_type']              = str(ais[9])
+                                    track['rate_of_turn']           = str(ais[10])
+                                    track['gross_tonnage']          = str(ais[12])
+                                    track['country']                = str(ais[13])
+                                    track['eta']                    = str(ais[15])
+                                    track['vendor_id']              = str(ais[16])
                         else:
                             track['created_time']        = str(td[1])
                             track['source_data']         = str(td[10])
@@ -348,20 +324,16 @@ def replay_track(session_id, start_time, end_time, added_track, data_lengkap, da
             ''' Check Hash, kalau beda baru append'''
             redis_key           = str(session_id) + "T" + str(ready)
             redis_value         = reduce(concat, track.values()) 
-            hashed_track_value  = hashlib.md5(redis_value.encode('utf-8')).hexdigest()
-            
-            if r.exists(redis_key):
-                # print(redis_key, " already in redis")
-                data_from_hashmap = r.get(redis_key)
-                if data_from_hashmap != hashed_track_value:
+            hashed_redis_value  = hashlib.md5(redis_value.encode('utf-8')).hexdigest()
+            track['hashed']     = hashed_redis_value
+            if r.exists(str(redis_key)):
+                data_from_hashmap = r.get(str(redis_key))
+                if data_from_hashmap != hashed_redis_value:
                     # print(ready, data_from_hashmap)
-                    r.set(redis_key, hashed_track_value)
-                    track['hashed']     = hashed_track_value
                     track_final.append(track)
-                    
+                    r.set(str(redis_key), hashed_redis_value)
             else:
-                r.set(redis_key, hashed_track_value)
-                track['hashed']     = hashed_track_value
+                r.set(str(redis_key), hashed_redis_value)
                 track_final.append(track)
 
             
@@ -369,7 +341,6 @@ def replay_track(session_id, start_time, end_time, added_track, data_lengkap, da
     return_data.append(added_track)
     return_data.append(data_lengkap)
     return_data.append(data_ais)
-    return_data.append(check_ais_later)
     
     return return_data
 
@@ -393,7 +364,6 @@ def get_replay():
     for data in query:
         data_lengkap = [{},{},{}]
         ais_data    = {}
-        check_ais_later = []
         session_id  = data[0]
         start_time  = data[1]
         end_time    = data[2]
@@ -447,12 +417,19 @@ def get_replay():
             }
             '''Jalankan query untuk setiap tabel per setiap segmen durasi'''
 
-            track_replay_data = replay_track(session_id, str(start_time), str(end_time), added_track, data_lengkap, ais_data, check_ais_later)
+            track_replay_data = replay_track(session_id, str(start_time), str(end_time), added_track, data_lengkap, ais_data)
             result["track_play"][str(t)]["track"].append(track_replay_data[0])            
             added_track = track_replay_data[1]
             data_lengkap = track_replay_data[2]
             ais_data = track_replay_data[3]
-            check_ais_later = track_replay_data[4]
+            # print(t, len(data_lengkap[0]))
+            # print(result["track_play"], start_time, end_time)
+            # print(track_replay_data[1])
+            # for i in track_replay_data[1]:
+            #     if i not in added_track :
+            #         added_track.append(i)
+            # added_track.extend(track_replay_data[1])
+            # track_data.append(track_replay_data)
             query_tf = "SELECT tf.* " \
                                    "FROM tactical_figures tf " \
                                     "JOIN(" \
@@ -617,7 +594,7 @@ def get_replay():
         if len(data) == 0:            
             cur.execute(q_store_replay)
             conn.commit()
-        print(session_id, "Done")
+        print("Done")
         # print(q_store_replay)
     # print(json.dumps(result))
     replay_data_send.append(result)
