@@ -198,20 +198,3 @@ async def send_history_dot(system_track_number, user):
 
     message = json.dumps({'data': data, 'data_type': 'history_dots', 'system_track_number': system_track_number}, default=str)
     await user.send(message)
-
-async def send_all_history_dot(system_track_number, user):
-    print(system_track_number, " send to ", user)
-    data = all_history_dots(system_track_number)
-
-    message = json.dumps({'data': data, 'data_type': 'all_history_dots'}, default=str)
-    await user.send(message)
-
-async def all_history_dot(system_track_number, STATE, USERS):
-    if len(system_track_number) != STATE['existed_data_count']:
-        STATE['existed_data_count'] = len(system_track_number)
-
-        if USERS:
-            data = all_history_dots(system_track_number)
-
-            message = json.dumps({'data': data, 'data_type': 'all_history_dots'}, default=str)
-            await asyncio.wait([user.send(message) for user in USERS])

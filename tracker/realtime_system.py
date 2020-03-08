@@ -9,8 +9,7 @@ import websockets
 import numpy as np
 from tracker.models import information_data, tactical_figure_data, reference_point_data, \
                             area_alert_data, session_data, replay_data
-from tracker.actions import data_processing, non_strict_data_processing, send_history_dot, \
-                            all_history_dot, send_all_history_dot
+from tracker.actions import data_processing, non_strict_data_processing, send_history_dot
 from tracker.config import WS_HOST, WS_PORT
 
 logging.basicConfig()
@@ -78,7 +77,6 @@ async def register(websocket):
         ['area_alert', AREA_ALERT_STATE],
         ['session', SESSION_STATE],
     ])
-    await send_all_history_dot(TRACK_STATE['existed_data'], websocket)
     print(USERS)
 
 async def unregister(websocket):
