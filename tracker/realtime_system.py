@@ -127,9 +127,6 @@ async def data_change_detection():
         session_datas = np.array(session_data())
         await non_strict_data_processing(session_datas, SESSION_STATE, USERS, NON_REALTIME_USERS, data_category="session",
                                 debug=False)
-
-        # all history dot
-        await all_history_dot(TRACK_STATE['existed_data'], HISTORY_DOT_STATE, USERS)
         print('========================================================================================================================')
         print('========================================================================================================================')
         # lama tidur

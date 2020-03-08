@@ -318,12 +318,14 @@ def information_data():
                                 results['eta_at_destination'] = row[11]
                                 results['vendor_id'] = row[12]
                         if data_ais > 0:
+                            results['history_dots'] = history_dots(system_track_number)
                             ship_tracks.append([system_track_number, results])
                             continue
                     else:
                         if len(results) > 0:
                             results['type_of_ship_or_cargo'] = '-'
                             results['ship_name'] = '-'
+                        results['history_dots'] = history_dots(system_track_number)
                         ship_tracks.append([system_track_number, results])
                 # pengambilan data track diambil dari pengkondisian ais
                 # tidak di kolektif di bawah
@@ -490,7 +492,7 @@ def history_dots(system_track_number):
                     "where system_track_number = {} " \
                     "group by last_update_time " \
                     "order by last_update_time asc; " \
-                    .format(system_track_number)
+            .format(system_track_number)
         cur.execute(the_query)
         data = []
         for row in cur.fetchall():
@@ -506,7 +508,8 @@ def history_dots(system_track_number):
     cur.close()
     conn.close()
 
-def all_history_dots(system_track_numbers = []):
+
+def all_history_dots(system_track_numbers=[]):
     if system_track_numbers == []:
         return []
     try:
@@ -525,7 +528,7 @@ def all_history_dots(system_track_numbers = []):
                         "where system_track_number = {} " \
                         "group by last_update_time " \
                         "order by last_update_time asc; " \
-                        .format(track)
+                .format(track)
             cur.execute(the_query)
             data = []
             for row in cur.fetchall():
