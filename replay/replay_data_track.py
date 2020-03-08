@@ -1,11 +1,8 @@
 #!/usr/bin/env python
 
 # WS server example that synchronizes REALTIME_state across clients
-import json
-import asyncio
-import websockets
 from main import *
-from replay_generator import *
+from replay_generator_alternative import *
 
 
 USERS = set()
@@ -17,13 +14,13 @@ async def ambil_replay():
         message = json.dumps(replay_data_send, default=str)
         await asyncio.wait([user.send(message) for user in USERS])
 
-    async def send_reply_data():
-        if USERS:
-            message = json.dumps(replay_data_send, default=str)
-            await asyncio.wait([user.send(message) for user in USERS])
+async def send_reply_data():
+    if USERS:
+        message = json.dumps(replay_data_send, default=str)
+        await asyncio.wait([user.send(message) for user in USERS])
 
-    async def register(websocket):
-        USERS.add(websocket)
+async def register(websocket):
+    USERS.add(websocket)
     print(USERS)
 
 async def unregister(websocket):

@@ -1,0 +1,18 @@
+SEGMENT 1
+2020-02-21 13:00:00
+2020-02-21 13:01:00
+STN :
+General     : 1,4,5     
+Kinetic     : 2,5,6
+Processing  : 3,4,6
+Data_Lengkap = [[1,4,5], [2,5,6], [3,4,6]]
+
+SEGMENT 2
+2020-02-21 13:01:00
+2020-02-21 13:02:00
+Data_Lengkap = [[1,4,5], [2,5,6], [3,4,6]]
+General     : 2,3,6
+Kinetic     : 4,6,8
+Processing  : 5,9,10
+Data_Lengkap = [[1,2,3,4,5,6], [2,4,5,6,8], [3,4,5,6,9,10]]
+Hasil intersect = [5,6]
