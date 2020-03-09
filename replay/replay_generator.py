@@ -81,7 +81,7 @@ def replay_track(session_id, start_time, end_time, added_track, data_lengkap):
                     # print(check_exist)
                     cur.execute(check_exist)
                     data_exist = cur.fetchall()
-                    print(start_time, ready, len(data_exist))
+                    # print(start_time, ready, len(data_exist))
                     
                     # if table == 'replay_system_track_general':
                     #     if len(data) > 0:
@@ -104,7 +104,7 @@ def replay_track(session_id, start_time, end_time, added_track, data_lengkap):
                     if len(data_exist) > 0:
                         is_exist = True
                         break
-                print(start_time, ready, is_exist)                          
+                # print(start_time, ready, is_exist)                          
                 
                 if is_exist:
                     if ready not in track_final:
@@ -445,6 +445,7 @@ def get_replay():
                             "points": tf[15]
                             }
                 result["track_play"][str(t)]["tactical_figures"].append(tf_track)                
+                print(tf_track)
 
             query_rp = "SELECT rrp.* " \
                                "FROM replay_reference_point rrp \

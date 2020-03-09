@@ -8,7 +8,7 @@ import hashlib
 from operator import concat
 
 conn = psycopg2.connect("host=127.0.0.1 \
-    dbname=shiptrack_kurdi \
+    dbname=shiptrack_test \
     user=postgres \
     password=1234"
 )
