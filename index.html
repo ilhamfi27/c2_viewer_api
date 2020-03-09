@@ -20,10 +20,6 @@
                 min-height: 1em;
                 min-width: 1em;
             }
-            .button {
-                cursor: pointer;
-                user-select: none;
-            }
             .realtime {
                 color: red;
             }
@@ -40,48 +36,50 @@
     </head>
     <body>
         <div class="buttons">
-            <div class="realtime button">Realtime</div>
-            <div class="replay button">Replay</div>
-            <div class="session button">Session 1</div>
-            <div class="dot button">Get Dot 1</div>
-        </div>
-        <div class="state">
-            <span class="users">?</span> online
+            <div class="button">
+                Realtime
+                <button id="realtime">Request</button>
+            </div>
+            <div class="button">
+                Replay
+                <button id="replay">Request</button>
+            </div>
+            <div class="button">
+                Session <input type="text" id="session-id" placeholder="session id">
+                <button id="session">Request</button>
+            </div>
+            <div class="button">
+                Get Dot <input type="text" id="dot-id" placeholder="dot id">
+                <button id="dot">Request</button>
+            </div>
         </div>
         <script>
-            var realtime = document.querySelector('.realtime'),
-                replay = document.querySelector('.replay'),
-                session = document.querySelector('.session'),
-                dot = document.querySelector('.dot'),
-                value = document.querySelector('.value'),
-                users = document.querySelector('.users'),
-                websocket = new WebSocket("ws://127.0.0.1:5679/");
+            var realtime = document.querySelector('#realtime'),
+                replay = document.querySelector('#replay'),
+                session = document.querySelector('#session'),
+                dot = document.querySelector('#dot'),
+                session_id = document.querySelector('#session-id'),
+                dot_id = document.querySelector('#dot-id'),
+                websocket = new WebSocket("ws://127.0.0.1:8080/");
             realtime.onclick = function (event) {
+                console.log("clicked")
                 websocket.send(JSON.stringify({action: 'realtime'}));
             }
             replay.onclick = function (event) {
+                console.log("clicked")
                 websocket.send(JSON.stringify({action: 'replay'}));
             }
             session.onclick = function (event) {
-                websocket.send(JSON.stringify({action: 'replay', request: 6}));
+                console.log("clicked " + session_id.value)
+                websocket.send(JSON.stringify({action: 'replay', request: session_id.value}));
             }
             dot.onclick = function (event) {
-                websocket.send(JSON.stringify({request_dots: 1}));
+                console.log("clicked" + dot_id.value)
+                websocket.send(JSON.stringify({request_dots: dot_id.value}));
             }
             websocket.onmessage = function (event) {
                 data = JSON.parse(event.data);
                 console.log(data);
-
-                switch (data.type) {
-                    case 'users':
-                        users.textContent = (
-                            data.count.toString() + " user" +
-                            (data.count == 1 ? "" : "s"));
-                        break;
-                    default:
-                        // console.error(
-                        //     "unsupported event", data);
-                }
             };
         </script>
     </body>
