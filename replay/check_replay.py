@@ -4,9 +4,10 @@
 
 
 from main import *
-from replay_generator import *
+from replay_generator_alternative import *
+import time, threading
 
-if __name__ == "__main__":    
+def check_replay():    
     query = "SELECT id FROM sessions where end_time is not null";
     cur.execute(query)
     session = cur.fetchall()
@@ -20,6 +21,10 @@ if __name__ == "__main__":
             if(len(recorded) == 0):
                 print("generating replay")
                 get_replay()
+    threading.Timer(1, check_replay).start()
+if __name__ == "__main__":    
+    check_replay()
+    
 
 
 
