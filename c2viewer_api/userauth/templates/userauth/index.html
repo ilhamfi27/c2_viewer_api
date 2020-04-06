@@ -1,0 +1,47 @@
+<!-- chat/templates/chat/room.html -->
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>Realtime Shiptrack</title>
+</head>
+
+<body>
+
+    <form method="post" id="login-form">
+        {% csrf_token %}
+        <input type="text" id="input-username" name="username" placeholder="Username"><br>
+        <input type="password" id="input-password" name="password" placeholder="Password"><br>
+        <input type="button" id="btn-login" value="Login">
+    </form>
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"
+        integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+    <script>
+        $('#btn-login').click(function () {
+            $.ajax({
+                method: "POST",
+                url: "http://localhost:8000/api/v1/auth/",
+                data: $('#login-form').serialize(),
+                success: function (res) {
+                    // write webstorage
+                    localStorage.setItem("token", res.token);
+
+                    // redirect to a page
+                    window.location.href = "/userauth/home/";
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    statusCode = jqXHR.status;
+                    
+                    if (statusCode == 401){
+                        alert("Invalid Username or Password");
+                    } else if (statusCode == 400) {
+                        alert("Bad Request!");
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

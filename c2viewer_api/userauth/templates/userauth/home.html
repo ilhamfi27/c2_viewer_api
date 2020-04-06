@@ -1,0 +1,48 @@
+<!-- chat/templates/chat/index.html -->
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>Realtime Shiptrack</title>
+</head>
+
+<body>
+    Welcome Home!<br>
+    <a href="javascript:void(0)" id="logout">Logout</a>
+
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"
+        integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+    <script>
+        $('#logout').click(function () {
+            logout();
+        });
+
+        const chatSocket = new WebSocket(
+            'ws://' +
+            window.location.host +
+            '/ws/realtime/'
+        );
+
+        chatSocket.onmessage = function (e) {
+            const data = JSON.parse(e.data);
+            const token = data.token
+
+            existingToken = localStorage.getItem('token');
+
+            if (existingToken == token) {
+                logout();
+            }
+        };
+
+        function logout() {
+            // clear local storage
+            localStorage.clear();
+
+            // redirect to a page
+            window.location.href = "/userauth/";
+        }
+    </script>
+</body>
+
+</html>
