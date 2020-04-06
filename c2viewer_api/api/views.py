@@ -321,27 +321,23 @@ class DatabaseOperationViewSet(viewsets.ViewSet):
             """Write the value by returning it, instead of storing in a buffer."""
             return value
 
+
     def iter_items(self, items, pseudo_buffer):
         for item in items:
             yield pseudo_buffer.write(item)
 
+
     def backup(self, request, session_id):
         file_path, string_query = db_operation.operation_backup(session_id)
 
-        print(len(string_query), flush=True)
+        print("QUERY LENGTH", len(string_query), flush=True)
+        print("FILE NAME", file_path, flush=True)
 
         response = StreamingHttpResponse(self.iter_items(string_query, self.Echo()),
                                          content_type="text/plain")
         response['Content-Disposition'] = 'attachment; filename=' + os.path.basename(file_path)
         return response
 
-        # file_path = os.path.join(settings.BASE_DIR, file_path)
-        # if os.path.exists(file_path):
-        #     with open(file_path, 'r') as fh:
-        #         response = Response(fh.read(), content_type="text/plain", status=st.HTTP_200_OK)
-        #         response['Content-Type'] = 'text/plain'
-        #         response['Content-Disposition'] = 'attachment; filename=' + os.path.basename(file_path)
-        #         return response
 
-        # return Response({}, status=st.HTTP_200_OK)
-        # return Response({"message": "File Not Found"}, status=st.HTTP_404_NOT_FOUND)
+    def restore(self, request):
+        pass

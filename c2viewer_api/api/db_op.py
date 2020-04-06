@@ -28,7 +28,7 @@ def operation_backup(session_id):
         cursor.execute(query_data)
         rows = cursor.fetchall()
         
-        namafile = "sql_backup_session_"+str(session_id)+".sql"
+        namafile = "sav_backup_session_"+str(session_id)+".sql"
         # f = open(db_dump_folder + namafile, "w")
 
         string_sql_insert = "INSERT INTO sessions VALUES ("
@@ -110,4 +110,4 @@ def operation_backup(session_id):
             connection.close()
             print("PostgreSQL connection is closed")
 
-        return db_dump_folder + namafile, queries
+        return namafile, queries
