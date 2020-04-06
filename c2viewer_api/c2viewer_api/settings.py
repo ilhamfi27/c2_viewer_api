@@ -47,7 +47,6 @@ INSTALLED_APPS = [
     'corsheaders',
     'api',
     'channels',
-    'chat',
     'userauth',
 ]
 
