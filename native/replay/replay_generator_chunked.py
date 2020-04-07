@@ -132,7 +132,7 @@ def replay_track(session_id, start_time, end_time, data_lengkap_ais, data_lengka
                 track = {
                 "system_track_number" : str(ready),
                 "track_name" : "",
-                "track_status" : "",
+                "status" : "",
                 # :eneral,
                 "environment" : "",
                 "source" : "",
@@ -319,7 +319,7 @@ def replay_track(session_id, start_time, end_time, data_lengkap_ais, data_lengka
             redis_value         = reduce(concat, track.values())
             hashed_track_value  = hashlib.md5(redis_value.encode('utf-8')).hexdigest()
             # if track_status not in added_track:
-            track_status = "T" + str(ready)
+            # track_status = ""
             if r.exists(redis_key):
                 data_from_hashmap = r.get(redis_key)
                 if data_from_hashmap.decode("utf-8") != hashed_track_value:                   
@@ -330,19 +330,19 @@ def replay_track(session_id, start_time, end_time, data_lengkap_ais, data_lengka
                         for track_lengkap in data_lengkap_non_ais:
                             if ready in track_lengkap:
                                 del track_lengkap[ready]
-                        track["track_status"] = track_status+ "R"
+                        track["status"] = "DELETE"
                         track['hashed']     = hashed_track_value
                         r.delete(redis_key)
                         track_final.append(track)
                     else:
                         r.set(redis_key, hashed_track_value)
-                        track["track_status"] = track_status+ "U"
+                        track["status"] = "UPDATE"
                         track['hashed']     = hashed_track_value
                         track_final.append(track)
 
             else:
                 r.set(redis_key, hashed_track_value)
-                track["track_status"] = track_status+ "A"
+                track["status"] = "CREATE"
                 track['hashed']     = hashed_track_value
                 track_final.append(track)
 
@@ -355,14 +355,14 @@ def replay_track(session_id, start_time, end_time, data_lengkap_ais, data_lengka
     return return_data
 
 # q = "SELECT aa.session_id as id, aa.*  FROM area_alerts aa  JOIN (    SELECT object_id,max(last_update_time) last_update_time     FROM area_alerts     WHERE session_id = '1' AND last_update_time > '2020-01-10 14:14:31' AND last_update_time < '2020-01-10 14:14:41'     GROUP BY object_id ) mx ON aa.object_id=mx.object_id and aa.last_update_time=mx.last_update_time  WHERE aa.session_id = '1'  AND aa.last_update_time > '2020-01-10 14:14:31' AND aa.last_update_time < '2020-01-10 14:14:41'  ORDER BY aa.object_id"
-async def get_replay():
+def get_replay():
     '''Get data session yang sudah selesai'''
     sql = "select id, to_char (start_time::timestamp, 'YYYY-MM-DD HH24:MI:SS') start_time, " \
                   " to_char (end_time::timestamp, 'YYYY-MM-DD HH24:MI:SS') end_time, " \
                   "extract(epoch from (end_time::timestamp - start_time::timestamp)) as durasi, name " \
                   " from sessions " \
                   " WHERE end_time IS NOT null and " \
-                  " id not in (SELECT distinct(session_id) FROM stored_replay WHERE update_rate="+str(UPDATE_RATE)+" ) "
+                  " id not in (SELECT distinct(session_id) FROM stored_replay WHERE update_rate="+str(UPDATE_RATE)+" ) AND id=2"
     print(sql)
     cur.execute(sql)
     query = cur.fetchall()    
@@ -398,29 +398,28 @@ async def get_replay():
         
 
         '''Looping sebanyak panjang replay'''
-        chunk_size = 1800
-        panjang_chunk = math.ceil(panjang_replay/chunk_size)
-        t_awal  = 0
-        t_akhir = 0
-        tmp_awal    = (datetime.strptime(str(start_time), '%Y-%m-%d %H:%M:%S'))
-        final = end_time
+        chunk_size      = 1800
+        panjang_chunk     = math.ceil(panjang_replay/chunk_size)        
+        t_awal          = 0
+        t_akhir         = 0
+        tmp_awal        = (datetime.strptime(str(start_time), '%Y-%m-%d %H:%M:%S'))
+        final           = end_time
         for sequence in range(panjang_chunk):
             ujung = panjang_chunk - 1        
             
             if sequence == 0:
                 print("awal")
                 t_awal  = 0
-                t_akhir = chunk_size
-
-                tmp_akhir   = start_time
+                t_akhir = chunk_size if panjang_chunk > 1 else final                
+                tmp_akhir     = start_time
                 tmp_akhir    += dt.timedelta(seconds=t_akhir)
             elif sequence == ujung:
                 print("ujung")
-                t_awal  = panjang_replay-chunk_size
-                t_akhir = panjang_replay-t_awal
-
+                t_awal  = t_akhir
+                t_akhir = panjang_replay
+                
                 tmp_awal    += dt.timedelta(seconds=chunk_size)
-                print(end_time)
+                print(panjang_replay, t_awal, t_akhir)
                 tmp_akhir    = final
             else:
                 print("tengah")
@@ -518,19 +517,19 @@ async def get_replay():
                         data_from_hashmap = r.get(redis_tf_key)
                         if data_from_hashmap.decode("utf-8") != hashed_tf_value:                        
                             if is_visible == 'REMOVE':                            
-                                tf_track["tf_status"] = tf_status+ "R"
+                                tf_track["status"] = "DELETE"
                                 tf_track['hashed']       = hashed_tf_value
                                 r.delete(redis_tf_key)
                                 result["track_play"][str(t)]["tactical_figures"].append(tf_track)
                             else:
                                 r.set(redis_tf_key, hashed_tf_value)
-                                tf_track["tf_status"] = tf_status+ "U"
+                                tf_track["status"] = "UPDATE"
                                 tf_track['hashed']       = hashed_tf_value
                                 result["track_play"][str(t)]["tactical_figures"].append(tf_track)
                     else:
                         r.set(redis_tf_key, hashed_tf_value)
-                        tf_track["tf_status"] = tf_status+ "A"
-                        tf_track['hashed']       = hashed_tf_value
+                        tf_track["status"] = "CREATE"
+                        tf_track['hashed'] = hashed_tf_value
                         result["track_play"][str(t)]["tactical_figures"].append(tf_track)
                     
 
@@ -553,7 +552,7 @@ async def get_replay():
                     rp_track            = {}
                     object_id           = rp[2]
                     visibility_type     = rp[7]
-                    rp_status           = 'P' + str(object_id)
+                    # rp_status           = 'P' + str(object_id)
                     rp_name             = str(rp[3])
                     rp_latitude         = str(float(rp[4]))
                     rp_longitude        = str(float(rp[5]))
@@ -582,19 +581,19 @@ async def get_replay():
                         data_from_hashmap = r.get(redis_rp_key)
                         if data_from_hashmap.decode("utf-8") != hashed_rp_value:                        
                             if is_visible == 'REMOVE':                            
-                                rp_track["rp_status"] = rp_status+ "R"
+                                rp_track["status"] = "DELETE"
                                 rp_track['hashed']       = hashed_rp_value
                                 r.delete(redis_rp_key)
                                 result["track_play"][str(t)]["reference_point"].append(rp_track)
                             else:
                                 r.set(redis_rp_key, hashed_rp_value)
-                                rp_track["rp_status"] = rp_status+ "U"
+                                rp_track["status"] = "UPDATE"
                                 rp_track['hashed']       = hashed_rp_value
                                 result["track_play"][str(t)]["reference_point"].append(rp_track)
 
                     else:
                         r.set(redis_rp_key, hashed_rp_value)
-                        rp_track["rp_status"] = rp_status+ "A"
+                        rp_track["status"] = "CREATE"
                         rp_track['hashed']       = hashed_rp_value
                         result["track_play"][str(t)]["reference_point"].append(rp_track)
                     
@@ -625,7 +624,7 @@ async def get_replay():
                     ship_name           = str(aa[7])
                     track_source_type   = str(aa[8])
                     is_visible          = str(aa[9])
-                    aa_status = 'AA' + str(object_id) #+'R' if is_visible == 'REMOVE' else 'AA'+str(object_id)
+                    # aa_status = 'AA' + str(object_id)
                     aa_track = {"system_track_number": aa_status,
                                 "object_type": object_type,
                                 "object_id": object_id,
@@ -643,19 +642,19 @@ async def get_replay():
                         data_from_hashmap = r.get(redis_aa_key)
                         if data_from_hashmap.decode("utf-8") != hashed_aa_value:                        
                             if is_visible == 'REMOVE':                            
-                                aa_track["aa_status"] = aa_status+ "R"
+                                aa_track["status"] = "DELETE"
                                 aa_track['hashed']       = hashed_aa_value
                                 r.delete(redis_aa_key)
                                 result["track_play"][str(t)]["area_alert"].append(aa_track)
                             else:
                                 r.set(redis_aa_key, hashed_aa_value)
-                                aa_track["aa_status"] = aa_status+ "U"
+                                aa_track["status"] = "UPDATE"
                                 aa_track['hashed']       = hashed_aa_value
                                 result["track_play"][str(t)]["area_alert"].append(aa_track)
 
                     else:
                         r.set(redis_aa_key, hashed_aa_value)
-                        aa_track["aa_status"] = aa_status+ "A"
+                        aa_track["status"] = "CREATE"
                         aa_track['hashed']       = hashed_aa_value
                         result["track_play"][str(t)]["area_alert"].append(aa_track)
             
@@ -681,41 +680,3 @@ async def get_replay():
 
     conn.commit()
 
-
-    if USERS:
-        message = json.dumps(replay_data_send, default=str)
-        await asyncio.wait([user.send(message) for user in USERS])
-
-async def send_reply_data():
-    if USERS:
-        message = json.dumps(replay_data_send, default=str)
-        await asyncio.wait([user.send(message) for user in USERS])
-
-async def register(websocket):
-    USERS.add(websocket)
-    print(USERS)
-
-async def unregister(websocket):
-    USERS.remove(websocket)
-async def handler(websocket, path):
-    await register(websocket),
-    try:
-        await send_reply_data()
-        async for message in websocket:
-            pass
-    except websockets.exceptions.ConnectionClosedError:
-        print("connection error")
-    finally:
-        await unregister(websocket)
-
-# start_server = websockets.serve(handler, "10.20.112.217", 8080)
-# start_server = websockets.serve(handler, "192.168.43.14", 14045)
-start_server = websockets.serve(handler, "127.0.0.1", 8082)
-
-tasks = [
-    asyncio.ensure_future(start_server),
-    asyncio.ensure_future(get_replay())
-]
-
-asyncio.get_event_loop().run_until_complete(asyncio.gather(*tasks))
-asyncio.get_event_loop().run_forever()
