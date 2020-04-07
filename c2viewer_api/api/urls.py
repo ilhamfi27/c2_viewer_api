@@ -39,6 +39,10 @@ db_op_backup = views.DatabaseOperationViewSet.as_view({
     'get': 'backup',
 })
 
+db_op_restore = views.DatabaseOperationViewSet.as_view({
+    'post': 'restore',
+})
+
 urlpatterns = [
     url(r'^auth/$', user_auth, name='user_auth'),
     url(r'^stored_replay/(?P<session_id>\d+)', stored_replay, name='stored_replay'),
@@ -47,5 +51,6 @@ urlpatterns = [
     url(r'^unlock_session/$', unlock_session, name='unlock_session'),
     url(r'^setting/current/$', current_setting, name='current_setting'),
     url(r'^database_operation/backup/(?P<session_id>\d+)', db_op_backup, name='db_op_backup'),
+    url(r'^database_operation/restore/$', db_op_restore, name='db_op_restore'),
     url(r'', include(router.urls)),
 ]

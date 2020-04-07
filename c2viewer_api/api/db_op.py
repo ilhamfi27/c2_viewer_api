@@ -111,3 +111,19 @@ def operation_backup(session_id):
             print("PostgreSQL connection is closed")
 
         return namafile, queries
+
+def restore_file_handler(f):
+    try:
+        cursor = connection.cursor()
+        for chunks in f.readlines():
+            chunks = chunks.decode("utf-8")
+            cursor.execute(chunks)
+    except Exception as error:
+        print ("Error while connecting to PostgreSQL", error)
+        raise error
+    finally:
+        # closing database connection.
+        if (connection):
+            cursor.close()
+            connection.close()
+            print("PostgreSQL connection is closed")

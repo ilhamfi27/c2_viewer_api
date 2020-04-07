@@ -44,3 +44,6 @@ class AppSettingSerializer(serializers.ModelSerializer):
     class Meta:
         model = AppSetting
         fields = '__all__'
+
+class RestoreFileSerializer(serializers.Serializer):
+    dump_file = serializers.FileField(required=True)

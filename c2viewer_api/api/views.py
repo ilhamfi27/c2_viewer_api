@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from django.utils import timezone
 from django.http import StreamingHttpResponse
 from .serializers import LocationSerializer, UserSerializer, LoginSerializer, StoredReplaySerializer, SessionSerializer, \
-    AppSettingSerializer, ChangePasswordSerializer, UnlockSessionSerializer
+    AppSettingSerializer, ChangePasswordSerializer, UnlockSessionSerializer, RestoreFileSerializer
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from django.db.models import Q
@@ -311,6 +311,7 @@ class AppSettingViewSet(viewsets.ModelViewSet):
 
 
 class DatabaseOperationViewSet(viewsets.ViewSet):
+    serializer_class = RestoreFileSerializer
 
     class Echo:
         """An object that implements just the write method of the file-like
@@ -329,15 +330,19 @@ class DatabaseOperationViewSet(viewsets.ViewSet):
 
     def backup(self, request, session_id):
         file_path, string_query = db_operation.operation_backup(session_id)
+        file_name = "sav_backup_session_"+str(session_id)+".sql"
 
         print("QUERY LENGTH", len(string_query), flush=True)
         print("FILE NAME", file_path, flush=True)
 
         response = StreamingHttpResponse(self.iter_items(string_query, self.Echo()),
                                          content_type="text/plain")
-        response['Content-Disposition'] = 'attachment; filename=' + os.path.basename(file_path)
+        response['Content-Disposition'] = 'attachment; filename=' + file_name
         return response
 
 
     def restore(self, request):
-        pass
+        dump_file = request.FILES["dump_file"]
+        db_operation.restore_file_handler(dump_file)
+
+        return Response({}, status=st.HTTP_200_OK)
