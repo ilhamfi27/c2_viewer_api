@@ -343,6 +343,25 @@ class DatabaseOperationViewSet(viewsets.ViewSet):
 
     def restore(self, request):
         dump_file = request.FILES["dump_file"]
+
+        file_name = dump_file.name.split('.')[0]
+        splitted_name = file_name.split('_')
+
+        session_id = splitted_name[-1]
+
+        if 'sav' not in splitted_name and 'backup' not in splitted_name and 'session' not in splitted_name:
+            response = {
+                "message": "Invalid file name"
+            }
+            return Response(response, status=st.HTTP_400_BAD_REQUEST)
+
+        session = Session.objects.filter(pk=session_id)
+        if session.exists():
+            response = {
+                "message": "Session exists"
+            }
+            return Response(response, status=st.HTTP_400_BAD_REQUEST)
+
         db_operation.restore_file_handler(dump_file)
 
         return Response({}, status=st.HTTP_200_OK)
