@@ -41,13 +41,17 @@ class AuthViewSet(viewsets.ModelViewSet):
         valid = login_serializer.is_valid()
 
         if valid:
-            token, user = self.authenticate_user(request, **kwargs)
+            token, user, location = self.authenticate_user(request, **kwargs)
 
             if user != None:
                 response = {
                     "token": token,
                     "username": user.username,
                     "level": user.level,
+                    "location": {
+                        "latitude": location.latitude,
+                        "longitude": location.longitude,
+                    },
                 }
 
                 # to get newest AccessToken
@@ -79,8 +83,11 @@ class AuthViewSet(viewsets.ModelViewSet):
     def authenticate_user(self, request, **kwargs):
         try:
             user = User.objects.get(**kwargs)
+            location = Location.objects.get(pk=user.location.id)
+
+            print(location, flush=True)
         except User.DoesNotExist:
-            return None, None
+            return None, None, None
 
         client_ip = self.get_client_ip(request)
         server_timezone = timezone.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -95,7 +102,7 @@ class AuthViewSet(viewsets.ModelViewSet):
 
         data_token = AccessToken.objects.create(**token_data)
 
-        return data_token.token, user
+        return data_token.token, user, location
 
     def disconnect_order(self, token):
         message = json.dumps({
@@ -249,46 +256,14 @@ class StoredReplayViewSet(viewsets.ModelViewSet):
         # return Response({}, status=st.HTTP_200_OK)
 
 
-    def streamed(self, request, session_id):
-        session = Session.objects.get(pk=session_id)
-        stored_replays = self.queryset.filter(session_id=session_id)
-
+    def streamed(self, request, session_id, sequence):
+        sequence_data = self.queryset.filter(session_id=session_id, sequence=sequence)
 
         response = {
-            "data": self.iter_items(session, stored_replays)
+            "data": sequence_data
         }
 
-        # return Response(response, status=st.HTTP_200_OK)
-        return StreamingHttpResponse(response)
-
-    def iter_items(self, session, stored_replays):
-        tracks = []
-        replay_data = {}
-        durasi_session = 0
-
-        for stored_replay in stored_replays:
-            res = json.loads(stored_replay.data)
-            update_rate = res["update_rate"]
-            for key, value in res["track_play"].items():
-                tracks.append((key, value))
-                durasi_session += 1
-
-        print(session.id, flush=True)
-
-        replay_data["session_id"] = session.id
-        replay_data["start_time"] = session.start_time
-        replay_data["end_time"] = session.end_time
-        replay_data["session_name"] = session.name
-        replay_data["update_rate"] = update_rate
-        replay_data["durasi_session"] = int(durasi_session) * int(update_rate)
-        replay_data["track_play"] = dict(tracks)
-
-        return replay_data
-
-    def hello(self):
-        yield 'Hello,'
-        yield 'there!'
-
+        return Response(response, status=st.HTTP_200_OK)
 
 
 class AppSettingViewSet(viewsets.ModelViewSet):
