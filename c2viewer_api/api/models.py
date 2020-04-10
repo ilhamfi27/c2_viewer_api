@@ -49,7 +49,7 @@ class StoredReplay(models.Model):
     session = models.ForeignKey(Session, on_delete=models.CASCADE, null=True)
     update_rate = models.CharField(max_length=100)
     data = models.CharField(max_length=500)
-    sequence = models.IntegerField(blank=True, null=True, default=None)
+    sequence = models.TextField(blank=True, null=True, default=None)
 
     class Meta:
         db_table = 'stored_replay'

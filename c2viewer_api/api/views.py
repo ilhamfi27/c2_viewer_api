@@ -244,6 +244,8 @@ class StoredReplayViewSet(viewsets.ModelViewSet):
         replay_data["durasi_session"] = int(durasi_session) * int(update_rate)
         replay_data["track_play"] = dict(tracks)
 
+        print("NOT SEQUENCED", session_id, flush=True)
+
         response = {
             "data": replay_data
         }
@@ -256,12 +258,33 @@ class StoredReplayViewSet(viewsets.ModelViewSet):
         # return Response({}, status=st.HTTP_200_OK)
 
 
-    def streamed(self, request, session_id, sequence):
-        sequence_data = self.queryset.filter(session_id=session_id, sequence=sequence)
+    def sequenced(self, request, session_id, sequence):
+        try:
+            session = Session.objects.get(pk=session_id)
 
-        response = {
-            "data": sequence_data
-        }
+            # get maximum sequence on this session
+            total_sequence = self.queryset.filter(session=session).order_by('-sequence').count()
+
+            sequence_data = self.queryset.filter(session=session, sequence=sequence).first()
+            if sequence_data:
+                sequence_response = json.loads(sequence_data.data)
+                sequence_response["sequence"] = sequence
+                sequence_response["total_sequence"] = total_sequence
+            else:
+                sequence_response = {}
+
+
+            response = {
+                "data": sequence_response
+            }
+
+        except Session.DoesNotExist:
+            response = {
+                "message": "Session does not exist"
+            }
+
+            return Response(response, status=st.HTTP_404_NOT_FOUND)
+
 
         return Response(response, status=st.HTTP_200_OK)
 

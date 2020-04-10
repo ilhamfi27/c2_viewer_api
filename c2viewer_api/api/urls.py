@@ -20,7 +20,7 @@ stored_replay = views.StoredReplayViewSet.as_view({
 })
 
 sequence_stored_replay = views.StoredReplayViewSet.as_view({
-    'get': 'streamed',
+    'get': 'sequenced',
 })
 
 change_password = views.ChangePasswordViewSet.as_view({
@@ -46,7 +46,7 @@ db_op_restore = views.DatabaseOperationViewSet.as_view({
 urlpatterns = [
     url(r'^auth/$', user_auth, name='user_auth'),
     url(r'^stored_replay/(?P<session_id>\d+)', stored_replay, name='stored_replay'),
-    url(r'^stored_replay/(?P<session_id>\d+)/sequence/(?P<sequence>\d+)', sequence_stored_replay, name='sequence_stored_replay'),
+    url(r'^sequence_stored_replay/(?P<session_id>\d+)/(?P<sequence>\d+)', sequence_stored_replay, name='sequence_stored_replay'),
     url(r'^change_password/$', change_password, name='change_password'),
     url(r'^unlock_session/$', unlock_session, name='unlock_session'),
     url(r'^setting/current/$', current_setting, name='current_setting'),
