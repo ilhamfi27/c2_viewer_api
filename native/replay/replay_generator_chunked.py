@@ -398,7 +398,7 @@ def get_replay():
         
 
         '''Looping sebanyak panjang replay'''
-        chunk_size      = 1800
+        chunk_size      = 600
         panjang_chunk     = math.ceil(panjang_replay/chunk_size)        
         t_awal          = 0
         t_akhir         = 0
@@ -660,13 +660,13 @@ def get_replay():
                         result["track_play"][str(t)]["area_alert"].append(aa_track)
             
             message = json.dumps(result, separators=(',', ':'))
-            check_stored = "SELECT distinct(id) FROM stored_replay WHERE session_id="+str(session_id)+" AND update_rate="+str(UPDATE_RATE)+" and sequence= "+str(sequence)+" "
+            check_stored = "SELECT distinct(id) FROM stored_replay WHERE session_id="+str(session_id)+" AND update_rate="+str(UPDATE_RATE)+" and sequence= '"+str(sequence)+"' "
             print(check_stored)
             cur.execute(check_stored)
             stored_data = cur.fetchall()
             if len(stored_data) == 0:
                 q_store_replay = "INSERT INTO stored_replay(update_rate, session_id, data, sequence)" \
-                                        "VALUES ("+str(UPDATE_RATE)+", "+str(session_id)+", '"+str(message)+"', "+str(sequence)+" )"
+                                        "VALUES ("+str(UPDATE_RATE)+", "+str(session_id)+", '"+str(message)+"', '"+str(sequence)+"' )"
                 cur.execute(q_store_replay)
                 conn.commit()
             result["track_play"].clear()
@@ -680,4 +680,5 @@ def get_replay():
     
 
     
+
 
