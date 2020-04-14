@@ -51,10 +51,10 @@ INSTALLED_APPS = [
 ]
 
 REST_FRAMEWORK = {
+    'AUTH_USER_MODEL': 'api.Models.User',
+    'UNAUTHENTICATED_USER': None,
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework.authentication.TokenAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
-        'c2viewer_api.authentication.MyCustomAuthentication',
+        'c2viewer_api.authentication.JwtServiceOnlyAuthentication',
     ),
 }
 

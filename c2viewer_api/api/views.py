@@ -49,6 +49,8 @@ class AuthViewSet(viewsets.ModelViewSet):
                     "username": user.username,
                     "level": user.level,
                     "location": {
+                        "id": location.id,
+                        "name": location.name,
                         "latitude": location.latitude,
                         "longitude": location.longitude,
                     },
@@ -362,4 +364,8 @@ class DatabaseOperationViewSet(viewsets.ViewSet):
 
         db_operation.restore_file_handler(dump_file)
 
-        return Response({}, status=st.HTTP_200_OK)
+        response = {
+            "success": True
+        }
+
+        return Response(response, status=st.HTTP_200_OK)
