@@ -4,17 +4,17 @@ import datetime as dt
 from functools import reduce
 import numpy as np
 from collections import Counter
-import hashlib
+import hashlib, math
 from operator import concat
 
 conn = psycopg2.connect("host=127.0.0.1 \
-    dbname=shiptrack_test \
+    dbname=c2_viewer_v1 \
     user=postgres \
-    password=1234"
+    password=LenElhan!@#"
 )
 
 r = redis.Redis(host='localhost', port=6379, db=0)
 
-UPDATE_RATE = 100
+UPDATE_RATE = 1
 cur = conn.cursor()
 
