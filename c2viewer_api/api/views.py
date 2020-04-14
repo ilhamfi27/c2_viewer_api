@@ -1,5 +1,6 @@
 from .models import Location, User, AccessToken, StoredReplay, Session, AppSetting
 from rest_framework import viewsets
+from rest_framework import views
 from rest_framework.response import Response
 from django.utils import timezone
 from django.http import StreamingHttpResponse
@@ -8,32 +9,37 @@ from .serializers import LocationSerializer, UserSerializer, LoginSerializer, St
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from django.db.models import Q
-from django.conf import settings
-from wsgiref.util import FileWrapper
-import os
+from c2viewer_api.authentication import MyCustomAuthentication
+from c2viewer_api.permissions import IsAuthenticated
+# from rest_framework.permissions import IsAuthenticated
 import api.db_op as db_operation
 import json
 import rest_framework.status as st
 import hashlib
-import csv
 
 
 class LocationViewSet(viewsets.ModelViewSet):
+    authentication_classes = (MyCustomAuthentication, )
+    permission_classes = [IsAuthenticated]
     queryset = Location.objects.all()
     serializer_class = LocationSerializer
 
 
 class UserViewSet(viewsets.ModelViewSet):
+    authentication_classes = (MyCustomAuthentication, )
+    permission_classes = [IsAuthenticated]
     queryset = User.objects.filter(~Q(level="superadmin"))
     serializer_class = UserSerializer
 
 
 class SessionViewSet(viewsets.ModelViewSet):
+    authentication_classes = (MyCustomAuthentication, )
+    permission_classes = [IsAuthenticated]
     queryset = Session.objects.all().order_by('id')
     serializer_class = SessionSerializer
 
 
-class AuthViewSet(viewsets.ModelViewSet):
+class AuthViewSet(views.APIView):
     serializer_class = LoginSerializer
 
     def login(self, request, **kwargs):
@@ -130,6 +136,8 @@ class AuthViewSet(viewsets.ModelViewSet):
 
 
 class ChangePasswordViewSet(viewsets.ModelViewSet):
+    authentication_classes = (MyCustomAuthentication, )
+    permission_classes = [IsAuthenticated]
     serializer_class = ChangePasswordSerializer
 
     def post(self, request):
@@ -180,6 +188,8 @@ class ChangePasswordViewSet(viewsets.ModelViewSet):
 
 
 class UnlockSessionViewSet(viewsets.ModelViewSet):
+    authentication_classes = (MyCustomAuthentication, )
+    permission_classes = [IsAuthenticated]
     serializer_class = UnlockSessionSerializer
 
     def post(self, request):
@@ -220,6 +230,8 @@ class UnlockSessionViewSet(viewsets.ModelViewSet):
 
 
 class StoredReplayViewSet(viewsets.ModelViewSet):
+    authentication_classes = (MyCustomAuthentication, )
+    permission_classes = [IsAuthenticated]
     queryset = StoredReplay.objects.all()
     serializer_class = StoredReplaySerializer
 
@@ -292,6 +304,8 @@ class StoredReplayViewSet(viewsets.ModelViewSet):
 
 
 class AppSettingViewSet(viewsets.ModelViewSet):
+    authentication_classes = (MyCustomAuthentication, )
+    permission_classes = [IsAuthenticated]
     queryset = AppSetting.objects.all()
     serializer_class = AppSettingSerializer
 
@@ -311,6 +325,8 @@ class AppSettingViewSet(viewsets.ModelViewSet):
 
 
 class DatabaseOperationViewSet(viewsets.ViewSet):
+    authentication_classes = (MyCustomAuthentication, )
+    permission_classes = [IsAuthenticated]
     serializer_class = RestoreFileSerializer
 
     class Echo:

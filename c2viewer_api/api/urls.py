@@ -11,10 +11,6 @@ router.register('stored_replay', views.StoredReplayViewSet)
 router.register('session', views.SessionViewSet)
 router.register('setting', views.AppSettingViewSet)
 
-user_auth = views.AuthViewSet.as_view({
-    'post': 'post',
-})
-
 stored_replay = views.StoredReplayViewSet.as_view({
     'get': 'get',
 })
@@ -44,7 +40,7 @@ db_op_restore = views.DatabaseOperationViewSet.as_view({
 })
 
 urlpatterns = [
-    url(r'^auth/$', user_auth, name='user_auth'),
+    url(r'^auth/$', views.AuthViewSet.as_view(), name='user_auth'),
     url(r'^stored_replay/(?P<session_id>\d+)', stored_replay, name='stored_replay'),
     url(r'^sequence_stored_replay/(?P<session_id>\d+)/(?P<sequence>\d+)', sequence_stored_replay, name='sequence_stored_replay'),
     url(r'^change_password/$', change_password, name='change_password'),
