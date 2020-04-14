@@ -5,7 +5,7 @@ from main import *
 import base64, textwrap
 
 
-USERS = set()
+
 replay_data_send = []
 done_generate    = []
 def replay_track(session_id, start_time, end_time, data_lengkap_ais, data_lengkap_non_ais):
@@ -362,7 +362,7 @@ def get_replay():
                   "extract(epoch from (end_time::timestamp - start_time::timestamp)) as durasi, name " \
                   " from sessions " \
                   " WHERE end_time IS NOT null and " \
-                  " id not in (SELECT distinct(session_id) FROM stored_replay WHERE update_rate="+str(UPDATE_RATE)+" ) AND id=2"
+                  " id not in (SELECT distinct(session_id) FROM stored_replay WHERE update_rate="+str(UPDATE_RATE)+" )"
     print(sql)
     cur.execute(sql)
     query = cur.fetchall()    
@@ -398,7 +398,7 @@ def get_replay():
         
 
         '''Looping sebanyak panjang replay'''
-        chunk_size      = 1800
+        chunk_size      = 600
         panjang_chunk     = math.ceil(panjang_replay/chunk_size)        
         t_awal          = 0
         t_akhir         = 0
@@ -410,7 +410,7 @@ def get_replay():
             if sequence == 0:
                 print("awal")
                 t_awal  = 0
-                t_akhir = chunk_size if panjang_chunk > 1 else final                
+                t_akhir = chunk_size if panjang_chunk > 1 else durasi                
                 tmp_akhir     = start_time
                 tmp_akhir    += dt.timedelta(seconds=t_akhir)
             elif sequence == ujung:
@@ -625,7 +625,8 @@ def get_replay():
                     track_source_type   = str(aa[8])
                     is_visible          = str(aa[9])
                     # aa_status = 'AA' + str(object_id)
-                    aa_track = {"system_track_number": aa_status,
+                    aa_track = {
+                        # "system_track_number": aa_status,
                                 "object_type": object_type,
                                 "object_id": object_id,
                                 "warning_type": warning_type,
@@ -659,13 +660,13 @@ def get_replay():
                         result["track_play"][str(t)]["area_alert"].append(aa_track)
             
             message = json.dumps(result, separators=(',', ':'))
-            check_stored = "SELECT distinct(id) FROM stored_replay WHERE session_id="+str(session_id)+" AND update_rate="+str(UPDATE_RATE)+" and sequence= "+str(sequence)+" "
+            check_stored = "SELECT distinct(id) FROM stored_replay WHERE session_id="+str(session_id)+" AND update_rate="+str(UPDATE_RATE)+" and sequence= '"+str(sequence)+"' "
             print(check_stored)
             cur.execute(check_stored)
             stored_data = cur.fetchall()
             if len(stored_data) == 0:
                 q_store_replay = "INSERT INTO stored_replay(update_rate, session_id, data, sequence)" \
-                                        "VALUES ("+str(UPDATE_RATE)+", "+str(session_id)+", '"+str(message)+"', "+str(sequence)+" )"
+                                        "VALUES ("+str(UPDATE_RATE)+", "+str(session_id)+", '"+str(message)+"', '"+str(sequence)+"' )"
                 cur.execute(q_store_replay)
                 conn.commit()
             result["track_play"].clear()
@@ -678,5 +679,6 @@ def get_replay():
         
     
 
-    conn.commit()
+    
+
 
