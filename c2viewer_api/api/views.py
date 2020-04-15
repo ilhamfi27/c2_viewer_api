@@ -3,19 +3,21 @@ from rest_framework import viewsets
 from rest_framework import views
 from rest_framework.response import Response
 from django.utils import timezone
-from django.http import StreamingHttpResponse
+from django.http import StreamingHttpResponse, HttpResponse
 from .serializers import LocationSerializer, UserSerializer, LoginSerializer, StoredReplaySerializer, SessionSerializer, \
     AppSettingSerializer, ChangePasswordSerializer, UnlockSessionSerializer, RestoreFileSerializer
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from django.db.models import Q
+from django.conf import settings
 from c2viewer_api.authentication import MyCustomAuthentication
 from c2viewer_api.permissions import IsAuthenticated
-# from rest_framework.permissions import IsAuthenticated
+from zipfile import ZipFile
 import api.db_op as db_operation
 import json
 import rest_framework.status as st
 import hashlib
+import os
 
 
 class LocationViewSet(viewsets.ModelViewSet):
@@ -325,8 +327,8 @@ class AppSettingViewSet(viewsets.ModelViewSet):
 
 
 class DatabaseOperationViewSet(viewsets.ViewSet):
-    authentication_classes = (MyCustomAuthentication, )
-    permission_classes = [IsAuthenticated]
+    # authentication_classes = (MyCustomAuthentication, )
+    # permission_classes = [IsAuthenticated]
     serializer_class = RestoreFileSerializer
 
     class Echo:
@@ -348,14 +350,26 @@ class DatabaseOperationViewSet(viewsets.ViewSet):
         file_path, string_query = db_operation.operation_backup(session_id)
         file_name = "sav_backup_session_"+str(session_id)+".sql"
 
-        print("QUERY LENGTH", len(string_query), flush=True)
-        print("FILE NAME", file_path, flush=True)
+        # ==================================================================================
+        # STREAMED DOWNLOAD RESPONSE
+        # ==================================================================================
+        # response = StreamingHttpResponse(self.iter_items(string_query, self.Echo()),
+        #                                  content_type="text/plain")
+        # response['Content-Disposition'] = 'attachment; filename=' + file_name
+        # return response
 
-        response = StreamingHttpResponse(self.iter_items(string_query, self.Echo()),
-                                         content_type="text/plain")
-        response['Content-Disposition'] = 'attachment; filename=' + file_name
-        return response
+        print(file_name, flush=True)
+        file_path = os.path.join(settings.BASE_DIR, file_path)
+        if os.path.exists(file_path):
+            with open(file_path, 'r') as fh:
+                response = HttpResponse(content_type="application/zip", status=st.HTTP_200_OK)
 
+                zf = ZipFile(response, 'w')
+                zf.writestr(file_name, fh.read())
+
+            response['Content-Disposition'] = 'attachment; filename=' + "sav_backup_session_"+str(session_id)+".zip"
+            return response
+        return Response({"message": "File Not Found"}, status=st.HTTP_404_NOT_FOUND)
 
     def restore(self, request):
         dump_file = request.FILES["dump_file"]
