@@ -162,16 +162,18 @@ class ChangePasswordViewSet(viewsets.ModelViewSet):
 
     def post(self, request):
         post_data = request.data
+        user = request.user
 
         print("POST DATA====================================================", post_data, flush=True)
 
+        # get user credentials by encrypted password
+        string_to_hash = post_data["password"] + request.user.username
+        hash_result = hashlib.sha256(string_to_hash.encode()).hexdigest()
+
         password_data = {}
-        password_data['token'] = post_data['token']
-        password_data['password'] = post_data['password']
+        password_data['password'] = hash_result
         password_data['new_password'] = post_data['new_password']
         password_data['new_password_confirm'] = post_data['new_password_confirm']
-
-        user_token = post_data['token']
 
         forgot_password_serialize = self.serializer_class(data=password_data)
         valid = forgot_password_serialize.is_valid()
@@ -183,9 +185,6 @@ class ChangePasswordViewSet(viewsets.ModelViewSet):
                 return Response(response, status=st.HTTP_400_BAD_REQUEST)
 
             # to get newest AccessToken
-            access = AccessToken.objects.filter(token=user_token).order_by('-id')[0]
-            user = User.objects.get(pk=access.user_id)
-
             if user.password != password_data['password']:
                 response = {
                     "message": "Invalid Password for Username {}".format(user.username)
@@ -217,30 +216,28 @@ class UnlockSessionViewSet(viewsets.ModelViewSet):
 
         print("POST DATA====================================================", post_data, flush=True)
 
-        unlock_data = {}
-        unlock_data['token'] = post_data['token']
-        unlock_data['password'] = post_data['password']
+        # get user credentials by encrypted password
+        string_to_hash = post_data["password"] + request.user.username
+        hash_result = hashlib.sha256(string_to_hash.encode()).hexdigest()
 
-        session_unlock = self.serializer_class(data=unlock_data)
+        post_data["username"] = request.user.username
+        post_data["password"] = hash_result
+
+        session_unlock = self.serializer_class(data=post_data)
         valid = session_unlock.is_valid()
         if valid:
             try:
-                access = AccessToken.objects.get(token=unlock_data['token'])
-                user = User.objects.get(pk=access.user_id, password=unlock_data['password'])
+                user = User.objects.get(**post_data)
             except User.DoesNotExist:
                 response = {
                     "message": "Invalid Password"
                 }
                 return Response(response, status=st.HTTP_401_UNAUTHORIZED)
-            except AccessToken.DoesNotExist:
-                response = {
-                    "message": "Invalid Token"
-                }
-                return Response(response, status=st.HTTP_401_UNAUTHORIZED)
 
             response = {
-                'token': access.token,
+                'message': "Unlocked!",
             }
+
             return Response(response, status=st.HTTP_200_OK)
         else:
             response = {
