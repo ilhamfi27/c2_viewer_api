@@ -6,6 +6,9 @@ class MyCustomAuthentication(authentication.BaseAuthentication):
     def authenticate(self, request):
         header_token = request.META.get('HTTP_AUTHORIZATION') # get the username request header
 
+        if header_token == None:
+            raise exceptions.AuthenticationFailed('Token Needed') # raise exception if token isn't correct
+
         try:
             token_string = header_token.split()
 

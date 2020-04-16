@@ -103,6 +103,12 @@ class AuthViewSet(views.APIView):
         return ip
 
     def authenticate_user(self, request, **kwargs):
+        # get user credentials by encrypted password
+        string_to_hash = kwargs["password"] + kwargs["username"]
+        hash_result = hashlib.sha256(string_to_hash.encode()).hexdigest()
+
+        kwargs["password"] = hash_result
+
         try:
             user = User.objects.get(**kwargs)
             location = Location.objects.get(pk=user.location.id)
