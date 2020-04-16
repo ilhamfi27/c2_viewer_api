@@ -28,10 +28,22 @@ class LocationViewSet(viewsets.ModelViewSet):
 
 
 class UserViewSet(viewsets.ModelViewSet):
+    # queryset = User.objects.filter(~Q(level="superadmin"))
     authentication_classes = (MyCustomAuthentication, )
     permission_classes = [IsAuthenticated]
-    queryset = User.objects.filter(~Q(level="superadmin"))
+    queryset = User.objects.all()
     serializer_class = UserSerializer
+
+    def list(self, request):
+        if request.user.level == "superadmin":
+            users = self.queryset
+        else:
+            users = self.queryset.filter(~Q(level="superadmin"))
+
+        serializer = UserSerializer(users, many=True)
+        data = serializer.data
+
+        return Response(data, status=st.HTTP_200_OK)
 
 
 class SessionViewSet(viewsets.ModelViewSet):
@@ -353,23 +365,23 @@ class DatabaseOperationViewSet(viewsets.ViewSet):
         # ==================================================================================
         # STREAMED DOWNLOAD RESPONSE
         # ==================================================================================
-        # response = StreamingHttpResponse(self.iter_items(string_query, self.Echo()),
-        #                                  content_type="text/plain")
-        # response['Content-Disposition'] = 'attachment; filename=' + file_name
-        # return response
+        response = StreamingHttpResponse(self.iter_items(string_query, self.Echo()),
+                                         content_type="text/plain")
+        response['Content-Disposition'] = 'attachment; filename=' + file_name
+        return response
 
-        print(file_name, flush=True)
-        file_path = os.path.join(settings.BASE_DIR, file_path)
-        if os.path.exists(file_path):
-            with open(file_path, 'r') as fh:
-                response = HttpResponse(content_type="application/zip", status=st.HTTP_200_OK)
-
-                zf = ZipFile(response, 'w')
-                zf.writestr(file_name, fh.read())
-
-            response['Content-Disposition'] = 'attachment; filename=' + "sav_backup_session_"+str(session_id)+".zip"
-            return response
-        return Response({"message": "File Not Found"}, status=st.HTTP_404_NOT_FOUND)
+        # print(file_name, flush=True)
+        # file_path = os.path.join(settings.BASE_DIR, file_path)
+        # if os.path.exists(file_path):
+        #     with open(file_path, 'r') as fh:
+        #         response = HttpResponse(content_type="application/zip", status=st.HTTP_200_OK)
+        #
+        #         zf = ZipFile(response, 'w')
+        #         zf.writestr(file_name, fh.read())
+        #
+        #     response['Content-Disposition'] = 'attachment; filename=' + "sav_backup_session_"+str(session_id)+".zip"
+        #     return response
+        # return Response({"message": "File Not Found"}, status=st.HTTP_404_NOT_FOUND)
 
     def restore(self, request):
         dump_file = request.FILES["dump_file"]
