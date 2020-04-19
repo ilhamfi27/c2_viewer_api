@@ -1,39 +1,59 @@
 from .models import Location, User, AccessToken, StoredReplay, Session, AppSetting
 from rest_framework import viewsets
+from rest_framework import views
 from rest_framework.response import Response
 from django.utils import timezone
-from django.http import StreamingHttpResponse
+from django.http import StreamingHttpResponse, HttpResponse
 from .serializers import LocationSerializer, UserSerializer, LoginSerializer, StoredReplaySerializer, SessionSerializer, \
     AppSettingSerializer, ChangePasswordSerializer, UnlockSessionSerializer, RestoreFileSerializer
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from django.db.models import Q
 from django.conf import settings
-from wsgiref.util import FileWrapper
-import os
+from c2viewer_api.authentication import MyCustomAuthentication
+from c2viewer_api.permissions import IsAuthenticated
+from zipfile import ZipFile
 import api.db_op as db_operation
 import json
 import rest_framework.status as st
 import hashlib
-import csv
+import os
 
 
 class LocationViewSet(viewsets.ModelViewSet):
+    authentication_classes = (MyCustomAuthentication, )
+    permission_classes = [IsAuthenticated]
     queryset = Location.objects.all()
     serializer_class = LocationSerializer
 
 
 class UserViewSet(viewsets.ModelViewSet):
-    queryset = User.objects.filter(~Q(level="superadmin"))
+    # queryset = User.objects.filter(~Q(level="superadmin"))
+    authentication_classes = (MyCustomAuthentication, )
+    permission_classes = [IsAuthenticated]
+    queryset = User.objects.all()
     serializer_class = UserSerializer
+
+    def list(self, request):
+        if request.user.level == "superadmin":
+            users = self.queryset
+        else:
+            users = self.queryset.filter(~Q(level="superadmin"))
+
+        serializer = UserSerializer(users, many=True)
+        data = serializer.data
+
+        return Response(data, status=st.HTTP_200_OK)
 
 
 class SessionViewSet(viewsets.ModelViewSet):
+    authentication_classes = (MyCustomAuthentication, )
+    permission_classes = [IsAuthenticated]
     queryset = Session.objects.all().order_by('id')
     serializer_class = SessionSerializer
 
 
-class AuthViewSet(viewsets.ModelViewSet):
+class AuthViewSet(views.APIView):
     serializer_class = LoginSerializer
 
     def login(self, request, **kwargs):
@@ -83,6 +103,12 @@ class AuthViewSet(viewsets.ModelViewSet):
         return ip
 
     def authenticate_user(self, request, **kwargs):
+        # get user credentials by encrypted password
+        string_to_hash = kwargs["password"] + kwargs["username"]
+        hash_result = hashlib.sha256(string_to_hash.encode()).hexdigest()
+
+        kwargs["password"] = hash_result
+
         try:
             user = User.objects.get(**kwargs)
             location = Location.objects.get(pk=user.location.id)
@@ -130,20 +156,24 @@ class AuthViewSet(viewsets.ModelViewSet):
 
 
 class ChangePasswordViewSet(viewsets.ModelViewSet):
+    authentication_classes = (MyCustomAuthentication, )
+    permission_classes = [IsAuthenticated]
     serializer_class = ChangePasswordSerializer
 
     def post(self, request):
         post_data = request.data
+        user = request.user
 
         print("POST DATA====================================================", post_data, flush=True)
 
+        # get user credentials by encrypted password
+        string_to_hash = post_data["password"] + request.user.username
+        hash_result = hashlib.sha256(string_to_hash.encode()).hexdigest()
+
         password_data = {}
-        password_data['token'] = post_data['token']
-        password_data['password'] = post_data['password']
+        password_data['password'] = hash_result
         password_data['new_password'] = post_data['new_password']
         password_data['new_password_confirm'] = post_data['new_password_confirm']
-
-        user_token = post_data['token']
 
         forgot_password_serialize = self.serializer_class(data=password_data)
         valid = forgot_password_serialize.is_valid()
@@ -155,9 +185,6 @@ class ChangePasswordViewSet(viewsets.ModelViewSet):
                 return Response(response, status=st.HTTP_400_BAD_REQUEST)
 
             # to get newest AccessToken
-            access = AccessToken.objects.filter(token=user_token).order_by('-id')[0]
-            user = User.objects.get(pk=access.user_id)
-
             if user.password != password_data['password']:
                 response = {
                     "message": "Invalid Password for Username {}".format(user.username)
@@ -180,6 +207,8 @@ class ChangePasswordViewSet(viewsets.ModelViewSet):
 
 
 class UnlockSessionViewSet(viewsets.ModelViewSet):
+    authentication_classes = (MyCustomAuthentication, )
+    permission_classes = [IsAuthenticated]
     serializer_class = UnlockSessionSerializer
 
     def post(self, request):
@@ -187,30 +216,28 @@ class UnlockSessionViewSet(viewsets.ModelViewSet):
 
         print("POST DATA====================================================", post_data, flush=True)
 
-        unlock_data = {}
-        unlock_data['token'] = post_data['token']
-        unlock_data['password'] = post_data['password']
+        # get user credentials by encrypted password
+        string_to_hash = post_data["password"] + request.user.username
+        hash_result = hashlib.sha256(string_to_hash.encode()).hexdigest()
 
-        session_unlock = self.serializer_class(data=unlock_data)
+        post_data["username"] = request.user.username
+        post_data["password"] = hash_result
+
+        session_unlock = self.serializer_class(data=post_data)
         valid = session_unlock.is_valid()
         if valid:
             try:
-                access = AccessToken.objects.get(token=unlock_data['token'])
-                user = User.objects.get(pk=access.user_id, password=unlock_data['password'])
+                user = User.objects.get(**post_data)
             except User.DoesNotExist:
                 response = {
                     "message": "Invalid Password"
                 }
                 return Response(response, status=st.HTTP_401_UNAUTHORIZED)
-            except AccessToken.DoesNotExist:
-                response = {
-                    "message": "Invalid Token"
-                }
-                return Response(response, status=st.HTTP_401_UNAUTHORIZED)
 
             response = {
-                'token': access.token,
+                'message': "Unlocked!",
             }
+
             return Response(response, status=st.HTTP_200_OK)
         else:
             response = {
@@ -220,6 +247,8 @@ class UnlockSessionViewSet(viewsets.ModelViewSet):
 
 
 class StoredReplayViewSet(viewsets.ModelViewSet):
+    authentication_classes = (MyCustomAuthentication, )
+    permission_classes = [IsAuthenticated]
     queryset = StoredReplay.objects.all()
     serializer_class = StoredReplaySerializer
 
@@ -292,6 +321,8 @@ class StoredReplayViewSet(viewsets.ModelViewSet):
 
 
 class AppSettingViewSet(viewsets.ModelViewSet):
+    authentication_classes = (MyCustomAuthentication, )
+    permission_classes = [IsAuthenticated]
     queryset = AppSetting.objects.all()
     serializer_class = AppSettingSerializer
 
@@ -311,6 +342,8 @@ class AppSettingViewSet(viewsets.ModelViewSet):
 
 
 class DatabaseOperationViewSet(viewsets.ViewSet):
+    # authentication_classes = (MyCustomAuthentication, )
+    # permission_classes = [IsAuthenticated]
     serializer_class = RestoreFileSerializer
 
     class Echo:
@@ -332,14 +365,26 @@ class DatabaseOperationViewSet(viewsets.ViewSet):
         file_path, string_query = db_operation.operation_backup(session_id)
         file_name = "sav_backup_session_"+str(session_id)+".sql"
 
-        print("QUERY LENGTH", len(string_query), flush=True)
-        print("FILE NAME", file_path, flush=True)
-
+        # ==================================================================================
+        # STREAMED DOWNLOAD RESPONSE
+        # ==================================================================================
         response = StreamingHttpResponse(self.iter_items(string_query, self.Echo()),
                                          content_type="text/plain")
         response['Content-Disposition'] = 'attachment; filename=' + file_name
         return response
 
+        # print(file_name, flush=True)
+        # file_path = os.path.join(settings.BASE_DIR, file_path)
+        # if os.path.exists(file_path):
+        #     with open(file_path, 'r') as fh:
+        #         response = HttpResponse(content_type="application/zip", status=st.HTTP_200_OK)
+        #
+        #         zf = ZipFile(response, 'w')
+        #         zf.writestr(file_name, fh.read())
+        #
+        #     response['Content-Disposition'] = 'attachment; filename=' + "sav_backup_session_"+str(session_id)+".zip"
+        #     return response
+        # return Response({"message": "File Not Found"}, status=st.HTTP_404_NOT_FOUND)
 
     def restore(self, request):
         dump_file = request.FILES["dump_file"]

@@ -26,13 +26,11 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(required=True, style={'input_type': 'password'})
 
 class ChangePasswordSerializer(serializers.Serializer):
-    token = serializers.CharField(required=True)
     password = serializers.CharField(required=True, style={'input_type': 'password'})
     new_password = serializers.CharField(required=True, style={'input_type': 'password'})
     new_password_confirm = serializers.CharField(required=True, style={'input_type': 'password'})
 
 class UnlockSessionSerializer(serializers.Serializer):
-    token = serializers.CharField(required=True)
     password = serializers.CharField(required=True, style={'input_type': 'password'})
 
 class StoredReplaySerializer(serializers.ModelSerializer):

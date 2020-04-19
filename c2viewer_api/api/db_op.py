@@ -1,5 +1,6 @@
 from django.db import connection
 from django.conf import settings
+import os
 
 db_name = settings.DATABASES["default"]["NAME"]
 
@@ -7,6 +8,12 @@ def operation_backup(session_id):
     queries = []
     try:
         cursor = connection.cursor()
+
+        # db_dump_folder = "sav_backup/"
+        namafile = "sav_backup_session_"+str(session_id)+".sql"
+
+        file_path = os.path.join(settings.BASE_DIR, namafile)
+        # f = open(namafile, "w")
 
         query_column = "SELECT * " \
                        "FROM information_schema.columns " \
@@ -27,10 +34,6 @@ def operation_backup(session_id):
                      .format(str(session_id))
         cursor.execute(query_data)
         rows = cursor.fetchall()
-        
-        namafile = "sav_backup_session_"+str(session_id)+".sql"
-        # f = open(db_dump_folder + namafile, "w")
-
         string_sql_insert = "INSERT INTO sessions VALUES ("
         for row in rows:
             # lihat tipe data
@@ -100,6 +103,8 @@ def operation_backup(session_id):
 
                 # f.write(string_sql_insert)
         # f.close()
+        return namafile, queries
+
     except Exception as error:
         print ("Error while connecting to PostgreSQL", error)
         raise error
@@ -110,7 +115,6 @@ def operation_backup(session_id):
             connection.close()
             print("PostgreSQL connection is closed")
 
-        return namafile, queries
 
 def restore_file_handler(f):
     try:

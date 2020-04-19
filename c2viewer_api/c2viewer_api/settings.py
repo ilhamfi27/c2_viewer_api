@@ -51,11 +51,14 @@ INSTALLED_APPS = [
 ]
 
 REST_FRAMEWORK = {
-    'AUTH_USER_MODEL': 'api.Models.User',
-    'UNAUTHENTICATED_USER': None,
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'c2viewer_api.authentication.JwtServiceOnlyAuthentication',
-    ),
+    # 'AUTH_USER_MODEL': 'api.Models.User',
+    # 'UNAUTHENTICATED_USER': None,
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        # 'c2viewer_api.authentication.JwtServiceOnlyAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        # 'rest_framework.permissions.IsAuthenticated',
+    ]
 }
 
 MIDDLEWARE = [

@@ -1,4 +1,5 @@
 from django.db import models
+import hashlib
 
 
 class Location(models.Model):
@@ -20,6 +21,14 @@ class User(models.Model):
     password = models.CharField(max_length=100)
     level = models.CharField(max_length=20, choices=USER_LEVEL)
     location = models.ForeignKey(Location, on_delete=models.CASCADE)
+
+
+    def save(self, *args, **kwargs):
+        string_to_hash = self.password + self.username
+        hash_result = hashlib.sha256(string_to_hash.encode()).hexdigest()
+
+        self.password = hash_result
+        super().save(*args, **kwargs)
 
     class Meta:
         db_table = 'users'
