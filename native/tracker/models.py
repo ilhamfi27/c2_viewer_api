@@ -435,7 +435,8 @@ def session_data():
             "	from public.stored_replay " \
             "	group by 1 " \
             ") sr on sr.session_id = s.id " \
-            "WHERE end_time IS NOT NULL; "
+            "WHERE end_time IS NOT NULL " \
+            "ORDER BY s.id; "
         cur.execute(q)
         data = []
         for row in cur.fetchall():
