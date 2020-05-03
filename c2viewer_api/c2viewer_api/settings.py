@@ -70,6 +70,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'realtime.middleware.RealtimeSupplier'
 ]
 
 CORS_ORIGIN_ALLOW_ALL = True
@@ -128,6 +129,18 @@ CHANNEL_LAYERS = {
         'CONFIG': {
             'hosts': [(env('REDIS_HOST'), env('REDIS_PORT'))],
         }
+    }
+}
+
+# Caching
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/1",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient"
+        },
+        "KEY_PREFIX": "realtime_tracker"
     }
 }
 
