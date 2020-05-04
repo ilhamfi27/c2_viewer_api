@@ -3,9 +3,10 @@ import time
 import datetime
 import asyncio
 import json
-from tracker.models import information_data, tactical_figure_data, reference_point_data, \
-                            area_alert_data, session_data, replay_data, history_dots, \
-                            all_history_dots
+from tracker.models import history_dots
+
+import tracker.util as util
+from tracker.config import r
 
 async def data_processing(important_data, STATE, USERS, NON_REALTIME_USERS,
                              data_category='', mandatory_attr='', must_remove=[], debug=True):

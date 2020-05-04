@@ -8,9 +8,11 @@ import logging
 import websockets
 import numpy as np
 from tracker.models import information_data, tactical_figure_data, reference_point_data, \
-                            area_alert_data, session_data, replay_data
+                            area_alert_data, session_data, replay_data, improved_track_data
 from tracker.actions import data_processing, non_strict_data_processing, send_history_dot
-from tracker.config import WS_HOST, WS_PORT
+from tracker.config import WS_HOST, WS_PORT, r
+from tracker.state import *
+import tracker.util as util
 
 logging.basicConfig()
 
@@ -47,12 +49,6 @@ SESSION_STATE = {
 HISTORY_DOT_STATE = {
     "existed_data_count": 0,
 }
-
-# variable penyimpanan realtime user
-USERS = set()
-
-# variable penyimpanan non realtime user
-NON_REALTIME_USERS = set()
 
 async def send_cached_data(user, states=[]):
     # send realtime
@@ -170,12 +166,45 @@ async def realtime_toggle_handler(user, state):
         USERS.remove(user)
         NON_REALTIME_USERS.add(user)
 
+
+# =================================================================================
+# IMPROVED SYSTEM
+# =================================================================================
+async def improved_send_cached_data(user):
+    # send realtime
+    tracks = util.redis_decode_to_list(r.hgetall('tracks'))
+    completed_tracks = []
+
+    for data in tracks:
+        if data['completed']:
+            completed_tracks.append(data)
+    print(completed_tracks)
+    message = json.dumps({'data': completed_tracks, 'data_type': 'realtime'})
+    await user.send(message)
+
+async def improved_register(websocket):
+    USERS.add(websocket)
+    print(USERS)
+    await improved_send_cached_data(websocket)
+
+
+async def improved_unregister(websocket):
+    USERS.remove(websocket)
+
+
+async def improved_data_change_detection():
+    while True:
+        # shiptrack data ------------------------------------------------------------------------
+        await improved_track_data()
+        await asyncio.sleep(5)
+
+
 async def handler(websocket, path):
     try:
         # -- event yang harus di jalankan oleh web socket --
 
         # meregister user ketika terkoneksi dengan web socket
-        await register(websocket)
+        await improved_register(websocket)
 
         # menghendle message dari client
         await get_websocket_messages(websocket)
@@ -187,14 +216,14 @@ async def handler(websocket, path):
         print("connection closed error", e)
 
     finally:
-        await unregister(websocket)
+        await improved_unregister(websocket)
 
 def _main_():
     # 0.0.0.0 for global ip
     start_server = websockets.serve(handler, WS_HOST, WS_PORT)
 
     tasks = [
-        asyncio.ensure_future(data_change_detection()),
+        asyncio.ensure_future(improved_data_change_detection()),
         asyncio.ensure_future(start_server)
     ]
 

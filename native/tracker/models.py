@@ -1,17 +1,25 @@
+import json
 import psycopg2
 import numpy as np
 from functools import reduce
-from tracker.config import getconn
+from datetime import datetime
+import time
+
+import tracker.util as util
+from tracker.config import getconn, r
+from tracker.state import *
 
 conn = getconn()
-
 cur = conn.cursor()
+
+r.flushdb()  # flushing db
+
+now = datetime.now()
 
 ar_mandatory_table = [
     'replay_system_track_general',
     'replay_system_track_kinetic',
     'replay_system_track_processing',
-    # 'replay_track_general_setting'
 ]
 ar_mandatory_table_8 = [
     'replay_system_track_general',
@@ -21,8 +29,334 @@ ar_mandatory_table_8 = [
     'replay_system_track_link',
     'replay_system_track_mission',
     'replay_track_general_setting',
-    'replay_ais_data'
+    'replay_ais_data',
 ]
+
+
+# ============ improvements ============
+# model action
+async def data_process(table, stn, table_results):
+    """
+    method ini dipakai buat set data ke redis
+    dan mengecek untuk pengiriman data ke user
+    pengecekan:
+    1. kelengkapan data mandatory
+        - kirim data ketika lengkap
+        - simpan data ketika belum lengkap
+    2. eksistensi data di memory
+        - jika ada, dan data beda, maka kirim data yang baru dan update memory
+        - jika ada, data beda, dan statusnya removed, maka kirim status removed, dan hapus dari memory
+    """
+    util.datetime_to_string(table_results)  # convert datetime to string
+    util.string_bool_to_bool(table_results) # clean STRING BOOLEAN to PURE BOOLEAN
+    is_updated = False
+    is_newly_created = False
+
+    if r.hexists('tracks', stn):
+        stn_hash = json.loads(r.hget('tracks', stn).decode("utf-8"))  # get data dari redis + convert to dict
+        stn_hash.pop('completed', None)  # remove created key dari hash redis
+
+        # table -> table name dari looping
+        if table in stn_hash:
+            if stn_hash[table] != table_results:  # kalau hash dari redis gak sama dengan hasil dari query
+                stn_hash[table] = table_results
+                is_updated = True
+        else:
+            stn_hash[table] = table_results  # set hash dengan nama table
+            is_newly_created = True
+    else:
+        stn_hash = {}
+        stn_hash[table] = table_results  # set hash dengan nama table
+        is_newly_created = True
+
+    # cek kelengkapan di 3 tabel
+    three_mandatory_completed = stn_hash.keys() >= {
+        'replay_system_track_general',
+        'replay_system_track_kinetic',
+        'replay_system_track_processing'
+    }
+
+    # kasih flag kelengkapan data
+    if three_mandatory_completed:
+        if stn_hash['replay_system_track_general']['source'] == 'AIS_TYPE':
+            stn_hash['completed'] = True if "replay_ais_data" in list(stn_hash.keys()) else False
+        else:
+            stn_hash['completed'] = True
+    else:
+        stn_hash['completed'] = False
+
+    # jika lengkap, maka data dikirimkan ke user
+    if (stn_hash['completed'] and is_updated) or (stn_hash['completed'] and is_newly_created):
+        message = json.dumps({'data': {table: table_results}, 'data_type': 'realtime'})
+        for user in USERS:
+            await user.send(message)
+
+    # kalau tracknya dihapus, maka hapus dari memory
+    if table == 'replay_system_track_processing' \
+            and table_results['track_phase_type'] in ["DELETED_BY_SYSTEM", "DELETED_BY_SENSOR"]:
+        r.hdel('tracks', stn)
+    else:
+        r.hset('tracks', stn, json.dumps(stn_hash))  # set redis key dengan STN
+
+
+async def improved_track_data():
+    current_time = datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+    print(current_time)
+    try:
+        start_time_session = "SELECT " \
+                             "   start_time " \
+                             "FROM sessions " \
+                             "WHERE end_time IS NULL;"
+        cur.execute(start_time_session)
+        start_time = cur.fetchall()
+
+        # untuk menyimpan create untuk masing - masing 8
+        # tabel
+        created_time_tracks = {
+            "replay_system_track_general": start_time[0][0],
+            "replay_system_track_kinetic": start_time[0][0],
+            "replay_system_track_processing": start_time[0][0],
+            "replay_system_track_identification": start_time[0][0],
+            "replay_system_track_link": start_time[0][0],
+            "replay_system_track_mission": start_time[0][0],
+            "replay_track_general_setting": start_time[0][0],
+            "replay_ais_data": start_time[0][0],
+        }
+
+        table_columns = {
+            "replay_system_track_general": (
+                'session_id', 'system_track_number', 'track_name', 'network_track_number', 'identity', 'environment',
+                'object_type', 'object_id', 'primitive_data_source', 'accuracy_level', 'source', 'own_unit_indicator',
+                'iu_indicator', 'c2_indicator', 'special_processing_indicator', 'force_tell_indicator',
+                'emergency_indicator', 'simulation_indicator', 'last_update_time', 'initiation_time', 'created_time',
+                'airborne_indicator',
+            ),
+            "replay_system_track_kinetic": (
+                'session_id', 'system_track_number', 'track_name', 'heading', 'latitude', 'longitude', 'range',
+                'bearing', 'height_depth', 'speed_over_ground', 'course_over_ground', 'last_update_time',
+                'created_time',
+            ),
+            "replay_system_track_processing": (
+                'session_id', 'system_track_number', 'track_fusion_status', 'track_join_status', 'daughter_tracks',
+                'track_phase_type', 'track_suspect_level', 'created_time',
+            ),
+            "replay_system_track_identification": (
+                'session_id', 'system_track_number', 'identity', 'environment', 'air_platform', 'surf_platform',
+                'land_platform', 'air_platform_activity', 'surf_platform_activity', 'land_platform_activity',
+                'air_specific', 'surf_specific', 'land_specific', 'created_time',
+            ),
+            "replay_system_track_link": (
+                'session_id', 'system_track_number', 'network_track_number', 'associated_track_number',
+                'originator_address', 'controlling_unit_address', 'network_track_quality', 'link_status',
+                'created_time',
+            ),
+            "replay_system_track_mission": (
+                'session_id', 'system_track_number', 'mission_name', 'route', 'voice_call_sign',
+                'voice_frequency_channel', 'fuel_status', 'radar_coverage', 'start_time', 'end_time', 'created_time',
+            ),
+            "replay_track_general_setting": (
+                'session_id', 'system_track_number', 'speed_label_visibility', 'track_name_label_visibility',
+                'radar_coverage_visibility', 'track_visibility', 'created_time',
+            ),
+            "replay_ais_data": (
+                'session_id', 'system_track_number', 'mmsi_number', 'name', 'radio_call_sign', 'imo_number',
+                'navigation_status', 'destination', 'dimensions_of_ship', 'type_of_ship_or_cargo', 'rate_of_turn',
+                'position_accuracy', 'gross_tonnage', 'ship_country', 'created_time', 'eta_at_destination', 'vendor_id',
+            ),
+        }
+
+        print('===================================================', current_time)
+        for ix, table in enumerate(ar_mandatory_table_8):
+            where_own_indicator = "and st.own_unit_indicator='FALSE'" \
+                if table == "replay_system_track_general" else ""
+            replay_query = """
+                SELECT st.*
+                FROM {} st
+                JOIN sessions s ON st.session_id=s.id
+                JOIN (
+                        SELECT
+                            session_id,
+                            system_track_number,
+                            max(created_time) created_time
+                        FROM {}
+                        WHERE created_time >= '{}'
+                        AND created_time < '{}'
+                        GROUP BY session_id,system_track_number
+                    ) mx
+                ON st.system_track_number=mx.system_track_number
+                and st.created_time=mx.created_time
+                and st.session_id=mx.session_id
+                WHERE s.end_time is NULL
+                {}
+                ORDER BY st.system_track_number;
+                """.format(table, table, created_time_tracks[table], current_time,
+                           where_own_indicator)
+
+            cur.execute(replay_query)
+            data = cur.fetchall()
+
+            if table == 'replay_system_track_kinetic':
+                print(replay_query)
+            for row in data:
+                stn = row[1] # stn -> system_track_number
+                table_results = dict(zip(table_columns[table], row)) # make the result dictionary
+                if table == 'replay_system_track_kinetic':
+                    print(table_results)
+                created_time_tracks[table] = table_results['created_time']
+                await data_process(table, stn, table_results)
+
+            if table == "replay_system_track_general":
+                """
+                columns:
+                - session_id
+                - system_track_number
+                - track_name
+                - network_track_number
+                - identity
+                - environment
+                - object_type
+                - object_id
+                - primitive_data_source
+                - accuracy_level
+                - source
+                - own_unit_indicator
+                - iu_indicator
+                - c2_indicator
+                - special_processing_indicator
+                - force_tell_indicator
+                - emergency_indicator
+                - simulation_indicator
+                - last_update_time
+                - initiation_time
+                - created_time
+                - airborne_indicator
+                """
+                pass
+
+            if table == "replay_system_track_kinetic":
+                """
+                columns:
+                session_id
+                system_track_number
+                track_name
+                heading
+                latitude
+                longitude
+                range
+                bearing
+                height_depth
+                speed_over_ground
+                course_over_ground
+                last_update_time
+                created_time
+                """
+                pass
+
+            if table == "replay_system_track_processing":
+                """
+                columns:
+                session_id
+                system_track_number
+                track_fusion_status
+                track_join_status
+                daughter_tracks
+                track_phase_type
+                track_suspect_level
+                created_time
+                """
+                pass
+
+            if table == "replay_system_track_identification":
+                """
+                columns:
+                session_id
+                system_track_number
+                identity
+                environment
+                air_platform
+                surf_platform
+                land_platform
+                air_platform_activity
+                surf_platform_activity
+                land_platform_activity
+                air_specific
+                surf_specific
+                land_specific
+                created_time
+                """
+                pass
+
+            if table == "replay_system_track_link":
+                """
+                columns:
+                session_id
+                system_track_number
+                network_track_number
+                associated_track_number
+                originator_address
+                controlling_unit_address
+                network_track_quality
+                link_status
+                created_time
+                """
+                pass
+
+            if table == "replay_system_track_mission":
+                """
+                columns:
+                session_id
+                system_track_number
+                mission_name
+                route
+                voice_call_sign
+                voice_frequency_channel
+                fuel_status
+                radar_coverage
+                start_time
+                end_time
+                created_time
+                """
+                pass
+
+            if table == "replay_track_general_setting":
+                """
+                columns:
+                session_id
+                system_track_number
+                speed_label_visibility
+                track_name_label_visibility
+                radar_coverage_visibility
+                track_visibility
+                created_time
+                """
+                pass
+
+            if table == "replay_ais_data":
+                """
+                session_id
+                system_track_number
+                mmsi_number
+                name
+                radio_call_sign
+                imo_number
+                navigation_status
+                destination
+                dimensions_of_ship
+                type_of_ship_or_cargo
+                rate_of_turn
+                position_accuracy
+                gross_tonnage
+                ship_country
+                created_time
+                eta_at_destination
+                vendor_id
+                """
+                pass
+    except psycopg2.Error as e:
+        print(e)
+
+
+# ============ improvements ============
 
 
 def information_data():
