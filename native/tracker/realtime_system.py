@@ -8,19 +8,13 @@ import logging
 import websockets
 import numpy as np
 from tracker.models import information_data, tactical_figure_data, reference_point_data, \
-                            area_alert_data, session_data, replay_data, improved_track_data
+                            area_alert_data, session_data, improved_track_data
 from tracker.actions import data_processing, non_strict_data_processing, send_history_dot
 from tracker.config import WS_HOST, WS_PORT, r
 from tracker.state import *
 import tracker.util as util
 
 logging.basicConfig()
-
-TRACK_STATE = {
-    "cached_data": [],
-    "removed_data": [],
-    "existed_data": [],
-}
 
 TACTICAL_FIGURE_STATE = {
     "cached_data": [],
@@ -60,6 +54,9 @@ async def send_cached_data(user, states=[]):
             data[STATE[0]] = list(cached_data[:, 1])
         else:
             data[STATE[0]] = list()
+
+    data['tracks'] = enhanced_send_track_cache()  # ambil data track yang berlaku di memory (enhanced)
+
     if len(data) > 0:
         message = json.dumps({'data': data, 'data_type': 'realtime'}, default=str)
         await user.send(message)
@@ -67,25 +64,27 @@ async def send_cached_data(user, states=[]):
 async def register(websocket):
     USERS.add(websocket)
     await send_cached_data(websocket, states=[
-        ['track', TRACK_STATE],
         ['tactical_figure', TACTICAL_FIGURE_STATE],
         ['reference_point', REFERENCE_POINT_STATE],
         ['area_alert', AREA_ALERT_STATE],
         ['session', SESSION_STATE],
     ])
-    print(USERS)
+    print("1 USER JOINED", websocket)
+    print("TOTAL JOINED USER", len(USERS))
 
 async def unregister(websocket):
     USERS.remove(websocket)
+    print("1 USER LEFT", websocket)
+    print("REMAINING USER", len(USERS))
 
 def check_if_state_must_be_emptied(states):
     if SESSION_STATE['existed_data_count'] == 0:
-        print("***********************************NGISI*******************************************")
         SESSION_STATE['existed_data_count'] = len(SESSION_STATE['existed_data'])
 
     # kalo misal sessionnya nambah, maka kosongkan data memory
     if SESSION_STATE['existed_data_count'] < len(SESSION_STATE['existed_data']):
-        print("***********************************KOSONGKANN*******************************************")
+        print("MENGOSONGKAN SESI")
+        track_empty_memory()
         for state in states:
             for key in state.keys():
                 state[key] = []
@@ -95,12 +94,9 @@ async def data_change_detection():
     while True:
         # mengecek apakah data cached tersebut butuh dikosongkan
         # akan dikosongkan ketika sesi berganti
-        check_if_state_must_be_emptied([TRACK_STATE, AREA_ALERT_STATE])
+        check_if_state_must_be_emptied([AREA_ALERT_STATE])
 
-        # shiptrack data ------------------------------------------------------------------------
-        shiptrack_data = np.array(information_data())
-        await data_processing(shiptrack_data, TRACK_STATE, USERS, NON_REALTIME_USERS, data_category="track",
-                        mandatory_attr="track_phase_type", must_remove=["DELETED_BY_SYSTEM", "DELETED_BY_SENSOR"], debug=True)
+        await improved_track_data() # get data track (enhanced)
 
         # tactical figures ------------------------------------------------------------------------
         tactical_figure_datas = np.array(tactical_figure_data())
@@ -121,17 +117,8 @@ async def data_change_detection():
         session_datas = np.array(session_data())
         await non_strict_data_processing(session_datas, SESSION_STATE, USERS, NON_REALTIME_USERS, data_category="session",
                                 debug=False)
-        print('========================================================================================================================')
-        print('========================================================================================================================')
         # lama tidur
         await asyncio.sleep(3)
-
-async def send_replay_track(session, user):
-    print(session, " send to ", user)
-    data = replay_data(session)
-
-    message = json.dumps({'data': data, 'data_type': 'replay'}, default=str)
-    await user.send(message)
 
 async def get_websocket_messages(websocket):
     async for message in websocket:
@@ -144,8 +131,6 @@ async def get_websocket_messages(websocket):
             elif data['action'] == 'replay':
                 await realtime_toggle_handler(websocket, data['action'])
                 print('replay')
-        if 'request' in data:
-            await send_replay_track(data['request'], websocket)
         if 'request_dots' in data:
             await send_history_dot(data['request_dots'], websocket)
 
@@ -155,7 +140,6 @@ async def realtime_toggle_handler(user, state):
         NON_REALTIME_USERS.remove(user)
         USERS.add(user)
         await send_cached_data(user, states=[
-            ['track', TRACK_STATE],
             ['tactical_figure', TACTICAL_FIGURE_STATE],
             ['reference_point', REFERENCE_POINT_STATE],
             ['area_alert', AREA_ALERT_STATE],
@@ -170,39 +154,29 @@ async def realtime_toggle_handler(user, state):
 # =================================================================================
 # IMPROVED SYSTEM
 # =================================================================================
-async def enhanced_send_track_cache(user):
+def enhanced_send_track_cache():
     # send realtime
     tracks = util.redis_decode_to_dict(r.hgetall('tracks'), nested_dict=True)
     completed_tracks = []
 
     for key, data in tracks.items():
         if r.exists('T' + key): completed_tracks.append(data)
-    message = json.dumps({'data': completed_tracks, 'data_type': 'realtime'})
-    await user.send(message)
 
-async def enhanced_register(websocket):
-    USERS.add(websocket)
-    print(USERS)
-    await enhanced_send_track_cache(websocket)
+    return completed_tracks
 
+def track_empty_memory():
+    r.flushdb()
 
-async def enhanced_unregister(websocket):
-    USERS.remove(websocket)
-
-
-async def enhanced_data_track_detection():
-    while True:
-        # shiptrack data ------------------------------------------------------------------------
-        await improved_track_data()
-        await asyncio.sleep(2)
-
+# =================================================================================
+# END IMPROVED SYSTEM
+# =================================================================================
 
 async def handler(websocket, path):
     try:
         # -- event yang harus di jalankan oleh web socket --
 
         # meregister user ketika terkoneksi dengan web socket
-        await enhanced_register(websocket)
+        await register(websocket)
 
         # menghendle message dari client
         await get_websocket_messages(websocket)
@@ -214,14 +188,15 @@ async def handler(websocket, path):
         print("connection closed error", e)
 
     finally:
-        await enhanced_unregister(websocket)
+        await unregister(websocket)
 
 def _main_():
     # 0.0.0.0 for global ip
+    print("Server Started on " + WS_HOST + ":" + WS_PORT)
     start_server = websockets.serve(handler, WS_HOST, WS_PORT)
 
     tasks = [
-        asyncio.ensure_future(enhanced_data_track_detection()),
+        asyncio.ensure_future(data_change_detection()),
         asyncio.ensure_future(start_server)
     ]
 
