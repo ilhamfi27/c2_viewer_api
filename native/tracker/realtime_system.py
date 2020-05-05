@@ -195,7 +195,7 @@ async def improved_data_change_detection():
     while True:
         # shiptrack data ------------------------------------------------------------------------
         await improved_track_data()
-        await asyncio.sleep(5)
+        await asyncio.sleep(2)
 
 
 async def handler(websocket, path):

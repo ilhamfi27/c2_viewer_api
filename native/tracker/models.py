@@ -84,11 +84,11 @@ async def data_process(table, stn, table_results):
 
         # double check dengan list STN dari memory
         # *** cek apakah di memory pernah dihapus atau enggak
-
         if table == 'replay_system_track_processing' \
             and table_results['track_phase_type'] not in ["DELETED_BY_SYSTEM", "DELETED_BY_SENSOR"] \
             and not r.exists(track_index) and is_updated:
-            is_updated = False; is_newly_created = True
+            is_updated = False;
+            is_newly_created = True
     else: # kalau data dari redis kosong
         stn_hash = {}
         stn_hash[table] = table_results  # set hash dengan nama table
@@ -110,12 +110,12 @@ async def data_process(table, stn, table_results):
     else:
         stn_hash['completed'] = False
 
-    if table == 'replay_system_track_kinetic':
-        print(table_results)
-        print("COMPLETED", stn_hash['completed'])
-        print("CREATED", is_newly_created)
-        print("NEWLY CREATED", is_exists_but_newly_completed)
-        print("UPDATED", is_updated)
+    # if table == 'replay_system_track_kinetic':
+    #     print(table_results)
+    #     print("COMPLETED", stn_hash['completed'])
+    #     print("CREATED", is_newly_created)
+    #     print("NEWLY CREATED", is_exists_but_newly_completed)
+    #     print("UPDATED", is_updated)
 
     # jika lengkap, maka data dikirimkan ke user
     if stn_hash['completed']:
@@ -123,11 +123,12 @@ async def data_process(table, stn, table_results):
             and table_results['track_phase_type'] not in ["DELETED_BY_SYSTEM", "DELETED_BY_SENSOR"]:
             r.set(track_index, json.dumps(stn_hash))
 
-        if is_newly_created:
-            stn_dict = util.redis_decode_to_dict(stn_hash)
-            message = json.dumps({'data':stn_dict , 'data_type': 'realtime'})
-            for user in USERS: await user.send(message)
-        elif is_updated:
+            if is_newly_created:
+                stn_dict = util.redis_decode_to_dict(stn_hash)
+                message = json.dumps({'data':stn_dict , 'data_type': 'realtime'})
+                for user in USERS: await user.send(message)
+
+        if r.exists(track_index) and is_updated:
             message = json.dumps({'data': {table: table_results}, 'data_type': 'realtime'})
             for user in USERS: await user.send(message)
 
