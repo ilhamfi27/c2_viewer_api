@@ -46,18 +46,7 @@ async def data_process(table, stn, table_results):
     2. eksistensi data di memory
         - jika ada, dan data beda, maka kirim data yang baru dan update memory
         - jika ada, data beda, dan statusnya removed, maka kirim status removed, dan hapus dari memory
-    """
-    util.datetime_to_string(table_results)  # convert datetime to string
-    util.string_bool_to_bool(table_results) # clean STRING BOOLEAN to PURE BOOLEAN
 
-    is_updated = False
-    is_newly_created = False
-    is_exists_but_newly_completed = False
-    is_compeleted = None
-
-    track_index = 'T' + str(stn)
-
-    """
     must read:
     di redis disimpen 2 list data
     - hashed -> . memori untuk menyimpan semua data track. Bakal dipanggil waktu ada user baru yang connect
@@ -68,28 +57,36 @@ async def data_process(table, stn, table_results):
                         . nama key -> T + STN = 'T2' / 'T3' / 'T4'
                         . data yang disimpen di memori ini adalah data lengkap dan tidak dihapus
     """
+    util.datetime_to_string(table_results)  # convert datetime to string
+    util.string_bool_to_bool(table_results)  # clean STRING BOOLEAN to PURE BOOLEAN
 
-    if r.hexists('tracks', stn): # kalau data dari redis udh ada
+    is_updated = False
+    is_newly_created = False
+
+    track_index = 'T' + str(stn)
+
+    if r.hexists('tracks', stn):  # kalau data dari redis udh ada
         stn_hash = json.loads(r.hget('tracks', stn).decode("utf-8"))  # get data dari redis + convert to dict
-        is_compeleted = stn_hash.pop('completed', None)  # remove created key dari hash redis
+        stn_hash.pop('completed', None)  # remove created key dari hash redis
 
         # table -> table name dari looping
-        if table in stn_hash: # kalau tablenya udh ada dari redis
+        if table in stn_hash:  # kalau tablenya udh ada dari redis
             if stn_hash[table] != table_results:  # kalau hash dari redis gak sama dengan hasil dari query
                 stn_hash[table] = table_results
                 is_updated = True
-        else: # kalau tablenya gak ada dari redis tapi datanya udah ada
+        else:  # kalau tablenya gak ada dari redis tapi datanya udah ada
             stn_hash[table] = table_results  # set hash dengan nama table
             is_updated = True
 
         # double check dengan list STN dari memory
         # *** cek apakah di memory pernah dihapus atau enggak
         if table == 'replay_system_track_processing' \
-            and table_results['track_phase_type'] not in ["DELETED_BY_SYSTEM", "DELETED_BY_SENSOR"] \
-            and not r.exists(track_index) and is_updated:
+                and table_results['track_phase_type'] not in ["DELETED_BY_SYSTEM", "DELETED_BY_SENSOR"] \
+                and not r.exists(track_index) and is_updated:
             is_updated = False;
             is_newly_created = True
-    else: # kalau data dari redis kosong
+
+    else:  # kalau data dari redis kosong
         stn_hash = {}
         stn_hash[table] = table_results  # set hash dengan nama table
         is_newly_created = True
@@ -119,22 +116,23 @@ async def data_process(table, stn, table_results):
 
     # jika lengkap, maka data dikirimkan ke user
     if stn_hash['completed']:
-        if table == 'replay_system_track_processing' \
-            and table_results['track_phase_type'] not in ["DELETED_BY_SYSTEM", "DELETED_BY_SENSOR"]:
-            r.set(track_index, json.dumps(stn_hash))
+        if 'replay_system_track_processing' in stn_hash \
+                and stn_hash['replay_system_track_processing']['track_phase_type'] not in ["DELETED_BY_SYSTEM",
+                                                                                           "DELETED_BY_SENSOR"]:
+            r.set(track_index, json.dumps(stn_hash)) # set data track ke redis
 
-            if is_newly_created:
-                stn_dict = util.redis_decode_to_dict(stn_hash)
-                message = json.dumps({'data':stn_dict , 'data_type': 'realtime'})
+            if is_newly_created: # kalau datanya dideteksi baru
+                message = json.dumps({'data': stn_hash, 'data_type': 'realtime'})
                 for user in USERS: await user.send(message)
 
-        if r.exists(track_index) and is_updated:
+        if r.exists(track_index) and is_updated: # kalau datanya dideteksi update, dan di redis ada
             message = json.dumps({'data': {table: table_results}, 'data_type': 'realtime'})
             for user in USERS: await user.send(message)
 
     # kalau tracknya dihapus, maka hapus dari memory
-    if table == 'replay_system_track_processing' \
-            and table_results['track_phase_type'] in ["DELETED_BY_SYSTEM", "DELETED_BY_SENSOR"]:
+    if 'replay_system_track_processing' in stn_hash \
+            and stn_hash['replay_system_track_processing']['track_phase_type'] in ["DELETED_BY_SYSTEM",
+                                                                                       "DELETED_BY_SENSOR"]:
         if r.exists(track_index): r.delete(track_index)
 
     r.hset('tracks', stn, json.dumps(stn_hash))  # set redis key dengan STN
@@ -238,8 +236,8 @@ async def improved_track_data():
             data = cur.fetchall()
 
             for row in data:
-                stn = row[1] # stn -> system_track_number
-                table_results = dict(zip(table_columns[table], row)) # make the result dictionary
+                stn = row[1]  # stn -> system_track_number
+                table_results = dict(zip(table_columns[table], row))  # make the result dictionary
                 created_time_tracks[table] = table_results['created_time']
                 await data_process(table, stn, table_results)
 

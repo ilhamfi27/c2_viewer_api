@@ -170,28 +170,27 @@ async def realtime_toggle_handler(user, state):
 # =================================================================================
 # IMPROVED SYSTEM
 # =================================================================================
-async def improved_send_cached_data(user):
+async def enhanced_send_track_cache(user):
     # send realtime
-    tracks = util.redis_decode_to_list(r.hgetall('tracks'))
+    tracks = util.redis_decode_to_dict(r.hgetall('tracks'), nested_dict=True)
     completed_tracks = []
 
-    for data in tracks:
-        if data['completed'] and data['replay_system_track_processing']['track_phase_type'] \
-            not in ["DELETED_BY_SYSTEM", "DELETED_BY_SENSOR"]: completed_tracks.append(data)
+    for key, data in tracks.items():
+        if r.exists('T' + key): completed_tracks.append(data)
     message = json.dumps({'data': completed_tracks, 'data_type': 'realtime'})
     await user.send(message)
 
-async def improved_register(websocket):
+async def enhanced_register(websocket):
     USERS.add(websocket)
     print(USERS)
-    await improved_send_cached_data(websocket)
+    await enhanced_send_track_cache(websocket)
 
 
-async def improved_unregister(websocket):
+async def enhanced_unregister(websocket):
     USERS.remove(websocket)
 
 
-async def improved_data_change_detection():
+async def enhanced_data_track_detection():
     while True:
         # shiptrack data ------------------------------------------------------------------------
         await improved_track_data()
@@ -203,7 +202,7 @@ async def handler(websocket, path):
         # -- event yang harus di jalankan oleh web socket --
 
         # meregister user ketika terkoneksi dengan web socket
-        await improved_register(websocket)
+        await enhanced_register(websocket)
 
         # menghendle message dari client
         await get_websocket_messages(websocket)
@@ -215,14 +214,14 @@ async def handler(websocket, path):
         print("connection closed error", e)
 
     finally:
-        await improved_unregister(websocket)
+        await enhanced_unregister(websocket)
 
 def _main_():
     # 0.0.0.0 for global ip
     start_server = websockets.serve(handler, WS_HOST, WS_PORT)
 
     tasks = [
-        asyncio.ensure_future(improved_data_change_detection()),
+        asyncio.ensure_future(enhanced_data_track_detection()),
         asyncio.ensure_future(start_server)
     ]
 

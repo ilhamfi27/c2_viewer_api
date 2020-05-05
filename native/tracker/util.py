@@ -13,14 +13,12 @@ def string_bool_to_bool(table_results):
         if type(value) == str and (value.upper() == "TRUE" or value.upper() == "FALSE"):
             table_results[key] = True if value.upper() == 'TRUE' else False
 
-def redis_decode_to_dict(redis_hash):
-    # convert string boolean to boolean
-    return { key.decode(): json.loads(val) for key, val in redis_hash.items() }
-
 def redis_decode_to_list(redis_hash):
     # convert string boolean to boolean
     return [ json.loads(val) for key, val in redis_hash.items() ]
 
-def redis_decode_to_dict(redis_hash):
+def redis_decode_to_dict(redis_hash, nested_dict=False):
     # convert string boolean to boolean
-    return { key: val for key, val in redis_hash.items() }
+    if nested_dict:
+        return { key.decode(): json.loads(val.decode()) for key, val in redis_hash.items() }
+    return { key.decode(): val.decode() for key, val in redis_hash.items() }
