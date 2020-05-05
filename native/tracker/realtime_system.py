@@ -176,9 +176,8 @@ async def improved_send_cached_data(user):
     completed_tracks = []
 
     for data in tracks:
-        if data['completed']:
-            completed_tracks.append(data)
-    print(completed_tracks)
+        if data['completed'] and data['replay_system_track_processing']['track_phase_type'] \
+            not in ["DELETED_BY_SYSTEM", "DELETED_BY_SENSOR"]: completed_tracks.append(data)
     message = json.dumps({'data': completed_tracks, 'data_type': 'realtime'})
     await user.send(message)
 

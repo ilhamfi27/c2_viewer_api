@@ -20,3 +20,7 @@ def redis_decode_to_dict(redis_hash):
 def redis_decode_to_list(redis_hash):
     # convert string boolean to boolean
     return [ json.loads(val) for key, val in redis_hash.items() ]
+
+def redis_decode_to_dict(redis_hash):
+    # convert string boolean to boolean
+    return { key: val for key, val in redis_hash.items() }
