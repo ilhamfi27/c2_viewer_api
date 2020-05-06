@@ -215,7 +215,7 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
         recorded_track  = {}
         if session_id not in done_generate:
             if value['mandatory_complete_status']:  
-                print(data_track[key])
+                # print(key)
                 if key not in added_track:
                     track['track_status'] = "T" + str(key) + "A"
                     #general
@@ -438,16 +438,16 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                                 track['land_platform_activity']          = str(td[9])
                                 track['land_specific']                   = str(td[12])
 
-                                
-                
                 if len(track) > 0:
                     track_final[key] = {}
                     track_final[key] = track
+                
                 if key not in added_track:
                     added_track.append(key)
     # print(track_final)
-    changed_mandatory_data.clear()
+    # changed_mandatory_data.clear()
     return_data.append(track_final)
+    # print(return_data[0])
     return_data.append(data_track)
     return_data.append(added_track)
     
@@ -462,7 +462,8 @@ def get_replay():
                   " to_char (end_time::timestamp, 'YYYY-MM-DD HH24:MI:SS') end_time, " \
                   "EXTRACT(EPOCH FROM (end_time::timestamp - start_time::timestamp)) as durasi, name " \
                   " from sessions " \
-                  "WHERE end_time IS NOT null AND id=1"
+                  "WHERE end_time IS NOT null and " \
+                  " id not in (SELECT distinct(session_id) FROM stored_replay WHERE update_rate="+str(UPDATE_RATE)+" )"
 
     cur.execute(sql)
     query = cur.fetchall()
@@ -481,9 +482,9 @@ def get_replay():
         name        = data[4]
         '''Buat panjang durasi dibagi dengan UPDATE_RATE. Buat list sesuai dengan panjang_replay'''
         panjang_replay = durasi / UPDATE_RATE
-        print(durasi)
-        track_list_prep = [i for i in range(int(panjang_replay))]
-        track_list = dict.fromkeys(track_list_prep, {})
+        # print(durasi)
+        # track_list_prep = [i for i in range(int(panjang_replay))]
+        # track_list = dict.fromkeys(track_list_prep, {})
         result={
                         "session_id"        : str(session_id),
                         "start_time"        : str(start_time),
@@ -491,246 +492,301 @@ def get_replay():
                         "session_name"      : str(name),
                         "update_rate"       : str(UPDATE_RATE),
                         "durasi_session"    : str(durasi),
-                        "track_play"        : track_list
+                        # "track_play"        : track_list
                 }
         # print(result)
         start_time  = (datetime.strptime(str(start_time), '%Y-%m-%d %H:%M:%S'))
         end_time    = (datetime.strptime(str(end_time), '%Y-%m-%d %H:%M:%S'))
         added_track = []
-
-        '''Looping sebanyak panjang replay'''
-        for t in track_list_prep:
-
-            '''Buat start_time dan end_time untuk setiap segmen replay.
-                        Segmen durasi adalah satuan  replay track,
-                        contoh 2020-01-10 14:45:31 sampai dengan 2020-01-10 14:45:41
-                        disebut sebagai 1 segmen durasi'''
-
-                    # print(t)
-                    # print(str(start_time) + " sampai dengan " + str(end_time))
-            if t == 0:
-                tmp_time = (datetime.strptime(str(start_time), '%Y-%m-%d %H:%M:%S'))
-                tmp_time += dt.timedelta(seconds=UPDATE_RATE)
-                end_time = tmp_time
-            else:
-                start_time += dt.timedelta(seconds=UPDATE_RATE)
-                end_time += dt.timedelta(seconds=UPDATE_RATE)
-
-            result["track_play"][str(t)] = {
-                                "start_time"        : str(start_time),
-                                "end_time"          : str(end_time),
-                                "track"             : [],
-                                "reference_point"   : [],
-                                "tactical_figures"  : [],
-                                "area_alert"        : []
-
-            }
-            '''Jalankan query untuk setiap tabel per setiap segmen durasi'''
-
-            track_replay_data       = replay_track(session_id, str(start_time), str(end_time), data_track, added_track)
-            result["track_play"][str(t)]["track"].append(track_replay_data[0])
+        chunk_size      = 600
+        panjang_chunk   = math.ceil(panjang_replay/chunk_size)        
+        t_awal          = 0
+        t_akhir         = 0
+        tmp_awal        = (datetime.strptime(str(start_time), '%Y-%m-%d %H:%M:%S'))
+        final           = end_time
+        for sequence in range(panjang_chunk):
+            ujung = panjang_chunk - 1        
             
-            data_track = track_replay_data[1]
-            added_track = track_replay_data[2]
-            # ais_data = track_replay_data[3]
-            # ais_data = track_replay_data[3]
-            # check_ais_later = track_replay_data[4]
-            query_tf = "SELECT tf.* " \
-                                   "FROM tactical_figures tf " \
-                                    "JOIN(" \
-                                   "     SELECT object_id,max(last_update_time) last_update_time " \
-                                   "     FROM tactical_figures " \
-                                   "     WHERE session_id = " + str(session_id) + " AND last_update_time >= '"+str(start_time)+"' AND last_update_time < '"+str(end_time)+"' " \
-                                    "     GROUP BY object_id) mx " \
-                                    "ON tf.object_id=mx.object_id and tf.last_update_time=mx.last_update_time " \
-                                    "WHERE tf.session_id = '"+str(session_id)+"' AND tf.last_update_time >= '"+str(start_time)+"' AND tf.last_update_time < '"+str(end_time)+"' " \
-                                    "ORDER BY tf.object_id"
-            # print(query_tf)
-            cur.execute(query_tf)
-            data_tf = cur.fetchall()
-            for tf in data_tf:
-                object_id                   = str(tf[2])
-                is_visible                  = str(tf[8])
-                tf_name                     = str(tf[3])
-                tf_environment              = str(tf[4])
-                tf_ntn                      = str(tf[10])
-                tf_link_status              = str(tf[11])
-                tf_status                   = str('F'+str(object_id))
-                tf_amplification            = str(tf[13])
-                tf_last_update_time         = str(tf[9])
+            if sequence == 0:
+                print("awal")
+                t_awal  = 0
+                t_akhir = chunk_size if panjang_chunk > 1 else durasi                
+                tmp_akhir     = start_time
+                tmp_akhir    += dt.timedelta(seconds=t_akhir)
+            elif sequence == ujung:
+                print("ujung")
+                t_awal  = t_akhir
+                t_akhir = panjang_replay
                 
-                # tf_track = [tf_status, tf_name, tf_environment, tf_ntn, tf_link_status, tf_amplification, str(tf_last_update_time)]
-                tf_track = {
-                            "object_id": object_id,
-                            "object_type": str(tf[1]),
-                            "name": tf_name,
-                            "environment": tf_environment,
-                            "shape": tf[5],
-                            "line_color": tf[6],
-                            "fill_color": tf[7],
-                            "is_visible": is_visible,
-                            "last_update_time": str(tf_last_update_time),
-                            "network_track_number": tf_ntn,
-                            "link_status_type": tf_link_status,
-                            "is_editable": tf[12],
-                            "point_amplification_type": tf_amplification,
-                            "point_keys": tf[14],
-                            "points": tf[15]
-                            }
-                redis_tf_key           = str(session_id) + "F" + str(object_id) + str(UPDATE_RATE)
-                redis_tf_value         = reduce(concat, [str(values) for key, values in tf_track.items()])
-                hashed_tf_value         = hashlib.md5(redis_tf_value.encode('utf-8')).hexdigest()
-                if r.exists(redis_tf_key):
-                    data_from_hashmap = r.get(redis_tf_key)
-                    if data_from_hashmap.decode("utf-8") != hashed_tf_value:                        
-                        if is_visible == 'REMOVE':                            
-                            tf_track["tf_status"] = tf_status+ "R"
-                            tf_track['hashed']       = hashed_tf_value
-                            r.delete(redis_tf_key)
-                            result["track_play"][str(t)]["tactical_figures"].append(tf_track)
-                        else:
-                            r.set(redis_tf_key, hashed_tf_value)
-                            tf_track["tf_status"] = tf_status+ "U"
-                            tf_track['hashed']       = hashed_tf_value
-                            result["track_play"][str(t)]["tactical_figures"].append(tf_track)
+                tmp_awal    += dt.timedelta(seconds=chunk_size)
+                print(panjang_replay, t_awal, t_akhir)
+                tmp_akhir    = final
+            else:
+                print("tengah")
+                t_awal  += chunk_size
+                t_akhir = t_awal + chunk_size
+                tmp_awal    += dt.timedelta(seconds=chunk_size)
+                tmp_akhir    += dt.timedelta(seconds=chunk_size)
+            '''Looping sebanyak panjang replay'''
+
+            result['start_time']    = str(tmp_awal)
+            result['end_time']      = str(tmp_akhir)
+            track_list_prep = [i for i in range(int(t_awal), int(t_akhir))]
+            track_list = dict.fromkeys(track_list_prep, {})
+            result["track_play"] = track_list
+            for t in track_list_prep:
+
+                '''Buat start_time dan end_time untuk setiap segmen replay.
+                            Segmen durasi adalah satuan  replay track,
+                            contoh 2020-01-10 14:45:31 sampai dengan 2020-01-10 14:45:41
+                            disebut sebagai 1 segmen durasi'''
+
+                        # print(t)
+                        # print(str(start_time) + " sampai dengan " + str(end_time))
+                # if t == 0:
+                #     tmp_time = (datetime.strptime(str(start_time), '%Y-%m-%d %H:%M:%S'))
+                #     tmp_time += dt.timedelta(seconds=UPDATE_RATE)
+                #     end_time = tmp_time
+                # else:
+                #     start_time += dt.timedelta(seconds=UPDATE_RATE)
+                #     end_time += dt.timedelta(seconds=UPDATE_RATE)
+                if t == 0:
+                    tmp_time = (datetime.strptime(str(start_time), '%Y-%m-%d %H:%M:%S'))
+                    tmp_time += dt.timedelta(seconds=UPDATE_RATE)
+                    end_time = tmp_time
                 else:
-                    r.set(redis_tf_key, hashed_tf_value)
-                    tf_track["tf_status"] = tf_status+ "A"
-                    tf_track['hashed']       = hashed_tf_value
-                    result["track_play"][str(t)]["tactical_figures"].append(tf_track)
+                    start_time += dt.timedelta(seconds=UPDATE_RATE)
+                    end_time += dt.timedelta(seconds=UPDATE_RATE)
 
-            query_rp = "SELECT rrp.* " \
-                               "FROM replay_reference_point rrp \
-                               JOIN (" \
-                               "    SELECT object_id,max(last_update_time) last_update_time " \
-                               "    FROM replay_reference_point " \
-                               "    WHERE session_id = " + str(session_id) + " AND last_update_time >= '"+str(start_time)+"' AND last_update_time < '"+str(end_time)+"' " \
-                               "    GROUP BY object_id" \
-                               ") mx ON rrp.object_id=mx.object_id and rrp.last_update_time=mx.last_update_time" \
-                               " WHERE rrp.session_id = '"+str(session_id)+"' AND rrp.last_update_time >= '"+str(start_time)+"' AND rrp.last_update_time < '"+str(end_time)+"' " \
-                               "ORDER BY rrp.object_id"
-            # print(query_rp)
-            cur.execute(query_rp)
-            data_rp = cur.fetchall()
+                result["track_play"][str(t)] = {
+                                    "start_time"        : str(start_time),
+                                    "end_time"          : str(end_time),
+                                    "track"             : [],
+                                    "reference_point"   : [],
+                                    "tactical_figures"  : [],
+                                    "area_alert"        : []
 
-            for rp in data_rp:
-                rp_track            = {}
-                object_id           = rp[2]
-                visibility_type     = rp[7]
-                rp_status           = 'P' + str(object_id)
-                rp_name             = str(rp[3])
-                rp_latitude         = str(float(rp[4]))
-                rp_longitude        = str(float(rp[5]))
-                rp_altitude         = str(rp[6])
-                rp_link_status      = str(rp[11])
-                rp_amplification    = str(rp[8])
-                rp_last_update_time = str(rp[12])
+                }
+                '''Jalankan query untuk setiap tabel per setiap segmen durasi'''
+
+                track_replay_data       = replay_track(session_id, str(start_time), str(end_time), data_track, added_track)                
                 
-                rp_track["object_type"] = rp[1]
-                rp_track["object_id"] =  object_id                
-                rp_track["name"] = rp_name
-                rp_track["latitude"] = rp_latitude
-                rp_track["longitude"] = rp_longitude
-                rp_track["altitude"] = rp_altitude
-                rp_track["visibility_type"] = visibility_type
-                rp_track["point_amplification_type"] = rp_amplification
-                rp_track["is_editable"] = rp[9]
-                rp_track["network_track_number"] = rp[10]
-                rp_track["link_status_type"] = rp_link_status
-                rp_track["last_update_time"] = str(rp_last_update_time)
-                # print(rp_track)
-                redis_rp_key           = str(session_id) + "P" + str(object_id) + str(UPDATE_RATE)
-                redis_rp_value         = reduce(concat, [str(values) for key, values in rp_track.items()])
-                hashed_rp_value         = hashlib.md5(redis_rp_value.encode('utf-8')).hexdigest()
-                if r.exists(redis_rp_key):
-                    data_from_hashmap = r.get(redis_rp_key)
-                    if data_from_hashmap.decode("utf-8") != hashed_rp_value:                        
-                        if is_visible == 'REMOVE':                            
-                            rp_track["rp_status"] = rp_status+ "R"
-                            rp_track['hashed']       = hashed_rp_value
-                            r.delete(redis_rp_key)
-                            result["track_play"][str(t)]["reference_point"].append(rp_track)
-                        else:
-                            r.set(redis_rp_key, hashed_rp_value)
-                            rp_track["rp_status"] = rp_status+ "U"
-                            rp_track['hashed']       = hashed_rp_value
-                            result["track_play"][str(t)]["reference_point"].append(rp_track)
+                result["track_play"][str(t)]["track"].append(track_replay_data[0])
+                
+                
+                data_track = track_replay_data[1]
+                added_track = track_replay_data[2]
+                # ais_data = track_replay_data[3]
+                # ais_data = track_replay_data[3]
+                # check_ais_later = track_replay_data[4]
+                query_tf = "SELECT tf.* " \
+                                    "FROM tactical_figures tf " \
+                                        "JOIN(" \
+                                    "     SELECT object_id,max(last_update_time) last_update_time " \
+                                    "     FROM tactical_figures " \
+                                    "     WHERE session_id = " + str(session_id) + " AND last_update_time >= '"+str(start_time)+"' AND last_update_time < '"+str(end_time)+"' " \
+                                        "     GROUP BY object_id) mx " \
+                                        "ON tf.object_id=mx.object_id and tf.last_update_time=mx.last_update_time " \
+                                        "WHERE tf.session_id = '"+str(session_id)+"' AND tf.last_update_time >= '"+str(start_time)+"' AND tf.last_update_time < '"+str(end_time)+"' " \
+                                        "ORDER BY tf.object_id"
+                # print(query_tf)
+                cur.execute(query_tf)
+                data_tf = cur.fetchall()
+                for tf in data_tf:
+                    object_id                   = str(tf[2])
+                    is_visible                  = str(tf[8])
+                    tf_name                     = str(tf[3])
+                    tf_environment              = str(tf[4])
+                    tf_ntn                      = str(tf[10])
+                    tf_link_status              = str(tf[11])
+                    tf_status                   = str('F'+str(object_id))
+                    tf_amplification            = str(tf[13])
+                    tf_last_update_time         = str(tf[9])
+                    
+                    # tf_track = [tf_status, tf_name, tf_environment, tf_ntn, tf_link_status, tf_amplification, str(tf_last_update_time)]
+                    tf_track = {
+                                "object_id": object_id,
+                                "object_type": str(tf[1]),
+                                "name": tf_name,
+                                "environment": tf_environment,
+                                "shape": tf[5],
+                                "line_color": tf[6],
+                                "fill_color": tf[7],
+                                "is_visible": is_visible,
+                                "last_update_time": str(tf_last_update_time),
+                                "network_track_number": tf_ntn,
+                                "link_status_type": tf_link_status,
+                                "is_editable": tf[12],
+                                "point_amplification_type": tf_amplification,
+                                "point_keys": tf[14],
+                                "points": tf[15]
+                                }
+                    redis_tf_key           = str(session_id) + "F" + str(object_id) + str(UPDATE_RATE)
+                    redis_tf_value         = reduce(concat, [str(values) for key, values in tf_track.items()])
+                    hashed_tf_value         = hashlib.md5(redis_tf_value.encode('utf-8')).hexdigest()
+                    if r.exists(redis_tf_key):
+                        data_from_hashmap = r.get(redis_tf_key)
+                        if data_from_hashmap.decode("utf-8") != hashed_tf_value:                        
+                            if is_visible == 'REMOVE':                            
+                                tf_track["tf_status"] = tf_status+ "R"
+                                tf_track['hashed']       = hashed_tf_value
+                                r.delete(redis_tf_key)
+                                result["track_play"][str(t)]["tactical_figures"].append(tf_track)
+                            else:
+                                r.set(redis_tf_key, hashed_tf_value)
+                                tf_track["tf_status"] = tf_status+ "U"
+                                tf_track['hashed']       = hashed_tf_value
+                                result["track_play"][str(t)]["tactical_figures"].append(tf_track)
+                    else:
+                        r.set(redis_tf_key, hashed_tf_value)
+                        tf_track["tf_status"] = tf_status+ "A"
+                        tf_track['hashed']       = hashed_tf_value
+                        result["track_play"][str(t)]["tactical_figures"].append(tf_track)
 
-                else:
-                    r.set(redis_rp_key, hashed_rp_value)
-                    rp_track["rp_status"] = rp_status+ "A"
-                    rp_track['hashed']       = hashed_rp_value
-                    result["track_play"][str(t)]["reference_point"].append(rp_track)
-
-
-            query_aa = "SELECT  aa.* " \
-                                " FROM area_alerts aa " \
-                                " JOIN (" \
+                query_rp = "SELECT rrp.* " \
+                                "FROM replay_reference_point rrp \
+                                JOIN (" \
                                 "    SELECT object_id,max(last_update_time) last_update_time " \
-                                "    FROM area_alerts " \
-                                "    WHERE session_id = '" + str(session_id) + "' AND last_update_time >= '"+str(start_time)+"' AND last_update_time < '"+str(end_time)+"' " \
-                                "    GROUP BY object_id " \
-                                ") mx ON aa.object_id=mx.object_id and aa.last_update_time=mx.last_update_time " \
-                                " WHERE aa.session_id = '" + str(session_id) + "' " \
-                                 " AND aa.last_update_time >= '"+str(start_time)+"' AND aa.last_update_time < '"+str(end_time)+"' " \
-                                 " ORDER BY aa.object_id"
-                    # query_aa = "SELECT aa.session_id as id, aa.*  FROM area_alerts aa  JOIN (    SELECT object_id,max(last_update_time) last_update_time     FROM area_alerts     WHERE session_id = '1' AND last_update_time > '2020-01-10 14:14:31' AND last_update_time < '2020-01-10 14:14:41'     GROUP BY object_id ) mx ON aa.object_id=mx.object_id and aa.last_update_time=mx.last_update_time  WHERE aa.session_id = '1'  AND aa.last_update_time > '2020-01-10 14:14:31' AND aa.last_update_time < '2020-01-10 14:14:41'  ORDER BY aa.object_id"
-            cur.execute(query_aa)
-            data_aa = cur.fetchall()
-            for aa in data_aa:
-                object_id           = str(aa[2])
-                object_type         = str(aa[1])
-                warning_type        = str(aa[3])
-                track_name          = str(aa[4])
-                last_update_time    = str(aa[5])
-                mmsi_number         = str(aa[6])
-                ship_name           = str(aa[7])
-                track_source_type   = str(aa[8])
-                is_visible          = str(aa[9])
-                aa_status = 'AA' + str(object_id) #+'R' if is_visible == 'REMOVE' else 'AA'+str(object_id)
-                aa_track = {"system_track_number": aa_status,
-                            "object_type": object_type,
-                            "object_id": object_id,
-                            "warning_type": warning_type,
-                            "track_name": track_name,
-                            "last_update_time": str(last_update_time),
-                            "mmsi_number": mmsi_number,
-                            "ship_name": ship_name,
-                            "track_source_type": track_source_type,
-                            "is_visible": is_visible}
-                redis_aa_key           = str(session_id) + "AA" + str(object_id) + str(UPDATE_RATE)
-                redis_aa_value         = reduce(concat, [str(values) for key, values in aa_track.items()])
-                hashed_aa_value         = hashlib.md5(redis_aa_value.encode('utf-8')).hexdigest()
-                if r.exists(redis_aa_key):
-                    data_from_hashmap = r.get(redis_aa_key)
-                    if data_from_hashmap.decode("utf-8") != hashed_aa_value:                        
-                        if is_visible == 'REMOVE':                            
-                            aa_track["aa_status"] = aa_status+ "R"
-                            aa_track['hashed']       = hashed_aa_value
-                            r.delete(redis_aa_key)
-                            result["track_play"][str(t)]["area_alert"].append(aa_track)
-                        else:
-                            r.set(redis_aa_key, hashed_aa_value)
-                            aa_track["aa_status"] = aa_status+ "U"
-                            aa_track['hashed']       = hashed_aa_value
-                            result["track_play"][str(t)]["area_alert"].append(aa_track)
+                                "    FROM replay_reference_point " \
+                                "    WHERE session_id = " + str(session_id) + " AND last_update_time >= '"+str(start_time)+"' AND last_update_time < '"+str(end_time)+"' " \
+                                "    GROUP BY object_id" \
+                                ") mx ON rrp.object_id=mx.object_id and rrp.last_update_time=mx.last_update_time" \
+                                " WHERE rrp.session_id = '"+str(session_id)+"' AND rrp.last_update_time >= '"+str(start_time)+"' AND rrp.last_update_time < '"+str(end_time)+"' " \
+                                "ORDER BY rrp.object_id"
+                # print(query_rp)
+                cur.execute(query_rp)
+                data_rp = cur.fetchall()
 
-                else:
-                    r.set(redis_aa_key, hashed_aa_value)
-                    aa_track["aa_status"] = aa_status+ "A"
-                    aa_track['hashed']       = hashed_aa_value
-                    result["track_play"][str(t)]["area_alert"].append(aa_track)
+                for rp in data_rp:
+                    rp_track            = {}
+                    object_id           = rp[2]
+                    visibility_type     = rp[7]
+                    rp_status           = 'P' + str(object_id)
+                    rp_name             = str(rp[3])
+                    rp_latitude         = str(float(rp[4]))
+                    rp_longitude        = str(float(rp[5]))
+                    rp_altitude         = str(rp[6])
+                    rp_link_status      = str(rp[11])
+                    rp_amplification    = str(rp[8])
+                    rp_last_update_time = str(rp[12])
+                    
+                    rp_track["object_type"] = rp[1]
+                    rp_track["object_id"] =  object_id                
+                    rp_track["name"] = rp_name
+                    rp_track["latitude"] = rp_latitude
+                    rp_track["longitude"] = rp_longitude
+                    rp_track["altitude"] = rp_altitude
+                    rp_track["visibility_type"] = visibility_type
+                    rp_track["point_amplification_type"] = rp_amplification
+                    rp_track["is_editable"] = rp[9]
+                    rp_track["network_track_number"] = rp[10]
+                    rp_track["link_status_type"] = rp_link_status
+                    rp_track["last_update_time"] = str(rp_last_update_time)
+                    # print(rp_track)
+                    redis_rp_key           = str(session_id) + "P" + str(object_id) + str(UPDATE_RATE)
+                    redis_rp_value         = reduce(concat, [str(values) for key, values in rp_track.items()])
+                    hashed_rp_value         = hashlib.md5(redis_rp_value.encode('utf-8')).hexdigest()
+                    if r.exists(redis_rp_key):
+                        data_from_hashmap = r.get(redis_rp_key)
+                        if data_from_hashmap.decode("utf-8") != hashed_rp_value:                        
+                            if is_visible == 'REMOVE':                            
+                                rp_track["rp_status"] = rp_status+ "R"
+                                rp_track['hashed']       = hashed_rp_value
+                                r.delete(redis_rp_key)
+                                result["track_play"][str(t)]["reference_point"].append(rp_track)
+                            else:
+                                r.set(redis_rp_key, hashed_rp_value)
+                                rp_track["rp_status"] = rp_status+ "U"
+                                rp_track['hashed']       = hashed_rp_value
+                                result["track_play"][str(t)]["reference_point"].append(rp_track)
 
+                    else:
+                        r.set(redis_rp_key, hashed_rp_value)
+                        rp_track["rp_status"] = rp_status+ "A"
+                        rp_track['hashed']       = hashed_rp_value
+                        result["track_play"][str(t)]["reference_point"].append(rp_track)
+
+
+                query_aa = "SELECT  aa.* " \
+                                    " FROM area_alerts aa " \
+                                    " JOIN (" \
+                                    "    SELECT object_id,max(last_update_time) last_update_time " \
+                                    "    FROM area_alerts " \
+                                    "    WHERE session_id = '" + str(session_id) + "' AND last_update_time >= '"+str(start_time)+"' AND last_update_time < '"+str(end_time)+"' " \
+                                    "    GROUP BY object_id " \
+                                    ") mx ON aa.object_id=mx.object_id and aa.last_update_time=mx.last_update_time " \
+                                    " WHERE aa.session_id = '" + str(session_id) + "' " \
+                                    " AND aa.last_update_time >= '"+str(start_time)+"' AND aa.last_update_time < '"+str(end_time)+"' " \
+                                    " ORDER BY aa.object_id"
+                        # query_aa = "SELECT aa.session_id as id, aa.*  FROM area_alerts aa  JOIN (    SELECT object_id,max(last_update_time) last_update_time     FROM area_alerts     WHERE session_id = '1' AND last_update_time > '2020-01-10 14:14:31' AND last_update_time < '2020-01-10 14:14:41'     GROUP BY object_id ) mx ON aa.object_id=mx.object_id and aa.last_update_time=mx.last_update_time  WHERE aa.session_id = '1'  AND aa.last_update_time > '2020-01-10 14:14:31' AND aa.last_update_time < '2020-01-10 14:14:41'  ORDER BY aa.object_id"
+                cur.execute(query_aa)
+                data_aa = cur.fetchall()
+                for aa in data_aa:
+                    object_id           = str(aa[2])
+                    object_type         = str(aa[1])
+                    warning_type        = str(aa[3])
+                    track_name          = str(aa[4])
+                    last_update_time    = str(aa[5])
+                    mmsi_number         = str(aa[6])
+                    ship_name           = str(aa[7])
+                    track_source_type   = str(aa[8])
+                    is_visible          = str(aa[9])
+                    aa_status = 'AA' + str(object_id) #+'R' if is_visible == 'REMOVE' else 'AA'+str(object_id)
+                    aa_track = {"system_track_number": aa_status,
+                                "object_type": object_type,
+                                "object_id": object_id,
+                                "warning_type": warning_type,
+                                "track_name": track_name,
+                                "last_update_time": str(last_update_time),
+                                "mmsi_number": mmsi_number,
+                                "ship_name": ship_name,
+                                "track_source_type": track_source_type,
+                                "is_visible": is_visible}
+                    redis_aa_key           = str(session_id) + "AA" + str(object_id) + str(UPDATE_RATE)
+                    redis_aa_value         = reduce(concat, [str(values) for key, values in aa_track.items()])
+                    hashed_aa_value         = hashlib.md5(redis_aa_value.encode('utf-8')).hexdigest()
+                    if r.exists(redis_aa_key):
+                        data_from_hashmap = r.get(redis_aa_key)
+                        if data_from_hashmap.decode("utf-8") != hashed_aa_value:                        
+                            if is_visible == 'REMOVE':                            
+                                aa_track["aa_status"] = aa_status+ "R"
+                                aa_track['hashed']       = hashed_aa_value
+                                r.delete(redis_aa_key)
+                                result["track_play"][str(t)]["area_alert"].append(aa_track)
+                            else:
+                                r.set(redis_aa_key, hashed_aa_value)
+                                aa_track["aa_status"] = aa_status+ "U"
+                                aa_track['hashed']       = hashed_aa_value
+                                result["track_play"][str(t)]["area_alert"].append(aa_track)
+
+                    else:
+                        r.set(redis_aa_key, hashed_aa_value)
+                        aa_track["aa_status"] = aa_status+ "A"
+                        aa_track['hashed']       = hashed_aa_value
+                        result["track_play"][str(t)]["area_alert"].append(aa_track)
+
+            message = json.dumps(result, separators=(',', ':'))
+            check_stored = "SELECT distinct(id) FROM stored_replay WHERE session_id="+str(session_id)+" AND update_rate="+str(UPDATE_RATE)+" and sequence= '"+str(sequence)+"' "
+                # print(check_stored)
+            cur.execute(check_stored)
+            stored_data = cur.fetchall()
+            if len(stored_data) == 0:
+                q_store_replay = "INSERT INTO stored_replay(update_rate, session_id, data, sequence)" \
+                                "VALUES ("+str(UPDATE_RATE)+", "+str(session_id)+", '"+str(message)+"', '"+str(sequence)+"' )"
+                cur.execute(q_store_replay)
+                conn.commit()
+                
+            
         print(session_id, "Finished generated")
-        track.append(result)
-        check_stored = "SELECT * FROM stored_replay WHERE session_id="+str(session_id)+" AND update_rate="+str(UPDATE_RATE)+" "
-        cur.execute(check_stored)
-        q_store_replay = "INSERT INTO stored_replay(update_rate, session_id, data)" \
-                            "	VALUES ("+str(UPDATE_RATE)+", "+str(session_id)+", '"+str(json.dumps(result))+"' )"
-        data = cur.fetchall()
-        if len(data) == 0:
-            cur.execute(q_store_replay)
-            conn.commit()
+        # track.append(result)
+        # check_stored = "SELECT * FROM stored_replay WHERE session_id="+str(session_id)+" AND update_rate="+str(UPDATE_RATE)+" "
+        # cur.execute(check_stored)
+        # q_store_replay = "INSERT INTO stored_replay(update_rate, session_id, data)" \
+        #                     "	VALUES ("+str(UPDATE_RATE)+", "+str(session_id)+", '"+str(json.dumps(result))+"' )"
+        # data = cur.fetchall()
+        # if len(data) == 0:
+        #     cur.execute(q_store_replay)
+        #     conn.commit()
         done_generate.append(session_id)
         print(session_id, "Done")
         # print(q_store_replay)
