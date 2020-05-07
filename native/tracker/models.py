@@ -109,12 +109,6 @@ def data_process(table, stn, table_results):
     else:
         stn_hash['completed'] = False
 
-    # kalau tracknya dihapus, maka hapus dari memory
-    if 'replay_system_track_processing' in stn_hash \
-            and stn_hash['replay_system_track_processing']['track_phase_type'] in ["DELETED_BY_SYSTEM",
-                                                                                       "DELETED_BY_SENSOR"]:
-        if r.exists(track_index): r.delete(track_index)
-
     r.hset('tracks', stn, json.dumps(stn_hash))  # set redis key dengan STN
 
     # jika lengkap, maka data dikirimkan ke user
@@ -127,6 +121,13 @@ def data_process(table, stn, table_results):
                 return 'new', stn_hash
 
         if r.exists(track_index) and is_updated: # kalau datanya dideteksi update, dan di redis ada
+
+            # kalau tracknya dihapus, maka hapus dari memory
+            if stn_hash['replay_system_track_processing']['track_phase_type'] in \
+                    ["DELETED_BY_SYSTEM", "DELETED_BY_SENSOR"]:
+
+                if r.exists(track_index): r.delete(track_index)
+
             return 'update', table_results
 
     return None, None
@@ -233,13 +234,19 @@ async def improved_track_data():
                 stn = row[1]  # stn -> system_track_number
                 table_results = dict(zip(table_columns[table], row))  # make the result dictionary
                 created_time_tracks[table] = table_results['created_time']
+
+                if stn == 12 and table == 'replay_system_track_processing': print(table_results)
+
                 status, result = data_process(table, stn, table_results)
+
+                # print(stn, status, result)
 
                 if status == 'new':
                     data_updates[stn] = result
                     data_updates[stn]['status'] = 'new'
 
                 if status == 'update':
+                    if stn == 12 and table == 'replay_system_track_processing': print(table_results)
                     if stn in data_updates:
                         data_updates[stn][table] = result
                     else:
@@ -248,6 +255,7 @@ async def improved_track_data():
                         data_updates[stn] = table_update
                         data_updates[stn]['status'] = 'update'
             print("===================================================")
+        # print(data_updates)
 
         updated_data = [val for key, val in data_updates.items()]
 
