@@ -172,6 +172,7 @@ def track_empty_memory():
 # =================================================================================
 
 async def handler(websocket, path):
+    print("WEBSOCKET STARTED")
     try:
         # -- event yang harus di jalankan oleh web socket --
 

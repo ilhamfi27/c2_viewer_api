@@ -35,7 +35,7 @@ ar_mandatory_table_8 = [
 
 # ============ improvements ============
 # model action
-async def data_process(table, stn, table_results):
+def data_process(table, stn, table_results):
     """
     method ini dipakai buat set data ke redis
     dan mengecek untuk pengiriman data ke user
@@ -57,6 +57,8 @@ async def data_process(table, stn, table_results):
                         . nama key -> T + STN = 'T2' / 'T3' / 'T4'
                         . data yang disimpen di memori ini adalah data lengkap dan tidak dihapus
     """
+    if table_results == {}:
+        return None, None
     util.datetime_to_string(table_results)  # convert datetime to string
     util.string_bool_to_bool(table_results)  # clean STRING BOOLEAN to PURE BOOLEAN
 
@@ -107,33 +109,6 @@ async def data_process(table, stn, table_results):
     else:
         stn_hash['completed'] = False
 
-    # jika lengkap, maka data dikirimkan ke user
-    if stn_hash['completed']:
-        if 'replay_system_track_processing' in stn_hash \
-                and stn_hash['replay_system_track_processing']['track_phase_type'] not in ["DELETED_BY_SYSTEM",
-                                                                                           "DELETED_BY_SENSOR"]:
-            r.set(track_index, json.dumps(stn_hash)) # set data track ke redis
-
-            if is_newly_created: # kalau datanya dideteksi baru
-
-                # kirim ke realtime user
-                message = json.dumps({'data': stn_hash, 'data_type': 'realtime'})
-                for user in USERS: await user.send(message)
-
-                # kirim ke non realtime user sebagai notifikasi
-                notification = json.dumps({'data': stn_hash, 'data_type': 'notification'})
-                for user in NON_REALTIME_USERS: await user.send(notification)
-
-        if r.exists(track_index) and is_updated: # kalau datanya dideteksi update, dan di redis ada
-
-            # kirim ke realtime user
-            message = json.dumps({'data': {table: table_results}, 'data_type': 'realtime'})
-            for user in USERS: await user.send(message)
-
-            # kirim ke non realtime user sebagai notifikasi
-            notification = json.dumps({'data': {table: table_results}, 'data_type': 'notification'})
-            for user in NON_REALTIME_USERS: await user.send(notification)
-
     # kalau tracknya dihapus, maka hapus dari memory
     if 'replay_system_track_processing' in stn_hash \
             and stn_hash['replay_system_track_processing']['track_phase_type'] in ["DELETED_BY_SYSTEM",
@@ -141,6 +116,20 @@ async def data_process(table, stn, table_results):
         if r.exists(track_index): r.delete(track_index)
 
     r.hset('tracks', stn, json.dumps(stn_hash))  # set redis key dengan STN
+
+    # jika lengkap, maka data dikirimkan ke user
+    if stn_hash['completed']:
+        if stn_hash['replay_system_track_processing']['track_phase_type'] not in ["DELETED_BY_SYSTEM",
+                                                                                   "DELETED_BY_SENSOR"]:
+            r.set(track_index, json.dumps(stn_hash)) # set data track ke redis
+
+            if is_newly_created: # kalau datanya dideteksi baru
+                return 'new', stn_hash
+
+        if r.exists(track_index) and is_updated: # kalau datanya dideteksi update, dan di redis ada
+            return 'update', table_results
+
+    return None, None
 
 
 async def improved_track_data():
@@ -210,6 +199,7 @@ async def improved_track_data():
             ),
         }
 
+        data_updates = {}
         for ix, table in enumerate(ar_mandatory_table_8):
             where_own_indicator = "and st.own_unit_indicator='FALSE'" \
                 if table == "replay_system_track_general" else ""
@@ -243,7 +233,32 @@ async def improved_track_data():
                 stn = row[1]  # stn -> system_track_number
                 table_results = dict(zip(table_columns[table], row))  # make the result dictionary
                 created_time_tracks[table] = table_results['created_time']
-                await data_process(table, stn, table_results)
+                status, result = data_process(table, stn, table_results)
+
+                if status == 'new':
+                    data_updates[stn] = result
+                    data_updates[stn]['status'] = 'new'
+
+                if status == 'update':
+                    if stn in data_updates:
+                        data_updates[stn][table] = result
+                    else:
+                        table_update = {}
+                        table_update[table] = result
+                        data_updates[stn] = table_update
+                        data_updates[stn]['status'] = 'update'
+            print("===================================================")
+
+        updated_data = [val for key, val in data_updates.items()]
+
+        if updated_data != []:
+            # kirim ke realtime user
+            message = json.dumps({'data': updated_data, 'data_type': 'realtime'})
+            for user in USERS: await user.send(message)
+
+            # kirim ke non realtime user sebagai notifikasi
+            notification = json.dumps({'data': updated_data, 'data_type': 'notification'})
+            for user in NON_REALTIME_USERS: await user.send(notification)
 
     except psycopg2.Error as e:
         print(e)
