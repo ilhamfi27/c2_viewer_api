@@ -235,8 +235,6 @@ async def improved_track_data():
                 table_results = dict(zip(table_columns[table], row))  # make the result dictionary
                 created_time_tracks[table] = table_results['created_time']
 
-                if stn == 12 and table == 'replay_system_track_processing': print(table_results)
-
                 status, result = data_process(table, stn, table_results)
 
                 # print(stn, status, result)
@@ -246,7 +244,6 @@ async def improved_track_data():
                     data_updates[stn]['status'] = 'new'
 
                 if status == 'update':
-                    if stn == 12 and table == 'replay_system_track_processing': print(table_results)
                     if stn in data_updates:
                         data_updates[stn][table] = result
                     else:
@@ -254,18 +251,16 @@ async def improved_track_data():
                         table_update[table] = result
                         data_updates[stn] = table_update
                         data_updates[stn]['status'] = 'update'
-            print("===================================================")
-        # print(data_updates)
 
         updated_data = [val for key, val in data_updates.items()]
 
         if updated_data != []:
             # kirim ke realtime user
-            message = json.dumps({'data': updated_data, 'data_type': 'realtime'})
+            message = json.dumps({'data': {'track': updated_data}, 'data_type': 'realtime'})
             for user in USERS: await user.send(message)
 
             # kirim ke non realtime user sebagai notifikasi
-            notification = json.dumps({'data': updated_data, 'data_type': 'notification'})
+            notification = json.dumps({'data': {'track': updated_data}, 'data_type': 'notification'})
             for user in NON_REALTIME_USERS: await user.send(notification)
 
     except psycopg2.Error as e:
