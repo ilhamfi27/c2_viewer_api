@@ -8,7 +8,7 @@ import logging
 import websockets
 import numpy as np
 from tracker.models import information_data, tactical_figure_data, reference_point_data, \
-                            area_alert_data, session_data, improved_track_data
+                            area_alert_data, session_data, improved_track_data, history_dots
 from tracker.actions import data_processing, non_strict_data_processing, send_history_dot
 from tracker.config import WS_HOST, WS_PORT, r
 from tracker.state import *
@@ -160,6 +160,7 @@ def enhanced_send_track_cache():
     completed_tracks = []
 
     for key, data in tracks.items():
+        data['history_dots'] = history_dots(key)
         if r.exists('T' + key): completed_tracks.append(data)
 
     return completed_tracks
