@@ -60,7 +60,7 @@ def data_process(table, stn, table_results):
     if table_results == {}:
         return None, None
     util.datetime_to_string(table_results)  # convert datetime to string
-    util.string_bool_to_bool(table_results)  # clean STRING BOOLEAN to PURE BOOLEAN
+    # util.string_bool_to_bool(table_results)  # clean STRING BOOLEAN to PURE BOOLEAN
 
     is_updated = False
     is_newly_created = False
