@@ -241,7 +241,7 @@ async def improved_track_data():
                     if status == 'new':
                         data_updates[stn] = result
                         data_updates[stn]['status'] = 'new'
-                        data_updates[stn]['stn'] = stn
+                        data_updates[stn]['system_track_number'] = stn
 
                     if status == 'update':
                         if stn in data_updates:
@@ -251,7 +251,7 @@ async def improved_track_data():
                             table_update[table] = result
                             data_updates[stn] = table_update
                             data_updates[stn]['status'] = 'update'
-                            data_updates[stn]['stn'] = stn
+                            data_updates[stn]['system_track_number'] = stn
 
         updated_data = [val for key, val in data_updates.items()]
 
