@@ -160,6 +160,7 @@ def enhanced_send_track_cache():
     completed_tracks = []
 
     for key, data in tracks.items():
+        data['stn'] = key
         data['history_dots'] = history_dots(key)
         if r.exists('T' + key): completed_tracks.append(data)
 

@@ -237,20 +237,20 @@ async def improved_track_data():
 
                 status, result = data_process(table, stn, table_results)
 
-                # print(stn, status, result)
+                if status != None:
+                    if status == 'new':
+                        data_updates[stn] = result
+                        data_updates[stn]['status'] = 'new'
 
-                if status == 'new':
-                    data_updates[stn] = result
-                    data_updates[stn]['status'] = 'new'
-
-                if status == 'update':
-                    if stn in data_updates:
-                        data_updates[stn][table] = result
-                    else:
-                        table_update = {}
-                        table_update[table] = result
-                        data_updates[stn] = table_update
-                        data_updates[stn]['status'] = 'update'
+                    if status == 'update':
+                        if stn in data_updates:
+                            data_updates[stn][table] = result
+                        else:
+                            table_update = {}
+                            table_update[table] = result
+                            data_updates[stn] = table_update
+                            data_updates[stn]['status'] = 'update'
+                    data_updates['stn'] = stn
 
         updated_data = [val for key, val in data_updates.items()]
 
