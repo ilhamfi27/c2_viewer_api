@@ -257,11 +257,11 @@ async def improved_track_data():
 
         if updated_data != []:
             # kirim ke realtime user
-            message = json.dumps({'data': {'track': updated_data}, 'data_type': 'realtime'})
+            message = json.dumps({'data': {'tracks': updated_data}, 'data_type': 'realtime'})
             for user in USERS: await user.send(message)
 
             # kirim ke non realtime user sebagai notifikasi
-            notification = json.dumps({'data': {'track': updated_data}, 'data_type': 'notification'})
+            notification = json.dumps({'data': {'tracks': updated_data}, 'data_type': 'notification'})
             for user in NON_REALTIME_USERS: await user.send(notification)
 
     except psycopg2.Error as e:
