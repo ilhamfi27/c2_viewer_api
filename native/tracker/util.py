@@ -5,7 +5,7 @@ def datetime_to_string(table_results):
     # convert datetime to string
     for key, value in table_results.items():
         if type(value) == datetime:
-            table_results[key] = value.strftime('%Y-%m-%d %H:%M:%S:%f')
+            table_results[key] = value.strftime('%Y-%m-%d %H:%M:%S.%f')
 
 def string_bool_to_bool(table_results):
     # convert string boolean to boolean
