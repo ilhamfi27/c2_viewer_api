@@ -114,13 +114,13 @@ def data_process(table, stn, table_results):
     # jika lengkap, maka data dikirimkan ke user
     if stn_hash['completed']:
         if stn_hash['replay_system_track_processing']['track_phase_type'] not in ["DELETED_BY_SYSTEM",
-                                                                                   "DELETED_BY_SENSOR"]:
-            r.set(track_index, json.dumps(stn_hash)) # set data track ke redis
+                                                                                  "DELETED_BY_SENSOR"]:
+            r.set(track_index, json.dumps(stn_hash))  # set data track ke redis
 
-            if is_newly_created: # kalau datanya dideteksi baru
+            if is_newly_created:  # kalau datanya dideteksi baru
                 return 'new', stn_hash
 
-        if r.exists(track_index) and is_updated: # kalau datanya dideteksi update, dan di redis ada
+        if r.exists(track_index) and is_updated:  # kalau datanya dideteksi update, dan di redis ada
 
             # kalau tracknya dihapus, maka hapus dari memory
             if stn_hash['replay_system_track_processing']['track_phase_type'] in \
@@ -160,52 +160,50 @@ async def improved_track_data():
 
         table_columns = {
             "replay_system_track_general": (
-                'session_id', 'system_track_number', 'track_name', 'network_track_number', 'identity', 'environment',
-                'object_type', 'object_id', 'primitive_data_source', 'accuracy_level', 'source', 'own_unit_indicator',
-                'iu_indicator', 'c2_indicator', 'special_processing_indicator', 'force_tell_indicator',
-                'emergency_indicator', 'simulation_indicator', 'last_update_time', 'initiation_time', 'created_time',
-                'airborne_indicator',
+                'system_track_number', 'created_time', 'identity', 'environment', 'source', 'track_name',
+                'iu_indicator', 'airborne_indicator',
+                'initiation_time',
             ),
             "replay_system_track_kinetic": (
-                'session_id', 'system_track_number', 'track_name', 'heading', 'latitude', 'longitude', 'range',
-                'bearing', 'height_depth', 'speed_over_ground', 'course_over_ground', 'last_update_time',
-                'created_time',
+                'system_track_number', 'created_time', 'heading', 'latitude', 'longitude', 'height_depth',
+                'speed_over_ground', 'course_over_ground', 'last_update_time',
             ),
             "replay_system_track_processing": (
-                'session_id', 'system_track_number', 'track_fusion_status', 'track_join_status', 'daughter_tracks',
-                'track_phase_type', 'track_suspect_level', 'created_time',
+                'system_track_number', 'created_time', 'track_join_status', 'track_fusion_status', 'track_phase_type',
+                'track_suspect_level',
             ),
             "replay_system_track_identification": (
-                'session_id', 'system_track_number', 'identity', 'environment', 'air_platform', 'surf_platform',
-                'land_platform', 'air_platform_activity', 'surf_platform_activity', 'land_platform_activity',
-                'air_specific', 'surf_specific', 'land_specific', 'created_time',
+                'system_track_number', 'created_time', 'air_platform', 'surf_platform', 'land_platform',
+                'air_platform_activity', 'surf_platform_activity', 'land_platform_activity', 'air_specific',
+                'surf_specific', 'land_specific',
             ),
             "replay_system_track_link": (
-                'session_id', 'system_track_number', 'network_track_number', 'associated_track_number',
-                'originator_address', 'controlling_unit_address', 'network_track_quality', 'link_status',
-                'created_time',
+                'system_track_number', 'created_time', 'network_track_number', 'originator_address', 'link_status',
             ),
             "replay_system_track_mission": (
-                'session_id', 'system_track_number', 'mission_name', 'route', 'voice_call_sign',
-                'voice_frequency_channel', 'fuel_status', 'radar_coverage', 'start_time', 'end_time', 'created_time',
+                'system_track_number', 'created_time', 'mission_name', 'route', 'voice_call_sign',
+                'voice_frequency_channel', 'fuel_status', 'start_time', 'end_time',
             ),
             "replay_track_general_setting": (
-                'session_id', 'system_track_number', 'speed_label_visibility', 'track_name_label_visibility',
-                'radar_coverage_visibility', 'track_visibility', 'created_time',
+                'system_track_number', 'created_time', 'session_id', 'speed_label_visibility',
+                'track_name_label_visibility', 'radar_coverage_visibility', 'track_visibility', 'created_time',
             ),
             "replay_ais_data": (
-                'session_id', 'system_track_number', 'mmsi_number', 'name', 'radio_call_sign', 'imo_number',
+                'system_track_number', 'created_time', 'mmsi_number', 'name', 'radio_call_sign', 'imo_number',
                 'navigation_status', 'destination', 'dimensions_of_ship', 'type_of_ship_or_cargo', 'rate_of_turn',
-                'position_accuracy', 'gross_tonnage', 'ship_country', 'created_time', 'eta_at_destination', 'vendor_id',
+                'gross_tonnage', 'ship_country',
+                'eta_at_destination', 'vendor_id', 'created_time',
             ),
         }
 
         data_updates = {}
         for ix, table in enumerate(ar_mandatory_table_8):
+            column_used = ("st." + s for s in table_columns[table])
+            column_used = ", ".join(column_used)
             where_own_indicator = "and st.own_unit_indicator='FALSE'" \
                 if table == "replay_system_track_general" else ""
             replay_query = """
-                SELECT st.*
+                SELECT {}
                 FROM {} st
                 JOIN sessions s ON st.session_id=s.id
                 JOIN (
@@ -224,14 +222,14 @@ async def improved_track_data():
                 WHERE s.end_time is NULL
                 {}
                 ORDER BY st.system_track_number;
-                """.format(table, table, created_time_tracks[table], current_time,
+                """.format(column_used, table, table, created_time_tracks[table], current_time,
                            where_own_indicator)
 
             cur.execute(replay_query)
             data = cur.fetchall()
 
             for row in data:
-                stn = row[1]  # stn -> system_track_number
+                stn = row[0]  # stn -> system_track_number
                 table_results = dict(zip(table_columns[table], row))  # make the result dictionary
                 created_time_tracks[table] = table_results['created_time']
 
