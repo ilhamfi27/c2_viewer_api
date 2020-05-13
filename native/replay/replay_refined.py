@@ -217,31 +217,35 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
             if value['mandatory_complete_status']:  
                 # print(key)
                 if key not in added_track:
+                    if 'replay_system_track_general' not in track:
+                        track['replay_system_track_general'] = {}
                     track['track_status'] = "T" + str(key) + "A"
                     #general
-                    track['created_time']        = str(value['replay_system_track_general']['created_time'])
-                    track['source_data']         = str(value['replay_system_track_general']['source_data'])
-                    track['track_name']          = str(value['replay_system_track_general']['track_name'])
-                    track['environment']         = str(value['replay_system_track_general']['environment'])
-                    track['iu_indicator']        = str(value['replay_system_track_general']['iu_indicator'])
-                    track['identity']            = str(value['replay_system_track_general']['identity'])
-                    track['initiation_time']     = str(value['replay_system_track_general']['initiation_time'])
-                    track['airborne_indicator']   = str(value['replay_system_track_general']['airborne_indicator'])
-                    if track['source_data'] == 'AIS_TYPE':                        
-                        track['mmsi_number']            = str(value['replay_ais_data']['mmsi_number'])
-                        track['ship_name']              = str(value['replay_ais_data']['ship_name'])
-                        track['radio_call_sign']        = str(value['replay_ais_data']['radio_call_sign'])
-                        track['imo_number']             = str(value['replay_ais_data']['imo_number'])
-                        track['navigation_status']      = str(value['replay_ais_data']['navigation_status'])
-                        track['destination']            = str(value['replay_ais_data']['destination'])
-                        track['dimension_of_ship']      = str(value['replay_ais_data']['dimension_of_ship'])
-                        track['ship_type']              = str(value['replay_ais_data']['ship_type'])
-                        track['rate_of_turn']           = str(value['replay_ais_data']['rate_of_turn'])
-                        track['gross_tonnage']          = str(value['replay_ais_data']['gross_tonnage'])
-                        track['country']                = str(value['replay_ais_data']['country'])
-                        track['eta']                    = str(value['replay_ais_data']['eta'])
-                        track['vendor_id']              = str(value['replay_ais_data']['vendor_id'])
-                    if track['iu_indicator'] :
+                    track['replay_system_track_general']['created_time']        = str(value['replay_system_track_general']['created_time'])
+                    track['replay_system_track_general']['source_data']         = str(value['replay_system_track_general']['source_data'])
+                    track['replay_system_track_general']['track_name']          = str(value['replay_system_track_general']['track_name'])
+                    track['replay_system_track_general']['environment']         = str(value['replay_system_track_general']['environment'])
+                    track['replay_system_track_general']['iu_indicator']        = str(value['replay_system_track_general']['iu_indicator'])
+                    track['replay_system_track_general']['identity']            = str(value['replay_system_track_general']['identity'])
+                    track['replay_system_track_general']['initiation_time']     = str(value['replay_system_track_general']['initiation_time'])
+                    track['replay_system_track_general']['airborne_indicator']   = str(value['replay_system_track_general']['airborne_indicator'])
+                    if track['replay_system_track_general']['source_data'] == 'AIS_TYPE':  
+                        if 'replay_ais_data' not in track:
+                            track['replay_ais_data'] = {}                      
+                        track['replay_ais_data']['mmsi_number']            = str(value['replay_ais_data']['mmsi_number'])
+                        track['replay_ais_data']['ship_name']              = str(value['replay_ais_data']['ship_name'])
+                        track['replay_ais_data']['radio_call_sign']        = str(value['replay_ais_data']['radio_call_sign'])
+                        track['replay_ais_data']['imo_number']             = str(value['replay_ais_data']['imo_number'])
+                        track['replay_ais_data']['navigation_status']      = str(value['replay_ais_data']['navigation_status'])
+                        track['replay_ais_data']['destination']            = str(value['replay_ais_data']['destination'])
+                        track['replay_ais_data']['dimension_of_ship']      = str(value['replay_ais_data']['dimension_of_ship'])
+                        track['replay_ais_data']['ship_type']              = str(value['replay_ais_data']['ship_type'])
+                        track['replay_ais_data']['rate_of_turn']           = str(value['replay_ais_data']['rate_of_turn'])
+                        track['replay_ais_data']['gross_tonnage']          = str(value['replay_ais_data']['gross_tonnage'])
+                        track['replay_ais_data']['country']                = str(value['replay_ais_data']['country'])
+                        track['replay_ais_data']['eta']                    = str(value['replay_ais_data']['eta'])
+                        track['replay_ais_data']['vendor_id']              = str(value['replay_ais_data']['vendor_id'])
+                    if track['replay_system_track_general']['iu_indicator'] :
                         sql_mission = "SELECT * FROM replay_system_track_mission st \
                                         JOIN (" \
                                             "SELECT system_track_number,max(created_time) created_time " \
@@ -258,13 +262,13 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                         cur.execute(sql_mission)
                         mission_data = cur.fetchall()
                         for md in mission_data:
-                            track['mission_name']            = str(md[2])
-                            track['mission_route']           = str(md[3])
-                            track['voice_call_sig']          = str(md[4])
-                            track['voice_frequency_channel'] = str(md[5])
-                            track['fuel_status']             = str(md[6])
-                            track['mission_start']           = str(md[8])
-                            track['mission_finish']          = str(md[9])                            
+                            track['replay_system_track_mission']['mission_name']            = str(md[2])
+                            track['replay_system_track_mission']['mission_route']           = str(md[3])
+                            track['replay_system_track_mission']['voice_call_sig']          = str(md[4])
+                            track['replay_system_track_mission']['voice_frequency_channel'] = str(md[5])
+                            track['replay_system_track_mission']['fuel_status']             = str(md[6])
+                            track['replay_system_track_mission']['mission_start']           = str(md[8])
+                            track['replay_system_track_mission']['mission_finish']          = str(md[9])                            
 
                             if 'replay_system_track_mission' not in value:
                                 value['replay_system_track_mission'] = {}
@@ -281,31 +285,37 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                             value['replay_system_track_mission']['hash'] = hashed_mission_value
 
                     #kinetic
-                    track['heading']             = str(value['replay_system_track_kinetic']['heading'])
-                    track['latitude']            = str(value['replay_system_track_kinetic']['latitude'])
-                    track['longitude']           = str(value['replay_system_track_kinetic']['longitude'])
-                    track['altitude']            = str(value['replay_system_track_kinetic']['altitude'])
-                    track['speed_over_ground']   = str(value['replay_system_track_kinetic']['speed_over_ground'])
-                    track['course_over_ground']  = str(value['replay_system_track_kinetic']['course_over_ground'])
-                    track['last_update_time']    = str(value['replay_system_track_kinetic']['last_update_time'])
+                    if 'replay_system_track_kinetic' not in track:
+                        track['replay_system_track_kinetic'] = {}
+                    track['replay_system_track_kinetic']['heading']             = str(value['replay_system_track_kinetic']['heading'])
+                    track['replay_system_track_kinetic']['latitude']            = str(value['replay_system_track_kinetic']['latitude'])
+                    track['replay_system_track_kinetic']['longitude']           = str(value['replay_system_track_kinetic']['longitude'])
+                    track['replay_system_track_kinetic']['altitude']            = str(value['replay_system_track_kinetic']['altitude'])
+                    track['replay_system_track_kinetic']['speed_over_ground']   = str(value['replay_system_track_kinetic']['speed_over_ground'])
+                    track['replay_system_track_kinetic']['course_over_ground']  = str(value['replay_system_track_kinetic']['course_over_ground'])
+                    track['replay_system_track_kinetic']['last_update_time']    = str(value['replay_system_track_kinetic']['last_update_time'])
                     #processing
-                    track['fusion_status']       = str(value['replay_system_track_processing']['fusion_status'])
-                    track['join_status']         = str(value['replay_system_track_processing']['join_status'])
-                    track['track_phase_type']    = str(value['replay_system_track_processing']['track_phase_type'])
-                    track['suspect_level']       = str(value['replay_system_track_processing']['suspect_level'])
+                    if 'replay_system_track_processing' not in track:
+                        track['replay_system_track_processing'] = {}
+                    track['replay_system_track_processing']['fusion_status']       = str(value['replay_system_track_processing']['fusion_status'])
+                    track['replay_system_track_processing']['join_status']         = str(value['replay_system_track_processing']['join_status'])
+                    track['replay_system_track_processing']['track_phase_type']    = str(value['replay_system_track_processing']['track_phase_type'])
+                    track['replay_system_track_processing']['suspect_level']       = str(value['replay_system_track_processing']['suspect_level'])
                 else:           
                     if key in changed_mandatory_data['replay_system_track_kinetic']:
                         changed_kinetic = changed_mandatory_data['replay_system_track_kinetic'][key]
                         # print(key, changed_kinetic)
-                        track['heading']             = str(changed_kinetic['heading'])
-                        track['latitude']            = str(changed_kinetic['latitude'])
-                        track['longitude']           = str(changed_kinetic['longitude'])
-                        track['altitude']            = str(changed_kinetic['altitude'])
-                        track['speed_over_ground']   = str(changed_kinetic['speed_over_ground'])
-                        track['course_over_ground']  = str(changed_kinetic['course_over_ground'])
-                        track['last_update_time']    = str(changed_kinetic['last_update_time'])                       
-                        track['hash']                = changed_kinetic['hash']
-                        track['track_status']        = "T" + str(key) + "U"                    
+                        if 'replay_system_track_kinetic' not in track:
+                            track['replay_system_track_kinetic'] = {}
+                        track['replay_system_track_kinetic']['heading']             = str(changed_kinetic['heading'])
+                        track['replay_system_track_kinetic']['latitude']            = str(changed_kinetic['latitude'])
+                        track['replay_system_track_kinetic']['longitude']           = str(changed_kinetic['longitude'])
+                        track['replay_system_track_kinetic']['altitude']            = str(changed_kinetic['altitude'])
+                        track['replay_system_track_kinetic']['speed_over_ground']   = str(changed_kinetic['speed_over_ground'])
+                        track['replay_system_track_kinetic']['course_over_ground']  = str(changed_kinetic['course_over_ground'])
+                        track['replay_system_track_kinetic']['last_update_time']    = str(changed_kinetic['last_update_time'])                       
+                        track['replay_system_track_kinetic']['hash']                = changed_kinetic['hash']
+                        track['replay_system_track_kinetic']['track_status']        = "T" + str(key) + "U"                    
 
                     # print(value['replay_system_track_general'])     
                     if value['replay_system_track_general']['iu_indicator']:
@@ -340,14 +350,16 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                                 new_mission_value         = reduce(concat, new_mission.values())
                                 new_mission_hashed_value  = hashlib.md5(new_mission_value.encode('utf-8')).hexdigest()
                                 if stored_mission_hash != new_mission_hashed_value:                            
-                                    track['mission_name']            = str(new_mission['mission_name'])
-                                    track['mission_route']           = str(new_mission['mission_route'])
-                                    track['voice_call_sig']          = str(new_mission['voice_call_sig'])
-                                    track['voice_frequency_channel'] = str(new_mission['voice_frequency_channel'])
-                                    track['fuel_status']             = str(new_mission['fuel_status'])
-                                    track['mission_start']           = str(new_mission['mission_start'])
-                                    track['mission_finish']          = str(new_mission['mission_finish'])
-                                    track['track_status'] = "T" + str(key) + "U"
+                                    if 'replay_system_track_mission' not in track:
+                                        track['replay_system_track_mission'] = {}
+                                    track['replay_system_track_mission']['mission_name']            = str(new_mission['mission_name'])
+                                    track['replay_system_track_mission']['mission_route']           = str(new_mission['mission_route'])
+                                    track['replay_system_track_mission']['voice_call_sig']          = str(new_mission['voice_call_sig'])
+                                    track['replay_system_track_mission']['voice_frequency_channel'] = str(new_mission['voice_frequency_channel'])
+                                    track['replay_system_track_mission']['fuel_status']             = str(new_mission['fuel_status'])
+                                    track['replay_system_track_mission']['mission_start']           = str(new_mission['mission_start'])
+                                    track['replay_system_track_mission']['mission_finish']          = str(new_mission['mission_finish'])
+                                    track['replay_system_track_mission']['track_status'] = "T" + str(key) + "U"
                                 data_track[key]['replay_system_track_mission']['hash'] = new_mission_hashed_value
                             else:
                                 data_track[key]['replay_system_track_mission'] = {}
@@ -358,29 +370,32 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                                 data_track[key]['replay_system_track_mission']['fuel_status']             = str(new_mission['fuel_status'])
                                 data_track[key]['replay_system_track_mission']['mission_start']           = str(new_mission['mission_start'])
                                 data_track[key]['replay_system_track_mission']['mission_finish']          = str(new_mission['mission_finish'])    
-
-                                track['mission_name']            = str(new_mission['mission_name'])
-                                track['mission_route']           = str(new_mission['mission_route'])
-                                track['voice_call_sig']          = str(new_mission['voice_call_sig'])
-                                track['voice_frequency_channel'] = str(new_mission['voice_frequency_channel'])
-                                track['fuel_status']             = str(new_mission['fuel_status'])
-                                track['mission_start']           = str(new_mission['mission_start'])
-                                track['mission_finish']          = str(new_mission['mission_finish'])    
+                                if 'replay_system_track_mission' not in track:
+                                    track['replay_system_track_mission'] = {}
+                                track['replay_system_track_mission']['mission_name']            = str(new_mission['mission_name'])
+                                track['replay_system_track_mission']['mission_route']           = str(new_mission['mission_route'])
+                                track['replay_system_track_mission']['voice_call_sig']          = str(new_mission['voice_call_sig'])
+                                track['replay_system_track_mission']['voice_frequency_channel'] = str(new_mission['voice_frequency_channel'])
+                                track['replay_system_track_mission']['fuel_status']             = str(new_mission['fuel_status'])
+                                track['replay_system_track_mission']['mission_start']           = str(new_mission['mission_start'])
+                                track['replay_system_track_mission']['mission_finish']          = str(new_mission['mission_finish'])    
 
                     if key in changed_mandatory_data['replay_system_track_processing']:
                         changed_processing = changed_mandatory_data['replay_system_track_processing'][key]
-                        track['fusion_status']       = str(changed_processing['fusion_status'])
-                        track['join_status']         = str(changed_processing['join_status'])
-                        track['track_phase_type']    = str(changed_processing['track_phase_type'])
-                        track['suspect_level']       = str(changed_processing['suspect_level'])
-                        if track['track_phase_type'] in ['DELETED_BY_SYSTEM', 'DELETED_BY_SENSOR']:
+                        if 'replay_system_track_processing' not in track:
+                            track['replay_system_track_processing'] = {}
+                        track['replay_system_track_processing']['fusion_status']       = str(changed_processing['fusion_status'])
+                        track['replay_system_track_processing']['join_status']         = str(changed_processing['join_status'])
+                        track['replay_system_track_processing']['track_phase_type']    = str(changed_processing['track_phase_type'])
+                        track['replay_system_track_processing']['suspect_level']       = str(changed_processing['suspect_level'])
+                        if track['replay_system_track_processing']['track_phase_type'] in ['DELETED_BY_SYSTEM', 'DELETED_BY_SENSOR']:
                             value['replay_system_track_processing'].clear()
                             data_track[key].clear()
-                            track['track_status']        = "T" + str(key) + "R"
+                            track['replay_system_track_processing']['track_status']        = "T" + str(key) + "R"
                             value['mandatory_complete_status'] = False
                             added_track.remove(key)
                         else:
-                            track['track_status']        = "T" + str(key) + "U"
+                            track['replay_system_track_processing']['track_status']        = "T" + str(key) + "U"
                                                        
                 for table in ar_mandatory_table_8:
                     sql_track = "SELECT * FROM " + table + " st \
@@ -402,15 +417,19 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                         if table not in value:
                             value[table] = {}   
                         if table == 'replay_system_track_link':
+                            if 'replay_system_track_link' not in track:
+                                track['replay_system_track_link'] = {}
                             for td in table_data:
                                 value[table]['network_track_number']    = str(td[3])
                                 value[table]['originator']              = str(td[5])
                                 value[table]['link_status']             = str(td[8])
                                 
-                                track['network_track_number']    = str(td[3])
-                                track['originator']              = str(td[5])
-                                track['link_status']             = str(td[8])
+                                track['replay_system_track_link']['network_track_number']    = str(td[3])
+                                track['replay_system_track_link']['originator']              = str(td[5])
+                                track['replay_system_track_link']['link_status']             = str(td[8])
                         if table == 'replay_system_track_identification':
+                            if 'replay_system_track_identification' not in track:
+                                track['replay_system_track_identification'] = {}
                             for td in table_data:
                                 value['environment'] = td[3]
                                 
@@ -426,17 +445,17 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                                 value[table]['land_platform_activity']   = str(td[9])
                                 value[table]['land_specific']       = str(td[12]) 
 
-                                track['air_platform']               = str(td[4])
-                                track['air_platform_activity']      = str(td[7])
-                                track['air_specific']               = str(td[10])
+                                track['replay_system_track_identification']['air_platform']               = str(td[4])
+                                track['replay_system_track_identification']['air_platform_activity']      = str(td[7])
+                                track['replay_system_track_identification']['air_specific']               = str(td[10])
 
-                                track['surf_platform']              = str(td[5])
-                                track['surf_platform_activity']     = str(td[8])
-                                track['surf_specific']              = str(td[11])
+                                track['replay_system_track_identification']['surf_platform']              = str(td[5])
+                                track['replay_system_track_identification']['surf_platform_activity']     = str(td[8])
+                                track['replay_system_track_identification']['surf_specific']              = str(td[11])
 
-                                track['land_platform']              = str(td[6])
-                                track['land_platform_activity']          = str(td[9])
-                                track['land_specific']                   = str(td[12])
+                                track['replay_system_track_identification']['land_platform']              = str(td[6])
+                                track['replay_system_track_identification']['land_platform_activity']          = str(td[9])
+                                track['replay_system_track_identification']['land_specific']                   = str(td[12])
 
                 if len(track) > 0:
                     track_final[key] = {}
@@ -463,7 +482,7 @@ def get_replay():
                   "EXTRACT(EPOCH FROM (end_time::timestamp - start_time::timestamp)) as durasi, name " \
                   " from sessions " \
                   "WHERE end_time IS NOT null and " \
-                  " id not in (SELECT distinct(session_id) FROM stored_replay WHERE update_rate="+str(UPDATE_RATE)+" )"
+                  " id not in (SELECT distinct(session_id) FROM stored_replay WHERE update_rate="+str(UPDATE_RATE)+" ) and id=19"
 
     cur.execute(sql)
     query = cur.fetchall()
@@ -791,7 +810,7 @@ def get_replay():
         print(session_id, "Done")
         # print(q_store_replay)
     # print(json.dumps(result))
-    replay_data_send.append(result)
+    # replay_data_send.append(result)
     # print(replay_data_send)
 
     # print(json.dumps(replay_data_send, default=str))
