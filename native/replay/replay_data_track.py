@@ -2,7 +2,7 @@
 
 # WS server example that synchronizes REALTIME_state across clients
 from main import *
-from replay_generator_chunked import *
+from replay_refined import *
 
 get_replay()
 
