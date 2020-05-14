@@ -482,8 +482,8 @@ def get_replay():
                   "EXTRACT(EPOCH FROM (end_time::timestamp - start_time::timestamp)) as durasi, name " \
                   " from sessions " \
                   "WHERE end_time IS NOT null and " \
-                  " id not in (SELECT distinct(session_id) FROM stored_replay WHERE update_rate="+str(UPDATE_RATE)+" ) and id=19"
-
+                  " id not in (SELECT distinct(session_id) FROM stored_replay WHERE update_rate="+str(UPDATE_RATE)+" )"
+    print(sql)
     cur.execute(sql)
     query = cur.fetchall()
     track = []
