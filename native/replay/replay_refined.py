@@ -8,6 +8,7 @@ USERS = set()
 replay_data_send = []
 done_generate    = []
 sent_before      = {}
+is_generating = False
 def replay_track(session_id, start_time, end_time, data_track, added_track):
     
     # session_id = 19 if 19 not in done_generate and session_id<=19 else 20    
@@ -489,7 +490,11 @@ def get_replay():
     track = []
     done_generate.clear()
     r.flushdb()
-
+    
+    panjang = len(query)
+    if panjang > 0:
+        r.set("is_generating", "1")
+    counter = 0
     for data in query:
 
         data_track = {}
@@ -551,7 +556,7 @@ def get_replay():
             track_list              = dict.fromkeys(track_list_prep, {})
             result["track_play"]    = {}
             for t in track_list_prep:
-                print(t)
+                # print(t)
                 '''Buat start_time dan end_time untuk setiap segmen replay.
                             Segmen durasi adalah satuan  replay track,
                             contoh 2020-01-10 14:45:31 sampai dengan 2020-01-10 14:45:41
@@ -787,22 +792,11 @@ def get_replay():
             result["track_play"].clear()  
             
         print(session_id, "Finished generated")
-        # track.append(result)
-        # check_stored = "SELECT * FROM stored_replay WHERE session_id="+str(session_id)+" AND update_rate="+str(UPDATE_RATE)+" "
-        # cur.execute(check_stored)
-        # q_store_replay = "INSERT INTO stored_replay(update_rate, session_id, data)" \
-        #                     "	VALUES ("+str(UPDATE_RATE)+", "+str(session_id)+", '"+str(json.dumps(result))+"' )"
-        # data = cur.fetchall()
-        # if len(data) == 0:
-        #     cur.execute(q_store_replay)
-        #     conn.commit()
+
         done_generate.append(session_id)
         print(session_id, "Done")
-        # print(q_store_replay)
-    # print(json.dumps(result))
-    # replay_data_send.append(result)
-    # print(replay_data_send)
+        counter = counter + 1
+        if counter == panjang:
+            r.set("is_generating", "0")
 
-    # print(json.dumps(replay_data_send, default=str))
-
-    conn.commit()
+    

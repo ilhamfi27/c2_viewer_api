@@ -4,48 +4,14 @@
 from main import *
 from replay_refined import *
 
-get_replay()
+if r.exists("is_generating"):
+    print(r.get("is_generating"))
+else:
+    r.set("is_generating", "0")
 
-# USERS = set()
-# replay_data_send = []
+if r.get("is_generating").decode("utf-8") == "0":    
+    get_replay()    
+else:    
+    print("Sedang menggenerate replay")
 
-# async def ambil_replay():
-#     get_replay()
-#     if USERS:
-#         message = json.dumps(replay_data_send, default=str)
-#         await asyncio.wait([user.send(message) for user in USERS])
-
-# async def send_reply_data():
-#     if USERS:
-#         message = json.dumps(replay_data_send, default=str)
-#         await asyncio.wait([user.send(message) for user in USERS])
-
-# async def register(websocket):
-#     USERS.add(websocket)
-#     print(USERS)
-
-# async def unregister(websocket):
-#     USERS.remove(websocket)
-# async def handler(websocket, path):
-#     await register(websocket),
-#     try:
-#         await send_reply_data()
-#         async for message in websocket:
-#             pass
-#     except websockets.exceptions.ConnectionClosedError:
-#         print("connection error")
-#     finally:
-#         await unregister(websocket)
-
-# # start_server = websockets.serve(handler, "10.20.112.217", 8080)
-# # start_server = websockets.serve(handler, "192.168.43.14", 14045)
-# start_server = websockets.serve(handler, "127.0.0.1", 8082)
-
-# tasks = [
-#     asyncio.ensure_future(start_server),
-#     asyncio.ensure_future(ambil_replay())
-# ]
-
-# asyncio.get_event_loop().run_until_complete(asyncio.gather(*tasks))
-# asyncio.get_event_loop().run_forever()
 
