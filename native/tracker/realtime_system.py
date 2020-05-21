@@ -78,8 +78,6 @@ async def unregister(websocket):
     print("REMAINING USER", len(USERS))
 
 def check_if_state_must_be_emptied(states):
-    print(SESSION_STATE['existed_data_count'])
-    print(SESSION_STATE['existed_data'])
     if SESSION_STATE['existed_data_count'] == 0:
         SESSION_STATE['existed_data_count'] = len(SESSION_STATE['existed_data'])
 
