@@ -263,7 +263,7 @@ async def improved_track_data():
             # kirim ke non realtime user sebagai notifikasi
             notification = json.dumps({'data': {'tracks': updated_data}, 'data_type': 'notification'})
             if NON_REALTIME_USERS:
-                await asyncio.wait([user.send(message) for user in USERS])
+                await asyncio.wait([user.send(notification) for user in USERS])
 
     except psycopg2.Error as e:
         print(e)
