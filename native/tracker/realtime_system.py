@@ -78,6 +78,8 @@ async def unregister(websocket):
     print("REMAINING USER", len(USERS))
 
 def check_if_state_must_be_emptied(states):
+    print(SESSION_STATE['existed_data_count'])
+    print(SESSION_STATE['existed_data'])
     if SESSION_STATE['existed_data_count'] == 0:
         SESSION_STATE['existed_data_count'] = len(SESSION_STATE['existed_data'])
 
@@ -177,6 +179,7 @@ async def handler(websocket, path):
     print("WEBSOCKET STARTED")
     try:
         # -- event yang harus di jalankan oleh web socket --
+        await websocket.recv()
 
         # meregister user ketika terkoneksi dengan web socket
         await register(websocket)
