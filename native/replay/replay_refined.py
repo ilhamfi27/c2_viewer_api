@@ -8,6 +8,7 @@ USERS = set()
 replay_data_send = []
 done_generate    = []
 sent_before      = {}
+is_generating = False
 def replay_track(session_id, start_time, end_time, data_track, added_track):
     
     # session_id = 19 if 19 not in done_generate and session_id<=19 else 20    
@@ -482,14 +483,18 @@ def get_replay():
                   "EXTRACT(EPOCH FROM (end_time::timestamp - start_time::timestamp)) as durasi, name " \
                   " from sessions " \
                   "WHERE end_time IS NOT null and " \
-                  " id not in (SELECT distinct(session_id) FROM stored_replay WHERE update_rate="+str(UPDATE_RATE)+" ) and id=19"
-
+                  " id not in (SELECT distinct(session_id) FROM stored_replay WHERE update_rate="+str(UPDATE_RATE)+" )"
+    print(sql)
     cur.execute(sql)
     query = cur.fetchall()
     track = []
     done_generate.clear()
     r.flushdb()
-
+    
+    panjang = len(query)
+    if panjang > 0:
+        r.set("is_generating", "1")
+    counter = 0
     for data in query:
 
         data_track = {}
@@ -500,10 +505,7 @@ def get_replay():
         durasi      = data[3]
         name        = data[4]
         '''Buat panjang durasi dibagi dengan UPDATE_RATE. Buat list sesuai dengan panjang_replay'''
-        panjang_replay = durasi / UPDATE_RATE
-        # print(durasi)
-        # track_list_prep = [i for i in range(int(panjang_replay))]
-        # track_list = dict.fromkeys(track_list_prep, {})
+        panjang_replay = durasi / UPDATE_RATE        
         result={
                         "session_id"        : str(session_id),
                         "start_time"        : str(start_time),
@@ -550,11 +552,11 @@ def get_replay():
 
             result['start_time']    = str(tmp_awal)
             result['end_time']      = str(tmp_akhir)
-            track_list_prep = [i for i in range(int(t_awal), int(t_akhir))]
-            track_list = dict.fromkeys(track_list_prep, {})
-            result["track_play"] = track_list
+            track_list_prep         = [i for i in range(int(t_awal), int(t_akhir))]
+            track_list              = dict.fromkeys(track_list_prep, {})
+            result["track_play"]    = {}
             for t in track_list_prep:
-
+                # print(t)
                 '''Buat start_time dan end_time untuk setiap segmen replay.
                             Segmen durasi adalah satuan  replay track,
                             contoh 2020-01-10 14:45:31 sampai dengan 2020-01-10 14:45:41
@@ -562,13 +564,6 @@ def get_replay():
 
                         # print(t)
                         # print(str(start_time) + " sampai dengan " + str(end_time))
-                # if t == 0:
-                #     tmp_time = (datetime.strptime(str(start_time), '%Y-%m-%d %H:%M:%S'))
-                #     tmp_time += dt.timedelta(seconds=UPDATE_RATE)
-                #     end_time = tmp_time
-                # else:
-                #     start_time += dt.timedelta(seconds=UPDATE_RATE)
-                #     end_time += dt.timedelta(seconds=UPDATE_RATE)
                 if t == 0:
                     tmp_time = (datetime.strptime(str(start_time), '%Y-%m-%d %H:%M:%S'))
                     tmp_time += dt.timedelta(seconds=UPDATE_RATE)
@@ -794,25 +789,14 @@ def get_replay():
                                 "VALUES ("+str(UPDATE_RATE)+", "+str(session_id)+", '"+str(message)+"', '"+str(sequence)+"' )"
                 cur.execute(q_store_replay)
                 conn.commit()
-                
+            result["track_play"].clear()  
             
         print(session_id, "Finished generated")
-        # track.append(result)
-        # check_stored = "SELECT * FROM stored_replay WHERE session_id="+str(session_id)+" AND update_rate="+str(UPDATE_RATE)+" "
-        # cur.execute(check_stored)
-        # q_store_replay = "INSERT INTO stored_replay(update_rate, session_id, data)" \
-        #                     "	VALUES ("+str(UPDATE_RATE)+", "+str(session_id)+", '"+str(json.dumps(result))+"' )"
-        # data = cur.fetchall()
-        # if len(data) == 0:
-        #     cur.execute(q_store_replay)
-        #     conn.commit()
+
         done_generate.append(session_id)
         print(session_id, "Done")
-        # print(q_store_replay)
-    # print(json.dumps(result))
-    # replay_data_send.append(result)
-    # print(replay_data_send)
+        counter = counter + 1
+        if counter == panjang:
+            r.set("is_generating", "0")
 
-    # print(json.dumps(replay_data_send, default=str))
-
-    conn.commit()
+    
