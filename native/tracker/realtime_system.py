@@ -177,7 +177,6 @@ async def handler(websocket, path):
     print("WEBSOCKET STARTED")
     try:
         # -- event yang harus di jalankan oleh web socket --
-        await websocket.recv()
 
         # meregister user ketika terkoneksi dengan web socket
         await register(websocket)
