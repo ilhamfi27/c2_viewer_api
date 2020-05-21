@@ -4,6 +4,7 @@ import numpy as np
 from functools import reduce
 from datetime import datetime
 import time
+import asyncio
 
 import tracker.util as util
 from tracker.config import getconn, r
@@ -257,12 +258,12 @@ async def improved_track_data():
             # kirim ke realtime user
             message = json.dumps({'data': {'tracks': updated_data}, 'data_type': 'realtime'})
             if USERS:
-                for user in USERS: await user.send(message)
+                await asyncio.wait([user.send(message) for user in USERS])
 
             # kirim ke non realtime user sebagai notifikasi
             notification = json.dumps({'data': {'tracks': updated_data}, 'data_type': 'notification'})
             if NON_REALTIME_USERS:
-                for user in NON_REALTIME_USERS: await user.send(notification)
+                await asyncio.wait([user.send(message) for user in USERS])
 
     except psycopg2.Error as e:
         print(e)
