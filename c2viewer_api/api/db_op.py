@@ -116,9 +116,25 @@ def operation_backup(session_id):
             print("PostgreSQL connection is closed")
 
 
-def restore_file_handler(f):
+def restore_file_handler(f, replaced=False, session_id=None):
     try:
         cursor = connection.cursor()
+
+        if replaced:
+            # mulai seluruh tabel yang berelasi dengan kunci session_id
+            sql_tabel_relasi = "SELECT distinct(table_name) " \
+                               "FROM information_schema.columns " \
+                               "where column_name = 'session_id' " \
+                               "and table_name not like '%stored%'"
+            cursor.execute(sql_tabel_relasi)
+            rows = cursor.fetchall()
+            for row in rows:
+                delete_query = "DELETE FROM " + str(row[0]) + " WHERE session_id = " + session_id
+                cursor.execute(delete_query)
+
+            delete_session = "DELETE FROM sessions WHERE id = " + session_id
+            cursor.execute(delete_session)
+
         for chunks in f.readlines():
             chunks = chunks.decode("utf-8")
             cursor.execute(chunks)

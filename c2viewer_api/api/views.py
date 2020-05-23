@@ -21,7 +21,7 @@ import os
 
 
 class LocationViewSet(viewsets.ModelViewSet):
-    authentication_classes = (MyCustomAuthentication, )
+    authentication_classes = (MyCustomAuthentication,)
     permission_classes = [IsAuthenticated]
     queryset = Location.objects.all()
     serializer_class = LocationSerializer
@@ -29,7 +29,7 @@ class LocationViewSet(viewsets.ModelViewSet):
 
 class UserViewSet(viewsets.ModelViewSet):
     # queryset = User.objects.filter(~Q(level="superadmin"))
-    authentication_classes = (MyCustomAuthentication, )
+    authentication_classes = (MyCustomAuthentication,)
     permission_classes = [IsAuthenticated]
     queryset = User.objects.all()
     serializer_class = UserSerializer
@@ -47,7 +47,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
 
 class SessionViewSet(viewsets.ModelViewSet):
-    authentication_classes = (MyCustomAuthentication, )
+    authentication_classes = (MyCustomAuthentication,)
     permission_classes = [IsAuthenticated]
     queryset = Session.objects.all().order_by('id')
     serializer_class = SessionSerializer
@@ -156,7 +156,7 @@ class AuthViewSet(views.APIView):
 
 
 class ChangePasswordViewSet(viewsets.ModelViewSet):
-    authentication_classes = (MyCustomAuthentication, )
+    authentication_classes = (MyCustomAuthentication,)
     permission_classes = [IsAuthenticated]
     serializer_class = ChangePasswordSerializer
 
@@ -207,7 +207,7 @@ class ChangePasswordViewSet(viewsets.ModelViewSet):
 
 
 class UnlockSessionViewSet(viewsets.ModelViewSet):
-    authentication_classes = (MyCustomAuthentication, )
+    authentication_classes = (MyCustomAuthentication,)
     permission_classes = [IsAuthenticated]
     serializer_class = UnlockSessionSerializer
 
@@ -247,7 +247,7 @@ class UnlockSessionViewSet(viewsets.ModelViewSet):
 
 
 class StoredReplayViewSet(viewsets.ModelViewSet):
-    authentication_classes = (MyCustomAuthentication, )
+    authentication_classes = (MyCustomAuthentication,)
     permission_classes = [IsAuthenticated]
     queryset = StoredReplay.objects.all()
     serializer_class = StoredReplaySerializer
@@ -288,7 +288,6 @@ class StoredReplayViewSet(viewsets.ModelViewSet):
         # return Response(res["track_play"], status=st.HTTP_200_OK)
         # return Response({}, status=st.HTTP_200_OK)
 
-
     def sequenced(self, request, session_id, sequence):
         try:
             session = Session.objects.get(pk=session_id)
@@ -304,7 +303,6 @@ class StoredReplayViewSet(viewsets.ModelViewSet):
             else:
                 sequence_response = {}
 
-
             response = {
                 "data": sequence_response
             }
@@ -316,12 +314,11 @@ class StoredReplayViewSet(viewsets.ModelViewSet):
 
             return Response(response, status=st.HTTP_404_NOT_FOUND)
 
-
         return Response(response, status=st.HTTP_200_OK)
 
 
 class AppSettingViewSet(viewsets.ModelViewSet):
-    authentication_classes = (MyCustomAuthentication, )
+    authentication_classes = (MyCustomAuthentication,)
     permission_classes = [IsAuthenticated]
     queryset = AppSetting.objects.all()
     serializer_class = AppSettingSerializer
@@ -355,15 +352,13 @@ class DatabaseOperationViewSet(viewsets.ViewSet):
             """Write the value by returning it, instead of storing in a buffer."""
             return value
 
-
     def iter_items(self, items, pseudo_buffer):
         for item in items:
             yield pseudo_buffer.write(item)
 
-
     def backup(self, request, session_id):
         file_path, string_query = db_operation.operation_backup(session_id)
-        file_name = "sav_backup_session_"+str(session_id)+".sql"
+        file_name = "sav_backup_session_" + str(session_id) + ".sql"
 
         # ==================================================================================
         # STREAMED DOWNLOAD RESPONSE
@@ -387,6 +382,9 @@ class DatabaseOperationViewSet(viewsets.ViewSet):
         # return Response({"message": "File Not Found"}, status=st.HTTP_404_NOT_FOUND)
 
     def restore(self, request):
+        must_replace = request.query_params.get('replace')
+        must_replace = True if must_replace == "true" else False
+
         dump_file = request.FILES["dump_file"]
 
         file_name = dump_file.name.split('.')
@@ -400,20 +398,21 @@ class DatabaseOperationViewSet(viewsets.ViewSet):
             }
             return Response(response, status=st.HTTP_400_BAD_REQUEST)
 
-        if 'sav' not in splitted_name and 'backup' not in splitted_name and 'session' not in splitted_name:
+        if 'sav' != splitted_name[0] or 'backup' != splitted_name[1] or 'session' != splitted_name[2]:
             response = {
                 "message": "Invalid file name"
             }
             return Response(response, status=st.HTTP_400_BAD_REQUEST)
 
         session = Session.objects.filter(pk=session_id)
-        if session.exists():
+        if session.exists() and not must_replace:  # must_replace = False
             response = {
                 "message": "Session exists"
             }
             return Response(response, status=st.HTTP_400_BAD_REQUEST)
 
-        success, error = db_operation.restore_file_handler(dump_file)
+        success, error = db_operation.restore_file_handler(dump_file, replaced=must_replace,
+                                                           session_id=session_id)  # must_replace = True
 
         if not success:
             response = {
