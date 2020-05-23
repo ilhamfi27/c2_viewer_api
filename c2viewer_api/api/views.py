@@ -369,7 +369,7 @@ class DatabaseOperationViewSet(viewsets.ViewSet):
         # STREAMED DOWNLOAD RESPONSE
         # ==================================================================================
         response = StreamingHttpResponse(self.iter_items(string_query, self.Echo()),
-                                         content_type="text/plain")
+                                         content_type="application/sql")
         response['Content-Disposition'] = 'attachment; filename=' + file_name
         return response
 
@@ -389,10 +389,16 @@ class DatabaseOperationViewSet(viewsets.ViewSet):
     def restore(self, request):
         dump_file = request.FILES["dump_file"]
 
-        file_name = dump_file.name.split('.')[0]
-        splitted_name = file_name.split('_')
+        file_name = dump_file.name.split('.')
+        splitted_name = file_name[0].split('_')
 
         session_id = splitted_name[-1]
+
+        if file_name[1] != 'sql':
+            response = {
+                "message": "File extension must be .sql"
+            }
+            return Response(response, status=st.HTTP_400_BAD_REQUEST)
 
         if 'sav' not in splitted_name and 'backup' not in splitted_name and 'session' not in splitted_name:
             response = {
@@ -407,10 +413,16 @@ class DatabaseOperationViewSet(viewsets.ViewSet):
             }
             return Response(response, status=st.HTTP_400_BAD_REQUEST)
 
-        db_operation.restore_file_handler(dump_file)
+        success, error = db_operation.restore_file_handler(dump_file)
+
+        if not success:
+            response = {
+                "message": error
+            }
+
+            return Response(response, status=st.HTTP_400_BAD_REQUEST)
 
         response = {
             "success": True
         }
-
         return Response(response, status=st.HTTP_200_OK)
