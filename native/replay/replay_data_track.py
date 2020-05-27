@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # WS server example that synchronizes REALTIME_state across clients
 from main import *
