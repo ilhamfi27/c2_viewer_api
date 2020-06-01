@@ -196,74 +196,74 @@ async def improved_track_data():
                 'eta_at_destination', 'vendor_id', 'created_time',
             ),
         }
+        if len(start_time) > 0:
+            data_updates = {}
+            for ix, table in enumerate(ar_mandatory_table_8):
+                column_used = ("st." + s for s in table_columns[table])
+                column_used = ", ".join(column_used)
+                where_own_indicator = "and st.own_unit_indicator='FALSE'" \
+                    if table == "replay_system_track_general" else ""
+                replay_query = """
+                    SELECT {}
+                    FROM {} st
+                    JOIN sessions s ON st.session_id=s.id
+                    JOIN (
+                            SELECT
+                                session_id,
+                                system_track_number,
+                                max(created_time) created_time
+                            FROM {}
+                            WHERE created_time >= '{}'
+                            AND created_time < '{}'
+                            GROUP BY session_id,system_track_number
+                        ) mx
+                    ON st.system_track_number=mx.system_track_number
+                    and st.created_time=mx.created_time
+                    and st.session_id=mx.session_id
+                    WHERE s.end_time is NULL
+                    {}
+                    ORDER BY st.system_track_number;
+                    """.format(column_used, table, table, created_time_tracks[table], current_time,
+                               where_own_indicator)
 
-        data_updates = {}
-        for ix, table in enumerate(ar_mandatory_table_8):
-            column_used = ("st." + s for s in table_columns[table])
-            column_used = ", ".join(column_used)
-            where_own_indicator = "and st.own_unit_indicator='FALSE'" \
-                if table == "replay_system_track_general" else ""
-            replay_query = """
-                SELECT {}
-                FROM {} st
-                JOIN sessions s ON st.session_id=s.id
-                JOIN (
-                        SELECT
-                            session_id,
-                            system_track_number,
-                            max(created_time) created_time
-                        FROM {}
-                        WHERE created_time >= '{}'
-                        AND created_time < '{}'
-                        GROUP BY session_id,system_track_number
-                    ) mx
-                ON st.system_track_number=mx.system_track_number
-                and st.created_time=mx.created_time
-                and st.session_id=mx.session_id
-                WHERE s.end_time is NULL
-                {}
-                ORDER BY st.system_track_number;
-                """.format(column_used, table, table, created_time_tracks[table], current_time,
-                           where_own_indicator)
+                cur.execute(replay_query)
+                data = cur.fetchall()
 
-            cur.execute(replay_query)
-            data = cur.fetchall()
+                for row in data:
+                    stn = row[0]  # stn -> system_track_number
+                    table_results = dict(zip(table_columns[table], row))  # make the result dictionary
+                    created_time_tracks[table] = table_results['created_time']
 
-            for row in data:
-                stn = row[0]  # stn -> system_track_number
-                table_results = dict(zip(table_columns[table], row))  # make the result dictionary
-                created_time_tracks[table] = table_results['created_time']
+                    status, result = data_process(table, stn, table_results)
 
-                status, result = data_process(table, stn, table_results)
-
-                if status != None:
-                    if status == 'new':
-                        data_updates[stn] = result
-                        data_updates[stn]['status'] = 'new'
-                        data_updates[stn]['system_track_number'] = stn
-
-                    if status == 'update':
-                        if stn in data_updates:
-                            data_updates[stn][table] = result
-                        else:
-                            table_update = {}
-                            table_update[table] = result
-                            data_updates[stn] = table_update
-                            data_updates[stn]['status'] = 'update'
+                    if status != None:
+                        if status == 'new':
+                            data_updates[stn] = result
+                            data_updates[stn]['status'] = 'new'
                             data_updates[stn]['system_track_number'] = stn
 
-        updated_data = [val for key, val in data_updates.items()]
+                        if status == 'update':
+                            if stn in data_updates:
+                                data_updates[stn][table] = result
+                            else:
+                                table_update = {}
+                                table_update[table] = result
+                                data_updates[stn] = table_update
+                                data_updates[stn]['status'] = 'update'
+                                data_updates[stn]['system_track_number'] = stn
 
-        if updated_data != []:
-            # kirim ke realtime user
-            message = json.dumps({'data': {'tracks': updated_data}, 'data_type': 'realtime'})
-            if USERS:
-                await asyncio.wait([user.send(message) for user in USERS])
+            updated_data = [val for key, val in data_updates.items()]
 
-            # kirim ke non realtime user sebagai notifikasi
-            notification = json.dumps({'data': {'tracks': updated_data}, 'data_type': 'notification'})
-            if NON_REALTIME_USERS:
-                await asyncio.wait([user.send(notification) for user in USERS])
+            if updated_data != []:
+                # kirim ke realtime user
+                message = json.dumps({'data': {'tracks': updated_data}, 'data_type': 'realtime'})
+                if USERS:
+                    await asyncio.wait([user.send(message) for user in USERS])
+
+                # kirim ke non realtime user sebagai notifikasi
+                notification = json.dumps({'data': {'tracks': updated_data}, 'data_type': 'notification'})
+                if NON_REALTIME_USERS:
+                    await asyncio.wait([user.send(notification) for user in USERS])
 
     except psycopg2.Error as e:
         print(e)
