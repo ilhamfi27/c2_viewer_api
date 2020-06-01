@@ -149,14 +149,14 @@ async def improved_track_data():
         # untuk menyimpan create untuk masing - masing 8
         # tabel
         created_time_tracks = {
-            "replay_system_track_general": start_time[0][0],
-            "replay_system_track_kinetic": start_time[0][0],
-            "replay_system_track_processing": start_time[0][0],
-            "replay_system_track_identification": start_time[0][0],
-            "replay_system_track_link": start_time[0][0],
-            "replay_system_track_mission": start_time[0][0],
-            "replay_track_general_setting": start_time[0][0],
-            "replay_ais_data": start_time[0][0],
+            "replay_system_track_general": start_time[0][0] if len(start_time) > 0 else current_time,
+            "replay_system_track_kinetic": start_time[0][0] if len(start_time) > 0 else current_time,
+            "replay_system_track_processing": start_time[0][0] if len(start_time) > 0 else current_time,
+            "replay_system_track_identification": start_time[0][0] if len(start_time) > 0 else current_time,
+            "replay_system_track_link": start_time[0][0] if len(start_time) > 0 else current_time,
+            "replay_system_track_mission": start_time[0][0] if len(start_time) > 0 else current_time,
+            "replay_track_general_setting": start_time[0][0] if len(start_time) > 0 else current_time,
+            "replay_ais_data": start_time[0][0] if len(start_time) > 0 else current_time,
         }
 
         table_columns = {
