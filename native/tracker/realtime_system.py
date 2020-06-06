@@ -11,7 +11,8 @@ from tracker.models import information_data, tactical_figure_data, reference_poi
                             area_alert_data, session_data, improved_track_data, history_dots
 from tracker.actions import data_processing, non_strict_data_processing, send_history_dot
 from tracker.config import WS_HOST, WS_PORT, r
-from tracker.state import *
+from tracker.state import USERS, NON_REALTIME_USERS
+from tracker import state
 import tracker.util as util
 
 logging.basicConfig()
@@ -69,13 +70,11 @@ async def register(websocket):
         ['area_alert', AREA_ALERT_STATE],
         ['session', SESSION_STATE],
     ])
-    print("1 USER JOINED", websocket)
-    print("TOTAL JOINED USER", len(USERS))
+    print("1 USER JOINED, TOTAL JOINED USER", len(USERS))
 
 async def unregister(websocket):
     USERS.remove(websocket)
-    print("1 USER LEFT", websocket)
-    print("REMAINING USER", len(USERS))
+    print("1 USER LEFT, REMAINING USER", len(USERS))
 
 def check_if_state_must_be_emptied(states):
     if SESSION_STATE['existed_data_count'] == 0:
@@ -92,6 +91,12 @@ def check_if_state_must_be_emptied(states):
 
 async def data_change_detection():
     while True:
+        if not state.DATA_READY: print("\nReading Database...\nPlease Wait Until Database Ready!")
+        if not state.FINISHED_CHECK:
+            if state.DATA_READY:
+                print("Database Ready!")
+                state.FINISHED_CHECK = True
+
         # mengecek apakah data cached tersebut butuh dikosongkan
         # akan dikosongkan ketika sesi berganti
         check_if_state_must_be_emptied([AREA_ALERT_STATE])
@@ -117,6 +122,7 @@ async def data_change_detection():
         session_datas = np.array(session_data())
         await non_strict_data_processing(session_datas, SESSION_STATE, USERS, NON_REALTIME_USERS, data_category="session",
                                 debug=False)
+        state.DATA_READY = True
         # lama tidur
         await asyncio.sleep(3)
 
@@ -161,7 +167,8 @@ def enhanced_send_track_cache():
 
     for key, data in tracks.items():
         data['system_track_number'] = int(key)
-        data['history_dots'] = history_dots(key)
+        # data['history_dots'] = history_dots(key)
+        data['history_dots'] = json.loads(r.hget('history_dots', key).decode("utf-8"))
         if r.exists('T' + key): completed_tracks.append(data)
 
     return completed_tracks
@@ -174,7 +181,7 @@ def track_empty_memory():
 # =================================================================================
 
 async def handler(websocket, path):
-    print("WEBSOCKET STARTED")
+    print("HANDSHAKED")
     try:
         # -- event yang harus di jalankan oleh web socket --
 

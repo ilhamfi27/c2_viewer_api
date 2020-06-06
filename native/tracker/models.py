@@ -234,6 +234,9 @@ async def improved_track_data():
                     table_results = dict(zip(table_columns[table], row))  # make the result dictionary
                     created_time_tracks[table] = table_results['created_time']
 
+                    if table == "replay_system_track_kinetic":
+                        improved_history_dots(stn, table_results)
+
                     status, result = data_process(table, stn, table_results)
 
                     if status != None:
@@ -268,6 +271,103 @@ async def improved_track_data():
     except psycopg2.Error as e:
         print(e)
 
+
+def improved_history_dots(stn, table_results):
+    """
+    :param table:
+    :param stn:
+    :param table_results:
+    :return:
+    """
+    """
+    "history_dots": [{
+        "latitude": 394.3620364771579,
+        "longitude": 119.021632990134,
+        "latlng": [394.3620364771579, 119.021632990134],
+        "last_update_time": "2020-01-10 14:15:42.328000"
+    }, {
+        "latitude": -8.8,
+        "longitude": 120.45,
+        "latlng": [-8.8, 120.45],
+        "last_update_time": "2020-01-20 14:22:45.265000"
+    }]
+    """
+    util.datetime_to_string(table_results)  # convert datetime to string
+
+    try:
+        changed = False
+        if r.hexists('history_dots', stn):  # kalau data dari redis udh ada
+            history_dots_list = json.loads(r.hget('history_dots', stn).decode("utf-8"))  # get data dari redis + convert to dict
+
+            r_update_time = util.single_string_to_datetime(history_dots_list[-1]["last_update_time"])
+            t_update_time = util.single_string_to_datetime(table_results['last_update_time'])
+
+            if r_update_time != t_update_time:
+                print("PERNAH MASUK SINI")
+                hd_hash = {
+                    "latitude": table_results['latitude'],
+                    "longitude": table_results['longitude'],
+                    "latlng": [table_results['latitude'], table_results['longitude']],
+                    "last_update_time": table_results['last_update_time'],
+                }
+                history_dots_list.append(hd_hash)
+                changed = True
+        else:
+            the_query = "select " \
+                        "   max(latitude), " \
+                        "   max(longitude), " \
+                        "   last_update_time " \
+                        "from public.replay_system_track_kinetic k " \
+                        "JOIN ( " \
+                        "	select id " \
+                        "	from sessions " \
+                        "	where end_time is null " \
+                        ") s on s.id = k.session_id " \
+                        "where system_track_number = {} " \
+                        "group by last_update_time " \
+                        "order by last_update_time asc; " \
+                .format(stn)
+            cur.execute(the_query)
+            history_dots_list = []
+            for row in cur.fetchall():
+                hd_hash = {
+                    "latitude": row[0],
+                    "longitude": row[1],
+                    "latlng": [row[0], row[1]],
+                    "last_update_time": util.single_datetime_to_string(row[2]),
+                }
+                history_dots_list.append(hd_hash)
+            changed = True
+
+        if changed:
+            r.hset('history_dots', stn, json.dumps(history_dots_list))  # set redis key dengan STN
+
+    except psycopg2.Error as e:
+        print(e)
+
+    # the_query = "select " \
+    #             "   max(latitude), " \
+    #             "   max(longitude), " \
+    #             "   last_update_time " \
+    #             "from public.replay_system_track_kinetic k " \
+    #             "JOIN ( " \
+    #             "	select id " \
+    #             "	from sessions " \
+    #             "	where end_time is null " \
+    #             ") s on s.id = k.session_id " \
+    #             "where system_track_number = {} " \
+    #             "group by last_update_time " \
+    #             "order by last_update_time asc; " \
+    #     .format(system_track_number)
+    # cur.execute(the_query)
+    # data = []
+    # for row in cur.fetchall():
+    #     results = dict()
+    #     results['latitude'] = row[0]
+    #     results['longitude'] = row[1]
+    #     results['latlng'] = [row[0], row[1]]
+    #     results['last_update_time'] = row[2]
+    #     data.append(results)
 
 # ============ improvements ============
 

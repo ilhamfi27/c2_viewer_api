@@ -7,6 +7,12 @@ def datetime_to_string(table_results):
         if type(value) == datetime:
             table_results[key] = value.strftime('%Y-%m-%d %H:%M:%S.%f')
 
+def single_string_to_datetime(str):
+    return datetime.strptime(str, '%Y-%m-%d %H:%M:%S.%f')
+
+def single_datetime_to_string(time):
+    return time.strftime('%Y-%m-%d %H:%M:%S.%f')
+
 def string_bool_to_bool(table_results):
     # convert string boolean to boolean
     for key, value in table_results.items():
