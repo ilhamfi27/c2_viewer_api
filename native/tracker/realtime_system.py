@@ -76,18 +76,28 @@ async def unregister(websocket):
     USERS.remove(websocket)
     print("1 USER LEFT, REMAINING USER", len(USERS))
 
-def check_if_state_must_be_emptied(states):
+async def check_if_state_must_be_emptied(states):
     if SESSION_STATE['existed_data_count'] == 0:
         SESSION_STATE['existed_data_count'] = len(SESSION_STATE['existed_data'])
 
     # kalo misal sessionnya nambah, maka kosongkan data memory
     if SESSION_STATE['existed_data_count'] < len(SESSION_STATE['existed_data']):
+        await must_notify_user_on_session_finished()
+
         print("MENGOSONGKAN SESI")
         track_empty_memory()
         for state in states:
             for key in state.keys():
                 state[key] = []
         SESSION_STATE['existed_data_count'] = len(SESSION_STATE['existed_data'])
+
+async def must_notify_user_on_session_finished():
+    print("KUDUNE MASUK")
+    if USERS:
+        send_data = dict()
+        send_data['finished'] = True
+        message = json.dumps({'data': send_data, 'data_type': 'session'}, default=str)
+        await asyncio.wait([user.send(message) for user in USERS])
 
 async def data_change_detection():
     while True:
@@ -99,7 +109,7 @@ async def data_change_detection():
 
         # mengecek apakah data cached tersebut butuh dikosongkan
         # akan dikosongkan ketika sesi berganti
-        check_if_state_must_be_emptied([AREA_ALERT_STATE])
+        await check_if_state_must_be_emptied([AREA_ALERT_STATE])
 
         await improved_track_data() # get data track (enhanced)
 
