@@ -301,7 +301,15 @@ class StoredReplayViewSet(viewsets.ModelViewSet):
                 sequence_response["sequence"] = sequence
                 sequence_response["total_sequence"] = total_sequence
             else:
-                sequence_response = {}
+                if total_sequence == 0:
+                    # cek apakah session ada tapi stored replay belom ada alias masih generate
+                    response = {
+                        "message": "In progress of generating session"
+                    }
+                    return Response(response, status=st.HTTP_404_NOT_FOUND)
+                elif int(sequence) > total_sequence - 1:
+                    # cek apakah nilai sequence yang diminta melebihi jumlah sequence yang ada
+                    sequence_response = {}
 
             response = {
                 "data": sequence_response

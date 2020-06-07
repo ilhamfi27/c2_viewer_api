@@ -776,14 +776,9 @@ def session_data():
             "   name, " \
             "   start_time, " \
             "   end_time " \
-            "FROM public.sessions s " \
-            "JOIN ( " \
-            "	select session_id " \
-            "	from public.stored_replay " \
-            "	group by 1 " \
-            ") sr on sr.session_id = s.id " \
+            "FROM public.sessions " \
             "WHERE end_time IS NOT NULL " \
-            "ORDER BY s.id; "
+            "ORDER BY id; "
         cur.execute(q)
         data = []
         for row in cur.fetchall():
