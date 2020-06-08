@@ -485,6 +485,15 @@ def get_replay():
                   "WHERE end_time IS NOT null and " \
                   " id not in (SELECT distinct(session_id) FROM stored_replay WHERE update_rate="+str(UPDATE_RATE)+" )"
     print(sql)
+    '''
+    select id, to_char (start_time::timestamp, 'YYYY-MM-DD HH24:MI:SS') start_time,  
+    to_char (end_time::timestamp, 'YYYY-MM-DD HH24:MI:SS') end_time, 
+    EXTRACT(EPOCH FROM (end_time::timestamp - start_time::timestamp)) as durasi, name  
+    from sessions 
+    WHERE end_time IS NOT null and  
+    id not in (SELECT distinct(session_id) FROM stored_replay WHERE update_rate=1 );
+
+    '''
     cur.execute(sql)
     query = cur.fetchall()
     track = []
@@ -493,6 +502,7 @@ def get_replay():
     
     panjang = len(query)
     if panjang > 0:
+        print(panjang)
         r.set("is_generating", "1")
     counter = 0
     for data in query:
@@ -504,6 +514,7 @@ def get_replay():
         end_time    = data[2]
         durasi      = data[3]
         name        = data[4]
+        print(session_id, "Generating")
         '''Buat panjang durasi dibagi dengan UPDATE_RATE. Buat list sesuai dengan panjang_replay'''
         panjang_replay = durasi / UPDATE_RATE        
         result={
@@ -795,9 +806,9 @@ def get_replay():
 
         done_generate.append(session_id)
         print(session_id, "Done")
-        counter     = counter + 1
-        panjang     = panjang-1
-        if counter == panjang:
+        counter     = counter + 1        
+        if counter == panjang:            
             r.set("is_generating", "0")
+            # r.flushdb()
 
     
