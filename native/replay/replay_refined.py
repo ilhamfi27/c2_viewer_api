@@ -795,7 +795,8 @@ def get_replay():
 
         done_generate.append(session_id)
         print(session_id, "Done")
-        counter = counter + 1
+        counter     = counter + 1
+        panjang     = panjang-1
         if counter == panjang:
             r.set("is_generating", "0")
 
