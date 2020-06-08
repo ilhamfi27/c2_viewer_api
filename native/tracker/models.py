@@ -303,7 +303,6 @@ def improved_history_dots(stn, table_results):
             t_update_time = util.single_string_to_datetime(table_results['last_update_time'])
 
             if r_update_time != t_update_time:
-                print("PERNAH MASUK SINI")
                 hd_hash = {
                     "latitude": table_results['latitude'],
                     "longitude": table_results['longitude'],
