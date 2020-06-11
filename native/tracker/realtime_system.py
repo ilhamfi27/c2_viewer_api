@@ -178,13 +178,18 @@ def enhanced_send_track_cache():
     for key, data in tracks.items():
         data['system_track_number'] = int(key)
         # data['history_dots'] = history_dots(key)
-        data['history_dots'] = json.loads(r.hget('history_dots', key).decode("utf-8"))
+        data['history_dots'] = json.loads(r.hget('history_dots', key).decode("utf-8")) \
+                                    if r.hexists('history_dots', key) else []
         if r.exists('T' + key): completed_tracks.append(data)
 
     return completed_tracks
 
 def track_empty_memory():
+    print(r.exists("tracks"))
+    print(r.exists("history_dots"))
     r.flushdb()
+    print(r.exists("tracks"))
+    print(r.exists("history_dots"))
 
 # =================================================================================
 # END IMPROVED SYSTEM
