@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 import hashlib
 import jwt
 
@@ -27,10 +28,11 @@ class User(models.Model):
     # change hashlib to jwt
     def save(self, *args, **kwargs):
         string_to_hash = self.password + self.username
+
         user_password = jwt.encode({
             'username':self.username,
             'password':self.password,
-        }, "LenElhan!@#").decode()
+        }, settings.JWT_USER_KEY).decode()
         hash_result = hashlib.sha256(string_to_hash.encode()).hexdigest()
 
         self.password = user_password
@@ -41,7 +43,7 @@ class User(models.Model):
 
 
 class AccessToken(models.Model):
-    token = models.CharField(max_length=64)
+    token = models.TextField()
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -207,3 +207,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
 
 STATIC_URL = '/static/'
+
+# JWT secret key
+JWT_TOKEN_KEY=env('JWT_TOKEN_KEY') if  env('JWT_TOKEN_KEY') != "" else "TOKEN SECRET"
+JWT_USER_KEY=env('JWT_USER_KEY') if  env('JWT_USER_KEY') != "" else "USER SECRET"

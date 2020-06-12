@@ -38,9 +38,9 @@ class UserViewSet(viewsets.ModelViewSet):
     def list(self, request):
         if request.user.level == "superadmin":
             current_user_id = request.user.id
-            users = self.queryset.filter(~Q(level="superadmin") | Q(id=current_user_id))
+            users = self.queryset.filter(~Q(level="superadmin") | Q(id=current_user_id)).order_by('id')
         else:
-            users = self.queryset.filter(~Q(level="superadmin"))
+            users = self.queryset.filter(~Q(level="superadmin")).order_by('id')
 
         serializer = UserSerializer(users, many=True)
         data = serializer.data
@@ -107,10 +107,11 @@ class AuthViewSet(views.APIView):
     def authenticate_user(self, request, **kwargs):
         # get user credentials by encrypted password
         string_to_hash = kwargs["password"] + kwargs["username"]
+
         user_password = jwt.encode({
             'username':kwargs["username"],
             'password':kwargs["password"]
-        }, "LenElhan!@#").decode()
+        }, settings.JWT_USER_KEY).decode()
         hash_result = hashlib.sha256(string_to_hash.encode()).hexdigest()
 
         kwargs["password"] = user_password
@@ -127,8 +128,13 @@ class AuthViewSet(views.APIView):
         string_to_hash = client_ip + server_timezone
         hash_result = hashlib.sha256(string_to_hash.encode()).hexdigest()
 
+        user_token = jwt.encode({
+            'user_id':user.id,
+            'random_string': string_to_hash
+        }, settings.JWT_TOKEN_KEY).decode()
+
         token_data = {
-            'token': hash_result,
+            'token': user_token,
             'user_id': user.id,
         }
 
@@ -222,10 +228,11 @@ class UnlockSessionViewSet(viewsets.ModelViewSet):
 
         # get user credentials by encrypted password
         string_to_hash = post_data["password"] + request.user.username
+
         user_password = jwt.encode({
             'username':request.user.username,
             'password':post_data["password"],
-        }, "LenElhan!@#").decode()
+        }, settings.JWT_USER_KEY).decode()
         hash_result = hashlib.sha256(string_to_hash.encode()).hexdigest()
 
         post_data["username"] = request.user.username
