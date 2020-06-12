@@ -1,5 +1,6 @@
 from django.db import models
 import hashlib
+import jwt
 
 
 class Location(models.Model):
@@ -18,16 +19,21 @@ class User(models.Model):
         ('operator', 'Operator'),
     ]
     username = models.CharField(max_length=40, unique=True)
-    password = models.CharField(max_length=100)
+    password = models.CharField(max_length=255)
     level = models.CharField(max_length=20, choices=USER_LEVEL)
     location = models.ForeignKey(Location, on_delete=models.CASCADE)
 
-
+    # TODO
+    # change hashlib to jwt
     def save(self, *args, **kwargs):
         string_to_hash = self.password + self.username
+        user_password = jwt.encode({
+            'username':self.username,
+            'password':self.password,
+        }, "LenElhan!@#").decode()
         hash_result = hashlib.sha256(string_to_hash.encode()).hexdigest()
 
-        self.password = hash_result
+        self.password = user_password
         super().save(*args, **kwargs)
 
     class Meta:

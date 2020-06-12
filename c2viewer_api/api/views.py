@@ -17,6 +17,7 @@ import api.db_op as db_operation
 import json
 import rest_framework.status as st
 import hashlib
+import jwt
 import os
 
 
@@ -36,7 +37,8 @@ class UserViewSet(viewsets.ModelViewSet):
 
     def list(self, request):
         if request.user.level == "superadmin":
-            users = self.queryset
+            current_user_id = request.user.id
+            users = self.queryset.filter(~Q(level="superadmin") | Q(id=current_user_id))
         else:
             users = self.queryset.filter(~Q(level="superadmin"))
 
@@ -105,15 +107,17 @@ class AuthViewSet(views.APIView):
     def authenticate_user(self, request, **kwargs):
         # get user credentials by encrypted password
         string_to_hash = kwargs["password"] + kwargs["username"]
+        user_password = jwt.encode({
+            'username':kwargs["username"],
+            'password':kwargs["password"]
+        }, "LenElhan!@#").decode()
         hash_result = hashlib.sha256(string_to_hash.encode()).hexdigest()
 
-        kwargs["password"] = hash_result
+        kwargs["password"] = user_password
 
         try:
             user = User.objects.get(**kwargs)
             location = Location.objects.get(pk=user.location.id)
-
-            print(location, flush=True)
         except User.DoesNotExist:
             return None, None, None
 
@@ -218,10 +222,14 @@ class UnlockSessionViewSet(viewsets.ModelViewSet):
 
         # get user credentials by encrypted password
         string_to_hash = post_data["password"] + request.user.username
+        user_password = jwt.encode({
+            'username':request.user.username,
+            'password':post_data["password"],
+        }, "LenElhan!@#").decode()
         hash_result = hashlib.sha256(string_to_hash.encode()).hexdigest()
 
         post_data["username"] = request.user.username
-        post_data["password"] = hash_result
+        post_data["password"] = user_password
 
         session_unlock = self.serializer_class(data=post_data)
         valid = session_unlock.is_valid()
