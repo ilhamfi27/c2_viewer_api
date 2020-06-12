@@ -38,7 +38,7 @@ class UserViewSet(viewsets.ModelViewSet):
     def list(self, request):
         if request.user.level == "superadmin":
             current_user_id = request.user.id
-            users = self.queryset.filter(~Q(level="superadmin") | Q(id=current_user_id)).order_by('id')
+            users = self.queryset.order_by('id')
         else:
             users = self.queryset.filter(~Q(level="superadmin")).order_by('id')
 
