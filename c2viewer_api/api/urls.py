@@ -50,5 +50,6 @@ urlpatterns = [
     url(r'^database_operation/restore/$', db_op_restore, name='db_op_restore'),
     url(r'^history_dots/(?P<stn>\d+)', views.HistoryDotsDetail.as_view()),
     url(r'^history_dots/', views.HistoryDotsList.as_view()),
+    url(r'^user_password_reset/(?P<pk>\d+)', views.UserPasswordReset.as_view()),
     url(r'', include(router.urls)),
 ]

@@ -45,3 +45,10 @@ class AppSettingSerializer(serializers.ModelSerializer):
 
 class RestoreFileSerializer(serializers.Serializer):
     dump_file = serializers.FileField(required=True)
+
+class UserPasswordResetSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(required=True, style={'input_type': 'password'})
+
+    class Meta:
+        model = User
+        fields = ('id', 'password')

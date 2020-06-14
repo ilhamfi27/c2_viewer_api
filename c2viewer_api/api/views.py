@@ -1,10 +1,11 @@
 from .models import Location, User, AccessToken, StoredReplay, Session, AppSetting
-from rest_framework import viewsets, views
+from rest_framework import viewsets, views, mixins, generics
 from rest_framework.response import Response
 from django.utils import timezone
 from django.http import StreamingHttpResponse, HttpResponse
 from .serializers import LocationSerializer, UserSerializer, LoginSerializer, StoredReplaySerializer, SessionSerializer, \
-    AppSettingSerializer, ChangePasswordSerializer, UnlockSessionSerializer, RestoreFileSerializer
+    AppSettingSerializer, ChangePasswordSerializer, UnlockSessionSerializer, RestoreFileSerializer, \
+    UserPasswordResetSerializer
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from django.db.models import Q
@@ -162,6 +163,30 @@ class AuthViewSet(views.APIView):
         ip_address = self.get_client_ip(request)
 
         return self.login(request, username=username, password=password)
+
+
+class UserPasswordReset(mixins.UpdateModelMixin,
+                        generics.GenericAPIView):
+    authentication_classes = (MyCustomAuthentication,)
+    permission_classes = [IsAuthenticated]
+
+    queryset = User.objects.all()
+    serializer_class = UserPasswordResetSerializer
+
+    def put(self, request, *args, **kwargs):
+        user = User.objects.get(pk=kwargs['pk'])
+
+        if request.user.level != "superadmin" and (user.level == "admin" or user.level == "superadmin"):
+            return Response({
+                "message": "Insufficient Access Level",
+            }, status=st.HTTP_401_UNAUTHORIZED)
+
+        if request.user.level == "superadmin" and  user.level == "superadmin":
+            return Response({
+                "message": "Can't Reset Superadmin Password",
+            }, status=st.HTTP_401_UNAUTHORIZED)
+
+        return self.update(request, *args, **kwargs)
 
 
 class ChangePasswordViewSet(viewsets.ModelViewSet):
@@ -494,6 +519,7 @@ class HistoryDotsList(views.APIView):
             list_of_history_dots[stn] = history_dots
 
         return list_of_history_dots
+
 
 class HistoryDotsDetail(views.APIView):
     authentication_classes = (MyCustomAuthentication,)
