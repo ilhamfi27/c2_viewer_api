@@ -48,5 +48,7 @@ urlpatterns = [
     url(r'^setting/current/$', current_setting, name='current_setting'),
     url(r'^database_operation/backup/(?P<session_id>\d+)', db_op_backup, name='db_op_backup'),
     url(r'^database_operation/restore/$', db_op_restore, name='db_op_restore'),
+    url(r'^history_dots/(?P<stn>\d+)', views.HistoryDotsDetail.as_view()),
+    url(r'^history_dots/', views.HistoryDotsList.as_view()),
     url(r'', include(router.urls)),
 ]

@@ -1,6 +1,5 @@
 from .models import Location, User, AccessToken, StoredReplay, Session, AppSetting
-from rest_framework import viewsets
-from rest_framework import views
+from rest_framework import viewsets, views
 from rest_framework.response import Response
 from django.utils import timezone
 from django.http import StreamingHttpResponse, HttpResponse
@@ -10,9 +9,9 @@ from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from django.db.models import Q
 from django.conf import settings
+from django.db import connection
 from c2viewer_api.authentication import MyCustomAuthentication
 from c2viewer_api.permissions import IsAuthenticated
-from zipfile import ZipFile
 import api.db_op as db_operation
 import json
 import rest_framework.status as st
@@ -448,3 +447,81 @@ class DatabaseOperationViewSet(viewsets.ViewSet):
             "success": True
         }
         return Response(response, status=st.HTTP_200_OK)
+
+
+class HistoryDotsList(views.APIView):
+    authentication_classes = (MyCustomAuthentication,)
+    permission_classes = [IsAuthenticated]
+    cursor = connection.cursor()
+
+    def get(self, request):
+        list_of_history_dots = self.all_history_dots()
+        return Response(list_of_history_dots, status=st.HTTP_200_OK)
+
+    def all_history_dots(self):
+        stn_query = "select k.system_track_number " \
+                    "from replay_system_track_kinetic k " \
+                    "JOIN ( " \
+                    "   select id " \
+                    "   from sessions " \
+                    "   where end_time is null " \
+                    ") s on s.id = k.session_id " \
+                    "group by 1; "
+        self.cursor.execute(stn_query)
+        rows = self.cursor.fetchall()
+        stns = [row[0] for row in rows]
+
+        list_of_history_dots = {}
+        for stn in stns:
+            the_query = "select " \
+                        "   max(latitude), " \
+                        "   max(longitude), " \
+                        "   last_update_time " \
+                        "from replay_system_track_kinetic k " \
+                        "JOIN ( " \
+                        "	select id " \
+                        "	from sessions " \
+                        "	where end_time is null " \
+                        ") s on s.id = k.session_id " \
+                        "where system_track_number = %s " \
+                        "group by last_update_time " \
+                        "order by last_update_time asc; "
+            self.cursor.execute(the_query, [stn])
+            rows = self.cursor.fetchall()
+
+            history_dot_keys = ['latitude', 'longitude', 'latlng', 'last_update_time']
+            history_dots = [dict(zip(history_dot_keys, [row[0], row[1], [row[0], row[1]], row[2]])) for row in rows]
+            list_of_history_dots[stn] = history_dots
+
+        return list_of_history_dots
+
+class HistoryDotsDetail(views.APIView):
+    authentication_classes = (MyCustomAuthentication,)
+    permission_classes = [IsAuthenticated]
+    cursor = connection.cursor()
+
+    def get_object(self, stn):
+        the_query = "select " \
+                    "max(latitude) as lat, " \
+                    "max(longitude) as long, " \
+                    "last_update_time " \
+                    "from replay_system_track_kinetic k " \
+                    "JOIN ( " \
+                    "select id " \
+                    "from sessions " \
+                    "where end_time is null " \
+                    ") s on s.id = k.session_id " \
+                    "where system_track_number = %s " \
+                    "group by last_update_time " \
+                    "order by last_update_time asc; "
+        self.cursor.execute(the_query, [stn])
+        rows = self.cursor.fetchall()
+
+        history_dot_keys = ['latitude', 'longitude', 'latlng', 'last_update_time']
+        history_dots = [dict(zip(history_dot_keys, [row[0], row[1], [row[0], row[1]], row[2]])) for row in rows]
+
+        return history_dots
+
+    def get(self, request, stn, format=None):
+        history_dots = self.get_object(stn)
+        return Response(history_dots, status=st.HTTP_200_OK)
