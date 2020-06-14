@@ -174,16 +174,16 @@ class UserPasswordReset(mixins.UpdateModelMixin,
     serializer_class = UserPasswordResetSerializer
 
     def put(self, request, *args, **kwargs):
-        user = User.objects.get(pk=kwargs['pk'])
+        try:
+            user = User.objects.get(pk=kwargs['pk'])
+        except User.DoesNotExist:
+            return Response({
+                "message": "User Not Found",
+            }, status=st.HTTP_404_NOT_FOUND)
 
-        if request.user.level != "superadmin" and (user.level == "admin" or user.level == "superadmin"):
+        if (request.user.level != "superadmin" and user.level == "superadmin") or request.user.level == "operator":
             return Response({
                 "message": "Insufficient Access Level",
-            }, status=st.HTTP_401_UNAUTHORIZED)
-
-        if request.user.level == "superadmin" and  user.level == "superadmin":
-            return Response({
-                "message": "Can't Reset Superadmin Password",
             }, status=st.HTTP_401_UNAUTHORIZED)
 
         return self.update(request, *args, **kwargs)
