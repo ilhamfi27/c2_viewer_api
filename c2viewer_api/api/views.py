@@ -496,7 +496,7 @@ class HistoryDotsList(views.APIView):
         rows = self.cursor.fetchall()
         stns = [row[0] for row in rows]
 
-        list_of_history_dots = {}
+        list_of_history_dots = []
         for stn in stns:
             the_query = "select " \
                         "   max(latitude), " \
@@ -516,7 +516,11 @@ class HistoryDotsList(views.APIView):
 
             history_dot_keys = ['latitude', 'longitude', 'latlng', 'last_update_time']
             history_dots = [dict(zip(history_dot_keys, [row[0], row[1], [row[0], row[1]], row[2]])) for row in rows]
-            list_of_history_dots[stn] = history_dots
+            data = dict()
+            data["system_track_number"] = stn
+            data["history_dots"] = history_dots
+
+            list_of_history_dots.append(data)
 
         return list_of_history_dots
 
