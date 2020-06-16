@@ -494,35 +494,39 @@ class HistoryDotsList(views.APIView):
                     "group by 1; "
         self.cursor.execute(stn_query)
         rows = self.cursor.fetchall()
-        stns = [row[0] for row in rows]
+        print(len(rows), flush=True)
 
-        list_of_history_dots = []
-        for stn in stns:
-            the_query = "select " \
-                        "   max(latitude), " \
-                        "   max(longitude), " \
-                        "   last_update_time " \
-                        "from replay_system_track_kinetic k " \
-                        "JOIN ( " \
-                        "	select id " \
-                        "	from sessions " \
-                        "	where end_time is null " \
-                        ") s on s.id = k.session_id " \
-                        "where system_track_number = %s " \
-                        "group by last_update_time " \
-                        "order by last_update_time asc; "
-            self.cursor.execute(the_query, [stn])
-            rows = self.cursor.fetchall()
+        if len(rows) > 0:
+            stns = [row[0] for row in rows]
 
-            history_dot_keys = ['latitude', 'longitude', 'latlng', 'last_update_time']
-            history_dots = [dict(zip(history_dot_keys, [row[0], row[1], [row[0], row[1]], row[2]])) for row in rows]
-            data = dict()
-            data["system_track_number"] = stn
-            data["history_dots"] = history_dots
+            list_of_history_dots = []
+            for stn in stns:
+                the_query = "select " \
+                            "   max(latitude), " \
+                            "   max(longitude), " \
+                            "   last_update_time " \
+                            "from replay_system_track_kinetic k " \
+                            "JOIN ( " \
+                            "	select id " \
+                            "	from sessions " \
+                            "	where end_time is null " \
+                            ") s on s.id = k.session_id " \
+                            "where system_track_number = %s " \
+                            "group by last_update_time " \
+                            "order by last_update_time asc; "
+                self.cursor.execute(the_query, [stn])
+                rows = self.cursor.fetchall()
 
-            list_of_history_dots.append(data)
+                history_dot_keys = ['latitude', 'longitude', 'latlng', 'last_update_time']
+                history_dots = [dict(zip(history_dot_keys, [row[0], row[1], [row[0], row[1]], row[2]])) for row in rows]
+                data = dict()
+                data["system_track_number"] = stn
+                data["history_dots"] = history_dots
 
-        return list_of_history_dots
+                list_of_history_dots.append(data)
+
+            return list_of_history_dots
+        return []
 
 
 class HistoryDotsDetail(views.APIView):
