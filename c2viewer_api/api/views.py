@@ -51,7 +51,7 @@ class UserViewSet(viewsets.ModelViewSet):
 class SessionViewSet(viewsets.ModelViewSet):
     authentication_classes = (MyCustomAuthentication,)
     permission_classes = [IsAuthenticated]
-    queryset = Session.objects.all().order_by('id')
+    queryset = Session.objects.all().filter(~Q(end_time=None)).order_by('id')
     serializer_class = SessionSerializer
 
 
