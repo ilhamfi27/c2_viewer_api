@@ -184,11 +184,11 @@ def enhanced_send_track_cache():
     return completed_tracks
 
 def track_empty_memory():
-    print(r.exists("tracks"))
-    print(r.exists("history_dots"))
+    print("REDIS TRACK KEYS - BEFORE CLEAR", r.exists("tracks"))
+    print("REDIS HISTORY DOTS KEYS - BEFORE CLEAR", r.exists("history_dots"))
     r.flushdb()
-    print(r.exists("tracks"))
-    print(r.exists("history_dots"))
+    print("REDIS TRACK KEYS - AFTER CLEAR", r.exists("tracks"))
+    print("REDIS HISTORY DOTS KEYS - AFTER CLEAR", r.exists("history_dots"))
 
 # =================================================================================
 # END IMPROVED SYSTEM
