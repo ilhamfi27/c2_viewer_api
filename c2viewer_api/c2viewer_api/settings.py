@@ -135,7 +135,7 @@ CHANNEL_LAYERS = {
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379/1",
+        "LOCATION": "redis://127.0.0.1:6379/2",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient"
         },
@@ -210,3 +210,8 @@ STATIC_URL = '/static/'
 # JWT secret key
 JWT_TOKEN_KEY=env('JWT_TOKEN_KEY') if  env('JWT_TOKEN_KEY') != "" else "TOKEN SECRET"
 JWT_USER_KEY=env('JWT_USER_KEY') if  env('JWT_USER_KEY') != "" else "USER SECRET"
+
+# native redis
+REDIS_HOST = env('REDIS_HOST')
+REDIS_PORT = env('REDIS_PORT')
+REDIS_DB = env('REDIS_DB')

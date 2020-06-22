@@ -13,6 +13,8 @@ from django.conf import settings
 from django.db import connection
 from c2viewer_api.authentication import MyCustomAuthentication
 from c2viewer_api.permissions import IsAuthenticated
+from c2viewer_api.redis import r
+from c2viewer_api.redis import RedisUtil
 import api.db_op as db_operation
 import json
 import rest_framework.status as st
@@ -477,85 +479,31 @@ class DatabaseOperationViewSet(viewsets.ViewSet):
 class HistoryDotsList(views.APIView):
     authentication_classes = (MyCustomAuthentication,)
     permission_classes = [IsAuthenticated]
-    cursor = connection.cursor()
 
     def get(self, request):
         list_of_history_dots = self.all_history_dots()
         return Response(list_of_history_dots, status=st.HTTP_200_OK)
 
     def all_history_dots(self):
-        stn_query = "select k.system_track_number " \
-                    "from replay_system_track_kinetic k " \
-                    "JOIN ( " \
-                    "   select id " \
-                    "   from sessions " \
-                    "   where end_time is null " \
-                    ") s on s.id = k.session_id " \
-                    "group by 1; "
-        self.cursor.execute(stn_query)
-        rows = self.cursor.fetchall()
-        print(len(rows), flush=True)
+        tracks = RedisUtil(r.hgetall('tracks')).redis_decode_to_dict(nested_dict=True)
+        completed_tracks = []
+        for key, data in tracks.items():
+            dots = {}
+            dots['system_track_number'] = int(key)
+            dots['history_dots'] = json.loads(r.hget('history_dots', key).decode("utf-8")) \
+                                        if r.hexists('history_dots', key) else []
+            if r.exists('T' + key): completed_tracks.append(dots)
 
-        if len(rows) > 0:
-            stns = [row[0] for row in rows]
-
-            list_of_history_dots = []
-            for stn in stns:
-                the_query = "select " \
-                            "   max(latitude), " \
-                            "   max(longitude), " \
-                            "   last_update_time " \
-                            "from replay_system_track_kinetic k " \
-                            "JOIN ( " \
-                            "	select id " \
-                            "	from sessions " \
-                            "	where end_time is null " \
-                            ") s on s.id = k.session_id " \
-                            "where system_track_number = %s " \
-                            "group by last_update_time " \
-                            "order by last_update_time asc; "
-                self.cursor.execute(the_query, [stn])
-                rows = self.cursor.fetchall()
-
-                history_dot_keys = ['latitude', 'longitude', 'latlng', 'last_update_time']
-                history_dots = [dict(zip(history_dot_keys, [row[0], row[1], [row[0], row[1]], row[2]])) for row in rows]
-                data = dict()
-                data["system_track_number"] = stn
-                data["history_dots"] = history_dots
-
-                list_of_history_dots.append(data)
-
-            return list_of_history_dots
-        return []
-
+        return completed_tracks
 
 class HistoryDotsDetail(views.APIView):
     authentication_classes = (MyCustomAuthentication,)
     permission_classes = [IsAuthenticated]
-    cursor = connection.cursor()
 
     def get_object(self, stn):
-        the_query = "select " \
-                    "max(latitude) as lat, " \
-                    "max(longitude) as long, " \
-                    "last_update_time " \
-                    "from replay_system_track_kinetic k " \
-                    "JOIN ( " \
-                    "select id " \
-                    "from sessions " \
-                    "where end_time is null " \
-                    ") s on s.id = k.session_id " \
-                    "where system_track_number = %s " \
-                    "group by last_update_time " \
-                    "order by last_update_time asc; "
-        self.cursor.execute(the_query, [stn])
-        rows = self.cursor.fetchall()
-
-        history_dot_keys = ['latitude', 'longitude', 'latlng', 'last_update_time']
-        history_dots = [dict(zip(history_dot_keys, [row[0], row[1], [row[0], row[1]], row[2]])) for row in rows]
-
+        history_dots = r.hget("history_dots", stn).decode("utf-8")
         return history_dots
 
     def get(self, request, stn, format=None):
         history_dots = self.get_object(stn)
-        return Response(history_dots, status=st.HTTP_200_OK)
+        return Response(json.loads(history_dots), status=st.HTTP_200_OK)
