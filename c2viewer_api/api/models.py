@@ -67,6 +67,7 @@ class StoredReplay(models.Model):
     update_rate = models.CharField(max_length=100)
     data = models.CharField(max_length=500)
     sequence = models.TextField(blank=True, null=True, default=None)
+    finished = models.BooleanField()
 
     class Meta:
         db_table = 'stored_replay'

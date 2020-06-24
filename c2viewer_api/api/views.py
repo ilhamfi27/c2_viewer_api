@@ -338,6 +338,13 @@ class StoredReplayViewSet(viewsets.ModelViewSet):
 
             sequence_data = self.queryset.filter(session=session, sequence=sequence).first()
             if sequence_data:
+                if sequence_data.finished == 0:
+                    # cek apakah session ada tapi stored replay belom ada alias masih generate
+                    response = {
+                        "message": "In progress of generating session"
+                    }
+                    return Response(response, status=st.HTTP_404_NOT_FOUND)
+
                 sequence_response = json.loads(sequence_data.data)
                 sequence_response["sequence"] = sequence
                 sequence_response["total_sequence"] = total_sequence
