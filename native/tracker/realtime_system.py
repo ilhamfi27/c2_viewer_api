@@ -133,8 +133,11 @@ async def data_change_detection():
         await non_strict_data_processing(session_datas, SESSION_STATE, USERS, NON_REALTIME_USERS, data_category="session",
                                 debug=False)
         state.DATA_READY = True
-        # lama tidur
-        await asyncio.sleep(3)
+        try:
+            # lama tidur
+            await asyncio.sleep(3)
+        except asyncio.CancelledError:
+            break
 
 async def get_websocket_messages(websocket):
     async for message in websocket:
@@ -224,5 +227,21 @@ def _main_():
         asyncio.ensure_future(start_server)
     ]
 
-    asyncio.get_event_loop().run_until_complete(asyncio.gather(*tasks))
-    asyncio.get_event_loop().run_forever()
+    loop = asyncio.get_event_loop()
+    try:
+        future = asyncio.gather(*tasks)
+        loop.run_until_complete(future)
+        loop.run_forever()
+    except Exception as e:
+        print(e)
+    except asyncio.CancelledError:
+        print('Tasks has been canceled')
+    except KeyboardInterrupt:
+        print("Exitting...")
+    finally:
+        print('Stopping')
+        for task in asyncio.Task.all_tasks():
+            task.cancel()
+        # future.cancel()
+        # loop.stop()
+        # loop.close()
