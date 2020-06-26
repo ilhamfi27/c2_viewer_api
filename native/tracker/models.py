@@ -777,7 +777,7 @@ def session_data():
             "   end_time " \
             "FROM public.sessions " \
             "WHERE end_time IS NOT NULL " \
-            "ORDER BY id DESC; "
+            "ORDER BY id ASC; "
         cur.execute(q)
         data = []
         for row in cur.fetchall():
