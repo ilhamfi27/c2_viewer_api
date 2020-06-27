@@ -137,7 +137,7 @@ async def data_change_detection():
         state.DATA_READY = True
         try:
             # lama tidur
-            await asyncio.sleep(3)
+            await asyncio.sleep(0.5)
         except asyncio.CancelledError:
             break
 
