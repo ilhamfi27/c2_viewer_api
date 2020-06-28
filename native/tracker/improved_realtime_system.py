@@ -17,7 +17,10 @@ from tracker.state import USERS, NON_REALTIME_USERS
 from tracker import state
 import tracker.util as util
 
-logging.basicConfig()
+logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+logger = logging.getLogger()
+# here
+logger.setLevel(logging.INFO)
 
 TACTICAL_FIGURE_STATE = {
     "cached_data": [],
@@ -113,8 +116,6 @@ async def data_change_detection():
         # akan dikosongkan ketika sesi berganti
         await check_if_state_must_be_emptied([AREA_ALERT_STATE])
 
-        await improved_track_data() # get data track (enhanced)
-
         # tactical figures ------------------------------------------------------------------------
         tactical_figure_datas = np.array(tactical_figure_data())
         await data_processing(tactical_figure_datas, TACTICAL_FIGURE_STATE, USERS, NON_REALTIME_USERS, data_category="tactical_figure",
@@ -134,6 +135,9 @@ async def data_change_detection():
         session_datas = np.array(session_data())
         await non_strict_data_processing(session_datas, SESSION_STATE, USERS, NON_REALTIME_USERS, data_category="session",
                                 debug=False)
+
+        await improved_track_data() # get data track (enhanced)
+
         state.DATA_READY = True
         try:
             # lama tidur
@@ -176,15 +180,15 @@ async def realtime_toggle_handler(user, state):
 # IMPROVED SYSTEM
 # =================================================================================
 def enhanced_send_track_cache():
+    redis_keys = util.redis_scan_keys(r, 'T*')
     # send realtime
-    tracks = util.redis_decode_to_dict(r.hgetall('tracks'), nested_dict=True)
     completed_tracks = []
 
-    for key, data in tracks.items():
-        data['system_track_number'] = int(key)
-        # data['history_dots'] = json.loads(r.hget('history_dots', key).decode("utf-8")) \
-        #                             if r.hexists('history_dots', key) else []
-        if r.exists('T' + key): completed_tracks.append(data)
+    for k in redis_keys:
+        decoded_k = k.decode()
+        data = json.loads(r.get(decoded_k).decode())
+        data['system_track_number'] = int(decoded_k[1:])
+        completed_tracks.append(data)
 
     return completed_tracks
 
@@ -226,16 +230,20 @@ def websocket_server_handler():
 
     print("Server Started on " + WS_HOST + ":" + WS_PORT)
     start_server = websockets.serve(handler, WS_HOST, WS_PORT)
-
-    loop.run_until_complete(start_server)
-    loop.run_forever()
+    try:
+        loop.run_until_complete(start_server)
+        loop.run_forever()
+    except Exception as e:
+        print(e)
 
 def data_checker_handler():
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-
-    loop.run_until_complete(data_change_detection())
-    loop.run_forever()
+    try:
+        loop.run_until_complete(data_change_detection())
+        loop.run_forever()
+    except Exception as e:
+        print(e)
 
 def _main_():
     try:

@@ -5,10 +5,16 @@ from functools import reduce
 from datetime import datetime
 import time
 import asyncio
+import logging
 
 import tracker.util as util
 from tracker.config import getconn, r
 from tracker.state import *
+
+logging.basicConfig(format='%(asctime)s - %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+logger = logging.getLogger()
+# here
+logger.setLevel(logging.INFO)
 
 conn = getconn()
 cur = conn.cursor()
@@ -89,6 +95,15 @@ def data_process(table, stn, table_results):
             is_updated = False;
             is_newly_created = True
 
+        # double check dengan list STN dari memory
+        # apakah data sudah ada tapi belom lengkap, dan muncul data baru, maka set new
+        if "replay_system_track_processing" in stn_hash and \
+                stn_hash['replay_system_track_processing']['track_phase_type'] not in ["DELETED_BY_SYSTEM",
+                                                                                  "DELETED_BY_SENSOR"] \
+                and not r.exists(track_index) and is_updated:
+            is_updated = False;
+            is_newly_created = True
+
     else:  # kalau data dari redis kosong
         stn_hash = {}
         stn_hash[table] = table_results  # set hash dengan nama table
@@ -116,9 +131,8 @@ def data_process(table, stn, table_results):
     if stn_hash['completed']:
         if stn_hash['replay_system_track_processing']['track_phase_type'] not in ["DELETED_BY_SYSTEM",
                                                                                   "DELETED_BY_SENSOR"]:
-            r.set(track_index, json.dumps(stn_hash))  # set data track ke redis
-
             if is_newly_created:  # kalau datanya dideteksi baru
+                r.set(track_index, json.dumps(stn_hash))  # set data track ke redis
                 return 'new', stn_hash
 
         if r.exists(track_index) and is_updated:  # kalau datanya dideteksi update, dan di redis ada
@@ -223,16 +237,16 @@ async def improved_track_data():
                     WHERE s.end_time is NULL
                     {}
                     ORDER BY st.system_track_number;
-                    """.format(column_used, table, table, created_time_tracks[table], current_time,
+                    """.format(column_used, table, table, CREATED_TIME_TRACKS[table], current_time,
                                where_own_indicator)
 
                 cur.execute(replay_query)
                 data = cur.fetchall()
 
+                changed = False
                 for row in data:
                     stn = row[0]  # stn -> system_track_number
                     table_results = dict(zip(table_columns[table], row))  # make the result dictionary
-                    created_time_tracks[table] = table_results['created_time']
 
                     if table == "replay_system_track_kinetic":
                         improved_history_dots(stn, table_results)
@@ -240,6 +254,7 @@ async def improved_track_data():
                     status, result = data_process(table, stn, table_results)
 
                     if status != None:
+                        changed = True
                         if status == 'new':
                             data_updates[stn] = result
                             data_updates[stn]['status'] = 'new'
@@ -254,6 +269,9 @@ async def improved_track_data():
                                 data_updates[stn] = table_update
                                 data_updates[stn]['status'] = 'update'
                                 data_updates[stn]['system_track_number'] = stn
+
+                if changed:
+                    CREATED_TIME_TRACKS[table] = current_time
 
             updated_data = [val for key, val in data_updates.items()]
 

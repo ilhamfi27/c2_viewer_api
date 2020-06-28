@@ -30,3 +30,16 @@ def redis_decode_to_dict(redis_hash, nested_dict=False):
             return { key.decode(): json.loads(val.decode()) for key, val in redis_hash.items() }
         return { key.decode(): val.decode() for key, val in redis_hash.items() }
     return {}
+
+
+def redis_scan_keys(r, pattern):
+    "Returns a list of all the keys matching a given pattern"
+
+    result = []
+    cur, keys = r.scan(cursor=0, match=pattern, count=2)
+    result.extend(keys)
+    while cur != 0:
+        cur, keys = r.scan(cursor=cur, match=pattern, count=2)
+        result.extend(keys)
+
+    return result
