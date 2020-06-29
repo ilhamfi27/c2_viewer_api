@@ -106,10 +106,10 @@ async def must_notify_user_on_session_finished():
 
 async def data_change_detection():
     while True:
-        if not state.DATA_READY: print("\nReading Database...\nPlease Wait Until Database Ready!")
+        if not state.DATA_READY: logging.info('Reading Database...\nPlease Wait Until Database Ready!')
         if not state.FINISHED_CHECK:
             if state.DATA_READY:
-                print("Database Ready!")
+                logging.info('Database Ready!')
                 state.FINISHED_CHECK = True
 
         # mengecek apakah data cached tersebut butuh dikosongkan

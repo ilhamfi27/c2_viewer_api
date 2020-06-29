@@ -137,6 +137,8 @@ def data_process(table, stn, table_results):
 
         if r.exists(track_index) and is_updated:  # kalau datanya dideteksi update, dan di redis ada
 
+            r.set(track_index, json.dumps(stn_hash))  # set data track ke redis
+
             # kalau tracknya dihapus, maka hapus dari memory
             if stn_hash['replay_system_track_processing']['track_phase_type'] in \
                     ["DELETED_BY_SYSTEM", "DELETED_BY_SENSOR"]:
@@ -243,10 +245,10 @@ async def improved_track_data():
                 cur.execute(replay_query)
                 data = cur.fetchall()
 
-                changed = False
                 for row in data:
                     stn = row[0]  # stn -> system_track_number
                     table_results = dict(zip(table_columns[table], row))  # make the result dictionary
+                    CREATED_TIME_TRACKS[table] = table_results['created_time']
 
                     if table == "replay_system_track_kinetic":
                         improved_history_dots(stn, table_results)
@@ -254,7 +256,6 @@ async def improved_track_data():
                     status, result = data_process(table, stn, table_results)
 
                     if status != None:
-                        changed = True
                         if status == 'new':
                             data_updates[stn] = result
                             data_updates[stn]['status'] = 'new'
@@ -269,9 +270,6 @@ async def improved_track_data():
                                 data_updates[stn] = table_update
                                 data_updates[stn]['status'] = 'update'
                                 data_updates[stn]['system_track_number'] = stn
-
-                if changed:
-                    CREATED_TIME_TRACKS[table] = current_time
 
             updated_data = [val for key, val in data_updates.items()]
 
