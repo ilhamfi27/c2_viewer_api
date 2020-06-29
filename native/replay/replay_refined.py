@@ -483,7 +483,7 @@ def get_replay():
                   "EXTRACT(EPOCH FROM (end_time::timestamp - start_time::timestamp)) as durasi, name " \
                   " from sessions " \
                   "WHERE end_time IS NOT null and " \
-                  " id not in (SELECT distinct(session_id) FROM stored_replay WHERE update_rate="+str(UPDATE_RATE)+" )"
+                  " id not in (SELECT distinct(session_id) FROM stored_replay WHERE update_rate="+str(UPDATE_RATE)+" ) and id=19"
     print(sql)
     '''
     select id, to_char (start_time::timestamp, 'YYYY-MM-DD HH24:MI:SS') start_time,  
@@ -802,7 +802,7 @@ def get_replay():
                 conn.commit()
             if sequence == ujung:
                 q_set_finished = "UPDATE stored_replay set finished = 1" \
-                                "WHERE session id =  "+str(session_id)+""
+                                " WHERE session_id =  "+str(session_id)+""
                 cur.execute(q_set_finished)
                 conn.commit()
             result["track_play"].clear()  
