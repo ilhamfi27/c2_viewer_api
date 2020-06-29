@@ -43,3 +43,14 @@ def redis_scan_keys(r, pattern):
         result.extend(keys)
 
     return result
+
+
+def write_array_to_redis(r, data):
+    for d in list(data[1]):
+        datetime_to_string(d[1])
+        r.set("%s%s" % (data[0], d[0]), json.dumps(d[1]))
+
+
+def write_int_to_redis(r, data):
+    for d in list(data[1]):
+        r.set("%s%s" % (data[0], d), d)

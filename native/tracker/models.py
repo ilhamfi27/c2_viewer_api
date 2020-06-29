@@ -72,7 +72,7 @@ def data_process(table, stn, table_results):
     is_updated = False
     is_newly_created = False
 
-    track_index = 'T' + str(stn)
+    track_index = 'TRACK_' + str(stn)
 
     if r.hexists('tracks', stn):  # kalau data dari redis udh ada
         stn_hash = json.loads(r.hget('tracks', stn).decode("utf-8"))  # get data dari redis + convert to dict
@@ -161,19 +161,6 @@ async def improved_track_data():
                              "WHERE end_time IS NULL;"
         cur.execute(start_time_session)
         start_time = cur.fetchall()
-
-        # untuk menyimpan create untuk masing - masing 8
-        # tabel
-        created_time_tracks = {
-            "replay_system_track_general": start_time[0][0] if len(start_time) > 0 else current_time,
-            "replay_system_track_kinetic": start_time[0][0] if len(start_time) > 0 else current_time,
-            "replay_system_track_processing": start_time[0][0] if len(start_time) > 0 else current_time,
-            "replay_system_track_identification": start_time[0][0] if len(start_time) > 0 else current_time,
-            "replay_system_track_link": start_time[0][0] if len(start_time) > 0 else current_time,
-            "replay_system_track_mission": start_time[0][0] if len(start_time) > 0 else current_time,
-            "replay_track_general_setting": start_time[0][0] if len(start_time) > 0 else current_time,
-            "replay_ais_data": start_time[0][0] if len(start_time) > 0 else current_time,
-        }
 
         table_columns = {
             "replay_system_track_general": (

@@ -7,12 +7,14 @@ import json
 import logging
 import websockets
 import threading
+from multiprocessing import Process
 import numpy as np
 import sys
+import pickle
 from tracker.models import information_data, tactical_figure_data, reference_point_data, \
                             area_alert_data, session_data, improved_track_data, history_dots
 from tracker.actions import data_processing, non_strict_data_processing, send_history_dot
-from tracker.config import WS_HOST, WS_PORT, r
+from tracker.config import WS_HOST, WS_PORT, r, r_channel
 from tracker.state import USERS, NON_REALTIME_USERS
 from tracker import state
 import tracker.util as util
@@ -22,34 +24,6 @@ logger = logging.getLogger()
 # here
 logger.setLevel(logging.INFO)
 
-TACTICAL_FIGURE_STATE = {
-    "cached_data": [],
-    "removed_data": [],
-    "existed_data": [],
-}
-
-REFERENCE_POINT_STATE = {
-    "cached_data": [],
-    "removed_data": [],
-    "existed_data": [],
-}
-
-AREA_ALERT_STATE = {
-    "cached_data": [],
-    "removed_data": [],
-    "existed_data": [],
-}
-
-SESSION_STATE = {
-    "cached_data": [],
-    "existed_data": [],
-    "existed_data_count": 0,
-}
-
-HISTORY_DOT_STATE = {
-    "existed_data_count": 0,
-}
-
 async def send_cached_data(user, states=[]):
     # send realtime
     # np.array untuk mengambil index ke 1 dari semua row cached data
@@ -57,7 +31,7 @@ async def send_cached_data(user, states=[]):
     for STATE in states:
         if len(STATE[1]["cached_data"]) > 0:
             cached_data = np.array(STATE[1]["cached_data"])
-            data[STATE[0]] = list(cached_data[:, 1])
+            data[STATE[0]] = list(cached_data)
         else:
             data[STATE[0]] = list()
 
@@ -67,8 +41,63 @@ async def send_cached_data(user, states=[]):
         message = json.dumps({'data': data, 'data_type': 'realtime'}, default=str)
         await user.send(message)
 
+class StoreWebsocket(object):
+    def __init__(self, websocket):
+        self.websocket = websocket
+
+    def getSockets(self):
+        return self.websocket
+
 async def register(websocket):
+    TACTICAL_FIGURE_STATE = {
+        "cached_data": [
+              json.loads(r.get(i.decode()).decode()) if len(i) > 0 else [] for i in util.redis_scan_keys(r, "TACTICAL_FIGURE_C_*")
+        ],
+        "removed_data": [
+              json.loads(r.get(i.decode()).decode()) if len(i) > 0 else [] for i in util.redis_scan_keys(r, "TACTICAL_FIGURE_R_*")
+        ],
+        "existed_data": [
+              json.loads(r.get(i.decode()).decode()) if len(i) > 0 else [] for i in util.redis_scan_keys(r, "TACTICAL_FIGURE_E_*")
+        ],
+    }
+    REFERENCE_POINT_STATE = {
+        "cached_data": [
+              json.loads(r.get(i.decode()).decode()) if len(i) > 0 else [] for i in util.redis_scan_keys(r, "REFERENCE_POINT_C_*")
+        ],
+        "removed_data": [
+              json.loads(r.get(i.decode()).decode()) if len(i) > 0 else [] for i in util.redis_scan_keys(r, "REFERENCE_POINT_R_*")
+        ],
+        "existed_data": [
+              json.loads(r.get(i.decode()).decode()) if len(i) > 0 else [] for i in util.redis_scan_keys(r, "REFERENCE_POINT_E_*")
+        ],
+    }
+    AREA_ALERT_STATE = {
+        "cached_data": [
+              json.loads(r.get(i.decode()).decode()) if len(i) > 0 else [] for i in util.redis_scan_keys(r, "AREA_ALERT_C_*")
+        ],
+        "removed_data": [
+              json.loads(r.get(i.decode()).decode()) if len(i) > 0 else [] for i in util.redis_scan_keys(r, "AREA_ALERT_R_*")
+        ],
+        "existed_data": [
+              json.loads(r.get(i.decode()).decode()) if len(i) > 0 else [] for i in util.redis_scan_keys(r, "AREA_ALERT_E_*")
+        ],
+    }
+    SESSION_STATE = {
+        "cached_data": [
+              json.loads(r.get(i.decode()).decode()) if len(i) > 0 else [] for i in util.redis_scan_keys(r, "SESSION_C_*")
+        ],
+        "existed_data": [
+              json.loads(r.get(i.decode()).decode()) if len(i) > 0 else [] for i in util.redis_scan_keys(r, "SESSION_E_*")
+        ],
+    }
+
+    # str_object = str(websocket)
+    # str_object = str_object[1:]
+    # str_object = str_object[:-1]
+    # websocket_id = str_object.split()[3]
+
     USERS.add(websocket)
+
     await send_cached_data(websocket, states=[
         ['tactical_figure', TACTICAL_FIGURE_STATE],
         ['reference_point', REFERENCE_POINT_STATE],
@@ -82,11 +111,16 @@ async def unregister(websocket):
     print("1 USER LEFT, REMAINING USER", len(USERS))
 
 async def check_if_state_must_be_emptied(states):
-    if SESSION_STATE['existed_data_count'] == 0:
-        SESSION_STATE['existed_data_count'] = len(SESSION_STATE['existed_data'])
+    session_data_count = r.get('session_data_count')
+    existed_data_count = session_data_count.decode() if session_data_count != None else 0
+    existed_data_count = int(existed_data_count)
+    existed_data = util.redis_scan_keys(r, "SESSION_E_")
+
+    if existed_data_count == 0:
+        existed_data_count = len(existed_data)
 
     # kalo misal sessionnya nambah, maka kosongkan data memory
-    if SESSION_STATE['existed_data_count'] < len(SESSION_STATE['existed_data']):
+    elif existed_data_count < len(existed_data):
         await must_notify_user_on_session_finished()
 
         print("MENGOSONGKAN SESI")
@@ -94,7 +128,9 @@ async def check_if_state_must_be_emptied(states):
         for state in states:
             for key in state.keys():
                 state[key] = []
-        SESSION_STATE['existed_data_count'] = len(SESSION_STATE['existed_data'])
+        existed_data_count = len(existed_data)
+
+    r.set('session_data_count', existed_data_count)
 
 async def must_notify_user_on_session_finished():
     print("KUDUNE MASUK")
@@ -105,6 +141,47 @@ async def must_notify_user_on_session_finished():
         await asyncio.wait([user.send(message) for user in USERS])
 
 async def data_change_detection():
+    TACTICAL_FIGURE_STATE = {
+        "cached_data": [
+              json.loads(r.get(i.decode()).decode()) if len(i) > 0 else [] for i in util.redis_scan_keys(r, "TACTICAL_FIGURE_C_*")
+        ],
+        "removed_data": [
+              json.loads(r.get(i.decode()).decode()) if len(i) > 0 else [] for i in util.redis_scan_keys(r, "TACTICAL_FIGURE_R_*")
+        ],
+        "existed_data": [
+              json.loads(r.get(i.decode()).decode()) if len(i) > 0 else [] for i in util.redis_scan_keys(r, "TACTICAL_FIGURE_E_*")
+        ],
+    }
+    REFERENCE_POINT_STATE = {
+        "cached_data": [
+              json.loads(r.get(i.decode()).decode()) if len(i) > 0 else [] for i in util.redis_scan_keys(r, "REFERENCE_POINT_C_*")
+        ],
+        "removed_data": [
+              json.loads(r.get(i.decode()).decode()) if len(i) > 0 else [] for i in util.redis_scan_keys(r, "REFERENCE_POINT_R_*")
+        ],
+        "existed_data": [
+              json.loads(r.get(i.decode()).decode()) if len(i) > 0 else [] for i in util.redis_scan_keys(r, "REFERENCE_POINT_E_*")
+        ],
+    }
+    AREA_ALERT_STATE = {
+        "cached_data": [
+              json.loads(r.get(i.decode()).decode()) if len(i) > 0 else [] for i in util.redis_scan_keys(r, "AREA_ALERT_C_*")
+        ],
+        "removed_data": [
+              json.loads(r.get(i.decode()).decode()) if len(i) > 0 else [] for i in util.redis_scan_keys(r, "AREA_ALERT_R_*")
+        ],
+        "existed_data": [
+              json.loads(r.get(i.decode()).decode()) if len(i) > 0 else [] for i in util.redis_scan_keys(r, "AREA_ALERT_E_*")
+        ],
+    }
+    SESSION_STATE = {
+        "cached_data": [
+              json.loads(r.get(i.decode()).decode()) if len(i) > 0 else [] for i in util.redis_scan_keys(r, "SESSION_C_*")
+        ],
+        "existed_data": [
+              json.loads(r.get(i.decode()).decode()) if len(i) > 0 else [] for i in util.redis_scan_keys(r, "SESSION_E_*")
+        ],
+    }
     while True:
         if not state.DATA_READY: logging.info('Reading Database...\nPlease Wait Until Database Ready!')
         if not state.FINISHED_CHECK:
@@ -120,23 +197,40 @@ async def data_change_detection():
         tactical_figure_datas = np.array(tactical_figure_data())
         await data_processing(tactical_figure_datas, TACTICAL_FIGURE_STATE, USERS, NON_REALTIME_USERS, data_category="tactical_figure",
                                 mandatory_attr="visibility_type", must_remove=["REMOVE"], debug=False)
+        if not state.DATA_READY: logging.info('Preparing Tactical Figures!')
 
         # reference points ------------------------------------------------------------------------
         reference_point_datas = np.array(reference_point_data())
         await data_processing(reference_point_datas, REFERENCE_POINT_STATE, USERS, NON_REALTIME_USERS, data_category="reference_point",
                                 mandatory_attr="visibility_type", must_remove=["REMOVE"], debug=False)
+        if not state.DATA_READY: logging.info('Preparing Reference Points!')
 
         # area alerts ------------------------------------------------------------------------
         area_alert_datas = np.array(area_alert_data())
         await data_processing(area_alert_datas, AREA_ALERT_STATE, USERS, NON_REALTIME_USERS, data_category="area_alert",
                                 mandatory_attr="is_visible", must_remove=["REMOVE"], debug=False)
+        if not state.DATA_READY: logging.info('Preparing Area Alerts!')
 
         # sessions ------------------------------------------------------------------------
         session_datas = np.array(session_data())
         await non_strict_data_processing(session_datas, SESSION_STATE, USERS, NON_REALTIME_USERS, data_category="session",
                                 debug=False)
+        if not state.DATA_READY: logging.info('Preparing Sessions!')
+
+        util.write_array_to_redis(r, ["TACTICAL_FIGURE_C_", TACTICAL_FIGURE_STATE["cached_data"]])
+        util.write_int_to_redis(r, ["TACTICAL_FIGURE_R_", TACTICAL_FIGURE_STATE["removed_data"]])
+        util.write_int_to_redis(r, ["TACTICAL_FIGURE_E_", TACTICAL_FIGURE_STATE["existed_data"]])
+        util.write_array_to_redis(r, ["REFERENCE_POINT_C_", REFERENCE_POINT_STATE["cached_data"]])
+        util.write_int_to_redis(r, ["REFERENCE_POINT_R_", REFERENCE_POINT_STATE["removed_data"]])
+        util.write_int_to_redis(r, ["REFERENCE_POINT_E_", REFERENCE_POINT_STATE["existed_data"]])
+        util.write_array_to_redis(r, ["AREA_ALERT_C_", AREA_ALERT_STATE["cached_data"]])
+        util.write_int_to_redis(r, ["AREA_ALERT_R_", AREA_ALERT_STATE["removed_data"]])
+        util.write_int_to_redis(r, ["AREA_ALERT_E_", AREA_ALERT_STATE["existed_data"]])
+        util.write_array_to_redis(r, ["SESSION_C_", SESSION_STATE["cached_data"]])
+        util.write_int_to_redis(r, ["SESSION_E_", SESSION_STATE["existed_data"]])
 
         await improved_track_data() # get data track (enhanced)
+        if not state.DATA_READY: logging.info('Preparing Tracks!')
 
         state.DATA_READY = True
         try:
@@ -160,6 +254,47 @@ async def get_websocket_messages(websocket):
             await send_history_dot(data['request_dots'], websocket)
 
 async def realtime_toggle_handler(user, state):
+    TACTICAL_FIGURE_STATE = {
+        "cached_data": [
+              json.loads(r.get(i.decode()).decode()) if len(i) > 0 else [] for i in util.redis_scan_keys(r, "TACTICAL_FIGURE_C_*")
+        ],
+        "removed_data": [
+              json.loads(r.get(i.decode()).decode()) if len(i) > 0 else [] for i in util.redis_scan_keys(r, "TACTICAL_FIGURE_R_*")
+        ],
+        "existed_data": [
+              json.loads(r.get(i.decode()).decode()) if len(i) > 0 else [] for i in util.redis_scan_keys(r, "TACTICAL_FIGURE_E_*")
+        ],
+    }
+    REFERENCE_POINT_STATE = {
+        "cached_data": [
+              json.loads(r.get(i.decode()).decode()) if len(i) > 0 else [] for i in util.redis_scan_keys(r, "REFERENCE_POINT_C_*")
+        ],
+        "removed_data": [
+              json.loads(r.get(i.decode()).decode()) if len(i) > 0 else [] for i in util.redis_scan_keys(r, "REFERENCE_POINT_R_*")
+        ],
+        "existed_data": [
+              json.loads(r.get(i.decode()).decode()) if len(i) > 0 else [] for i in util.redis_scan_keys(r, "REFERENCE_POINT_E_*")
+        ],
+    }
+    AREA_ALERT_STATE = {
+        "cached_data": [
+              json.loads(r.get(i.decode()).decode()) if len(i) > 0 else [] for i in util.redis_scan_keys(r, "AREA_ALERT_C_*")
+        ],
+        "removed_data": [
+              json.loads(r.get(i.decode()).decode()) if len(i) > 0 else [] for i in util.redis_scan_keys(r, "AREA_ALERT_R_*")
+        ],
+        "existed_data": [
+              json.loads(r.get(i.decode()).decode()) if len(i) > 0 else [] for i in util.redis_scan_keys(r, "AREA_ALERT_E_*")
+        ],
+    }
+    SESSION_STATE = {
+        "cached_data": [
+              json.loads(r.get(i.decode()).decode()) if len(i) > 0 else [] for i in util.redis_scan_keys(r, "SESSION_C_*")
+        ],
+        "existed_data": [
+              json.loads(r.get(i.decode()).decode()) if len(i) > 0 else [] for i in util.redis_scan_keys(r, "SESSION_E_*")
+        ],
+    }
     if state == 'realtime' and \
         user in NON_REALTIME_USERS:
         NON_REALTIME_USERS.remove(user)
@@ -180,14 +315,14 @@ async def realtime_toggle_handler(user, state):
 # IMPROVED SYSTEM
 # =================================================================================
 def enhanced_send_track_cache():
-    redis_keys = util.redis_scan_keys(r, 'T*')
+    redis_keys = util.redis_scan_keys(r, 'TRACK_*')
     # send realtime
     completed_tracks = []
 
     for k in redis_keys:
         decoded_k = k.decode()
         data = json.loads(r.get(decoded_k).decode())
-        data['system_track_number'] = int(decoded_k[1:])
+        data['system_track_number'] = int(decoded_k[6:])
         completed_tracks.append(data)
 
     return completed_tracks
@@ -239,19 +374,23 @@ def websocket_server_handler():
 def data_checker_handler():
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    try:
-        loop.run_until_complete(data_change_detection())
-        loop.run_forever()
-    except Exception as e:
-        print(e)
+    # try:
+    loop.run_until_complete(data_change_detection())
+    loop.run_forever()
+    # except Exception as e:
+    #     print(e)
 
 def _main_():
     try:
-        ws_thread = threading.Thread(target=websocket_server_handler)
-        data_checker = threading.Thread(target=data_checker_handler)
+        # multiprocessing
+        ws_thread = Process(name='ws_thread', target=websocket_server_handler)
+        data_checker = Process(name='data_checker', target=data_checker_handler)
 
-        ws_thread.setDaemon(True)
-        data_checker.setDaemon(True)
+        ws_thread.daemon = True
+        data_checker.daemon = True
+
+        # multithreading
+        # ws_thread = threading.Thread(tas
 
         ws_thread.start()
         data_checker.start()

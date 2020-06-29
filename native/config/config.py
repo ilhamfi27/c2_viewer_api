@@ -24,5 +24,7 @@ def getconn():
 REDIS_HOST=os.getenv('REDIS_HOST')
 REDIS_PORT=os.getenv('REDIS_PORT')
 REDIS_DB=os.getenv('REDIS_DB')
+REDIS_CHANNEL_DB=os.getenv('REDIS_CHANNEL_DB')
 
 r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB)
+r_channel = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_CHANNEL_DB)
