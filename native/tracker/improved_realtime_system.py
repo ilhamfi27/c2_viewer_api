@@ -9,8 +9,8 @@ import websockets
 import threading
 import numpy as np
 import sys
-from tracker.models import information_data, tactical_figure_data, reference_point_data, \
-                            area_alert_data, session_data, improved_track_data, history_dots
+from tracker.models import active_session, tactical_figure_data, reference_point_data, \
+                            area_alert_data, session_data, improved_track_data
 from tracker.actions import data_processing, non_strict_data_processing, send_history_dot
 from tracker.config import WS_HOST, WS_PORT, r
 from tracker.state import USERS, NON_REALTIME_USERS
@@ -62,6 +62,7 @@ async def send_cached_data(user, states=[]):
             data[STATE[0]] = list()
 
     data['tracks'] = enhanced_send_track_cache()  # ambil data track yang berlaku di memory (enhanced)
+    data['session_id'] = active_session()[-1][1]['id'] if len(active_session()) > 0 else []
 
     if len(data) > 0:
         message = json.dumps({'data': data, 'data_type': 'realtime'}, default=str)
