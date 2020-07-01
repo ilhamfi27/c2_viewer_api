@@ -156,24 +156,11 @@ async def improved_track_data():
 
     try:
         start_time_session = "SELECT " \
-                             "   start_time " \
+                             "   id, name, start_time, end_time " \
                              "FROM sessions " \
                              "WHERE end_time IS NULL;"
         cur.execute(start_time_session)
-        start_time = cur.fetchall()
-
-        # untuk menyimpan create untuk masing - masing 8
-        # tabel
-        created_time_tracks = {
-            "replay_system_track_general": start_time[0][0] if len(start_time) > 0 else current_time,
-            "replay_system_track_kinetic": start_time[0][0] if len(start_time) > 0 else current_time,
-            "replay_system_track_processing": start_time[0][0] if len(start_time) > 0 else current_time,
-            "replay_system_track_identification": start_time[0][0] if len(start_time) > 0 else current_time,
-            "replay_system_track_link": start_time[0][0] if len(start_time) > 0 else current_time,
-            "replay_system_track_mission": start_time[0][0] if len(start_time) > 0 else current_time,
-            "replay_track_general_setting": start_time[0][0] if len(start_time) > 0 else current_time,
-            "replay_ais_data": start_time[0][0] if len(start_time) > 0 else current_time,
-        }
+        active_session = cur.fetchall()
 
         table_columns = {
             "replay_system_track_general": (
@@ -270,6 +257,7 @@ async def improved_track_data():
                                 data_updates[stn] = table_update
                                 data_updates[stn]['status'] = 'update'
                                 data_updates[stn]['system_track_number'] = stn
+                        data_updates[stn]['session_id'] = active_session[0][0] if len(active_session) > 0 else None
 
             updated_data = [val for key, val in data_updates.items()]
 
@@ -794,6 +782,33 @@ def session_data():
             "FROM public.sessions " \
             "WHERE end_time IS NOT NULL " \
             "ORDER BY id ASC; "
+        cur.execute(q)
+        data = []
+        for row in cur.fetchall():
+            object_id = row[0]
+            results = dict(zip(columns, row))
+            data.append([object_id, results])
+        return data
+    except psycopg2.Error as e:
+        print(e)
+    cur.close()
+    conn.close()
+
+
+def active_session():
+    try:
+        columns = (
+            'id', 'name', 'start_time', 'end_time'
+        )
+
+        q = "SELECT " \
+            "   id, " \
+            "   name, " \
+            "   start_time, " \
+            "   end_time " \
+            "FROM public.sessions " \
+            "WHERE end_time IS NULL " \
+            "ORDER BY id DESC LIMIT 1;"
         cur.execute(q)
         data = []
         for row in cur.fetchall():

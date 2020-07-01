@@ -802,7 +802,7 @@ def get_replay():
                 conn.commit()
             if sequence == ujung:
                 q_set_finished = "UPDATE stored_replay set finished = 1" \
-                                "WHERE session id =  "+str(session_id)+""
+                                " WHERE session_id =  "+str(session_id)+""
                 cur.execute(q_set_finished)
                 conn.commit()
             result["track_play"].clear()  

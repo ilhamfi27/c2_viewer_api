@@ -332,6 +332,7 @@ class StoredReplayViewSet(viewsets.ModelViewSet):
     def sequenced(self, request, session_id, sequence):
         try:
             session = Session.objects.get(pk=session_id)
+            sequence_response = {}
 
             # get maximum sequence on this session
             total_sequence = self.queryset.filter(session=session).order_by('-sequence').count()

@@ -9,8 +9,8 @@ import websockets
 import threading
 import numpy as np
 import sys
-from tracker.models import information_data, tactical_figure_data, reference_point_data, \
-                            area_alert_data, session_data, improved_track_data, history_dots
+from tracker.models import active_session, tactical_figure_data, reference_point_data, \
+                            area_alert_data, session_data, improved_track_data
 from tracker.actions import data_processing, non_strict_data_processing, send_history_dot
 from tracker.config import WS_HOST, WS_PORT, r
 from tracker.state import USERS, NON_REALTIME_USERS
@@ -62,6 +62,8 @@ async def send_cached_data(user, states=[]):
             data[STATE[0]] = list()
 
     data['tracks'] = enhanced_send_track_cache()  # ambil data track yang berlaku di memory (enhanced)
+    this_session = active_session() if active_session() != None else []
+    data['session_id'] = this_session[-1][1]['id'] if len(this_session) > 0 else None
 
     if len(data) > 0:
         message = json.dumps({'data': data, 'data_type': 'realtime'}, default=str)
@@ -117,25 +119,30 @@ async def data_change_detection():
         await check_if_state_must_be_emptied([AREA_ALERT_STATE])
 
         # tactical figures ------------------------------------------------------------------------
+        if not state.DATA_READY: logging.info('Preparing Tactical Figures!')
         tactical_figure_datas = np.array(tactical_figure_data())
         await data_processing(tactical_figure_datas, TACTICAL_FIGURE_STATE, USERS, NON_REALTIME_USERS, data_category="tactical_figure",
                                 mandatory_attr="visibility_type", must_remove=["REMOVE"], debug=False)
 
         # reference points ------------------------------------------------------------------------
+        if not state.DATA_READY: logging.info('Preparing Reference Points!')
         reference_point_datas = np.array(reference_point_data())
         await data_processing(reference_point_datas, REFERENCE_POINT_STATE, USERS, NON_REALTIME_USERS, data_category="reference_point",
                                 mandatory_attr="visibility_type", must_remove=["REMOVE"], debug=False)
 
         # area alerts ------------------------------------------------------------------------
+        if not state.DATA_READY: logging.info('Preparing Area Alerts!')
         area_alert_datas = np.array(area_alert_data())
         await data_processing(area_alert_datas, AREA_ALERT_STATE, USERS, NON_REALTIME_USERS, data_category="area_alert",
                                 mandatory_attr="is_visible", must_remove=["REMOVE"], debug=False)
 
         # sessions ------------------------------------------------------------------------
+        if not state.DATA_READY: logging.info('Preparing Sessions!')
         session_datas = np.array(session_data())
         await non_strict_data_processing(session_datas, SESSION_STATE, USERS, NON_REALTIME_USERS, data_category="session",
                                 debug=False)
 
+        if not state.DATA_READY: logging.info('Preparing Tracks!')
         await improved_track_data() # get data track (enhanced)
 
         state.DATA_READY = True
