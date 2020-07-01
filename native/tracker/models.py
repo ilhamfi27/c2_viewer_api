@@ -199,7 +199,7 @@ async def improved_track_data():
                 'eta_at_destination', 'vendor_id', 'created_time',
             ),
         }
-        if len(start_time) > 0:
+        if len(active_session) > 0:
             data_updates = {}
             for ix, table in enumerate(ar_mandatory_table_8):
                 column_used = ("st." + s for s in table_columns[table])
@@ -257,7 +257,7 @@ async def improved_track_data():
                                 data_updates[stn] = table_update
                                 data_updates[stn]['status'] = 'update'
                                 data_updates[stn]['system_track_number'] = stn
-                        data_updates[stn]['session_id'] = active_session[0][0] if len(active_session) > 0 else None
+                        data_updates[stn]['session_id'] = active_session[0][0]
 
             updated_data = [val for key, val in data_updates.items()]
 

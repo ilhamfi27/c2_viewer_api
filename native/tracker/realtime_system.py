@@ -15,7 +15,10 @@ from tracker.state import USERS, NON_REALTIME_USERS
 from tracker import state
 import tracker.util as util
 
-logging.basicConfig()
+logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+logger = logging.getLogger()
+# here
+logger.setLevel(logging.INFO)
 
 TACTICAL_FIGURE_STATE = {
     "cached_data": [],
@@ -111,24 +114,29 @@ async def data_change_detection():
         # akan dikosongkan ketika sesi berganti
         await check_if_state_must_be_emptied([AREA_ALERT_STATE])
 
+        if not state.DATA_READY: logging.info('Preparing Tracks!')
         await improved_track_data() # get data track (enhanced)
 
         # tactical figures ------------------------------------------------------------------------
+        if not state.DATA_READY: logging.info('Preparing Tactical Figures!')
         tactical_figure_datas = np.array(tactical_figure_data())
         await data_processing(tactical_figure_datas, TACTICAL_FIGURE_STATE, USERS, NON_REALTIME_USERS, data_category="tactical_figure",
                                 mandatory_attr="visibility_type", must_remove=["REMOVE"], debug=False)
 
         # reference points ------------------------------------------------------------------------
+        if not state.DATA_READY: logging.info('Preparing Reference Points!')
         reference_point_datas = np.array(reference_point_data())
         await data_processing(reference_point_datas, REFERENCE_POINT_STATE, USERS, NON_REALTIME_USERS, data_category="reference_point",
                                 mandatory_attr="visibility_type", must_remove=["REMOVE"], debug=False)
 
         # area alerts ------------------------------------------------------------------------
+        if not state.DATA_READY: logging.info('Preparing Area Alerts!')
         area_alert_datas = np.array(area_alert_data())
         await data_processing(area_alert_datas, AREA_ALERT_STATE, USERS, NON_REALTIME_USERS, data_category="area_alert",
                                 mandatory_attr="is_visible", must_remove=["REMOVE"], debug=False)
 
         # sessions ------------------------------------------------------------------------
+        if not state.DATA_READY: logging.info('Preparing Sessions!')
         session_datas = np.array(session_data())
         await non_strict_data_processing(session_datas, SESSION_STATE, USERS, NON_REALTIME_USERS, data_category="session",
                                 debug=False)
@@ -223,8 +231,8 @@ def _main_():
     start_server = websockets.serve(handler, WS_HOST, WS_PORT)
 
     tasks = [
+        asyncio.ensure_future(start_server),
         asyncio.ensure_future(data_change_detection()),
-        asyncio.ensure_future(start_server)
     ]
 
     loop = asyncio.get_event_loop()
