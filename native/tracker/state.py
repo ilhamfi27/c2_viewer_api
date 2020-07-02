@@ -36,3 +36,5 @@ CREATED_TIME_TRACKS = {
     "replay_track_general_setting": start_time[0][0] if len(start_time) > 0 else current_time,
     "replay_ais_data": start_time[0][0] if len(start_time) > 0 else current_time,
 }
+
+ACTIVE_SESSION = None

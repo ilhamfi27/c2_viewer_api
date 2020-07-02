@@ -61,9 +61,9 @@ async def send_cached_data(user, states=[]):
         else:
             data[STATE[0]] = list()
 
+    logging.info(state.ACTIVE_SESSION)
     data['tracks'] = enhanced_send_track_cache()  # ambil data track yang berlaku di memory (enhanced)
-    this_session = active_session() if active_session() != None else []
-    data['session_id'] = this_session[-1][1]['id'] if len(this_session) > 0 else None
+    data['session_id'] = state.ACTIVE_SESSION
 
     if len(data) > 0:
         message = json.dumps({'data': data, 'data_type': 'realtime'}, default=str)
@@ -144,6 +144,10 @@ async def data_change_detection():
 
         if not state.DATA_READY: logging.info('Preparing Tracks!')
         await improved_track_data() # get data track (enhanced)
+
+        # set active session
+        this_session = active_session() if active_session() != None else []
+        state.ACTIVE_SESSION = this_session[-1][1]['id'] if len(this_session) > 0 else None
 
         state.DATA_READY = True
         try:
