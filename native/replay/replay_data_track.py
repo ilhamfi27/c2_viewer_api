@@ -1,8 +1,11 @@
-#!/usr/bin/env python3
+#!/home/patrick/anaconda3/bin/python 
 
-# WS server example that synchronizes REALTIME_state across clients
 from main import *
-from replay_refined import *
+from replay_fetchone import *
+import datetime
+
+now = datetime.datetime.now()
+# f = open(now.strftime("%Y-%m-%d %H:%M:%S")+".txt", "w+")
 
 if r.exists("is_generating"):
     print(r.get("is_generating"))
@@ -13,5 +16,7 @@ if r.get("is_generating").decode("utf-8") == "0":
     get_replay()    
 else:    
     print("Sedang menggenerate replay")
+
+
 
 
