@@ -206,8 +206,13 @@ class ChangePasswordViewSet(viewsets.ModelViewSet):
         string_to_hash = post_data["password"] + request.user.username
         hash_result = hashlib.sha256(string_to_hash.encode()).hexdigest()
 
+        user_password = jwt.encode({
+            'username':user.username,
+            'password':post_data["password"]
+        }, settings.JWT_USER_KEY).decode()
+
         password_data = {}
-        password_data['password'] = hash_result
+        password_data['password'] = user_password
         password_data['new_password'] = post_data['new_password']
         password_data['new_password_confirm'] = post_data['new_password_confirm']
 
