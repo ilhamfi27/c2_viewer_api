@@ -2,7 +2,7 @@
 
 # WS server example that synchronizes REALTIME_state across clients
 from main import *
-from replay_refined import *
+from replay_fetchone import *
 
 if r.exists("is_generating"):
     print(r.get("is_generating"))

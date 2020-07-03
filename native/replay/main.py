@@ -13,7 +13,7 @@ conn = psycopg2.connect("host=127.0.0.1 \
     password=LenElhan!@#"
 )
 
-r = redis.Redis(host='localhost', port=6379, db=0)
+r = redis.Redis(host='localhost', port=6379, db=3)
 
 UPDATE_RATE = 1
 cur = conn.cursor()
