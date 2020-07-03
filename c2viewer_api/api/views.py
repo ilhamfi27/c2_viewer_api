@@ -157,8 +157,6 @@ class AuthViewSet(views.APIView):
     def post(self, request):
         post_data = request.data
 
-        print("POST DATA====================================================", post_data, flush=True)
-
         username = post_data['username']
         password = post_data['password']
 
@@ -199,8 +197,6 @@ class ChangePasswordViewSet(viewsets.ModelViewSet):
     def post(self, request):
         post_data = request.data
         user = request.user
-
-        print("POST DATA====================================================", post_data, flush=True)
 
         # get user credentials by encrypted password
         string_to_hash = post_data["password"] + request.user.username
@@ -254,8 +250,6 @@ class UnlockSessionViewSet(viewsets.ModelViewSet):
 
     def post(self, request):
         post_data = request.data
-
-        print("POST DATA====================================================", post_data, flush=True)
 
         # get user credentials by encrypted password
         string_to_hash = post_data["password"] + request.user.username
