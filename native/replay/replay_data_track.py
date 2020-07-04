@@ -1,6 +1,5 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3 
 
-# WS server example that synchronizes REALTIME_state across clients
 from main import *
 from replay_fetchone import *
 
@@ -13,5 +12,7 @@ if r.get("is_generating").decode("utf-8") == "0":
     get_replay()    
 else:    
     print("Sedang menggenerate replay")
+
+
 
 
