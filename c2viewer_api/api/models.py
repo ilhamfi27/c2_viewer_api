@@ -24,16 +24,18 @@ class User(models.Model):
     level = models.CharField(max_length=20, choices=USER_LEVEL)
     location = models.ForeignKey(Location, on_delete=models.CASCADE)
 
-    # TODO
-    # change hashlib to jwt
     def save(self, *args, **kwargs):
-        string_to_hash = self.password + self.username
+        # get original data first
+        try:
+            data = jwt.decode(self.password, settings.JWT_USER_KEY)
+            original_data = data['password']
+        except jwt.DecodeError:
+            original_data = self.password
 
         user_password = jwt.encode({
             'username':self.username,
-            'password':self.password,
+            'password':original_data,
         }, settings.JWT_USER_KEY).decode()
-        hash_result = hashlib.sha256(string_to_hash.encode()).hexdigest()
 
         self.password = user_password
         super().save(*args, **kwargs)
