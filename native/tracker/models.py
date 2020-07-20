@@ -8,7 +8,7 @@ import asyncio
 import logging
 
 import tracker.util as util
-from tracker.config import getconn, r
+from tracker.config import getconn, r, DB_SCHEMA
 from tracker.state import *
 
 logging.basicConfig(format='%(asctime)s - %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
@@ -18,6 +18,7 @@ logger.setLevel(logging.INFO)
 
 conn = getconn()
 cur = conn.cursor()
+cur.execute("SET search_path TO {}". format(DB_SCHEMA))
 
 r.flushdb()  # flushing db
 
