@@ -3,6 +3,7 @@ __pycache__
 venv
 .idea
 .env
+.rdb
 
 dummy_replay_data.json
 dummy_replay.json

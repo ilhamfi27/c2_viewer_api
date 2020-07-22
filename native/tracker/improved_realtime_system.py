@@ -14,7 +14,7 @@ from tracker.models import active_session, tactical_figure_data, reference_point
 from tracker.actions import data_processing, non_strict_data_processing, send_history_dot
 from tracker.config import WS_HOST, WS_PORT, r
 from tracker.state import USERS, NON_REALTIME_USERS
-from tracker import state
+from tracker import state as s
 import tracker.util as util
 
 logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
@@ -61,9 +61,9 @@ async def send_cached_data(user, states=[]):
         else:
             data[STATE[0]] = list()
 
-    logging.info(state.ACTIVE_SESSION)
+    logging.info(s.ACTIVE_SESSION)
     data['tracks'] = enhanced_send_track_cache()  # ambil data track yang berlaku di memory (enhanced)
-    data['session_id'] = state.ACTIVE_SESSION
+    data['session_id'] = s.ACTIVE_SESSION
 
     if len(data) > 0:
         message = json.dumps({'data': data, 'data_type': 'realtime'}, default=str)
@@ -89,13 +89,14 @@ async def check_if_state_must_be_emptied(states):
 
     # kalo misal sessionnya nambah, maka kosongkan data memory
     if SESSION_STATE['existed_data_count'] < len(SESSION_STATE['existed_data']):
-        await must_notify_user_on_session_finished()
+        if s.ACTIVE_SESSION == None:
+            logging.info('Emptying Session Data!')
+            await must_notify_user_on_session_finished()
 
-        print("MENGOSONGKAN SESI")
-        track_empty_memory()
-        for state in states:
-            for key in state.keys():
-                state[key] = []
+            track_empty_memory()
+            for state in states:
+                for key in state.keys():
+                    state[key] = []
         SESSION_STATE['existed_data_count'] = len(SESSION_STATE['existed_data'])
 
 async def must_notify_user_on_session_finished():
@@ -108,48 +109,51 @@ async def must_notify_user_on_session_finished():
 
 async def data_change_detection():
     while True:
-        if not state.DATA_READY: logging.info('Reading Database...\nPlease Wait Until Database Ready!')
-        if not state.FINISHED_CHECK:
-            if state.DATA_READY:
+        if not s.DATA_READY: logging.info('Reading Database...\nPlease Wait Until Database Ready!')
+        if not s.FINISHED_CHECK:
+            if s.DATA_READY:
                 logging.info('Database Ready!')
-                state.FINISHED_CHECK = True
+                s.FINISHED_CHECK = True
+
+        # set active session
+        this_session = active_session() if active_session() != None else []
+        s.ACTIVE_SESSION = this_session[-1][1]['id'] if len(this_session) > 0 else None
 
         # mengecek apakah data cached tersebut butuh dikosongkan
         # akan dikosongkan ketika sesi berganti
         await check_if_state_must_be_emptied([AREA_ALERT_STATE])
 
         # tactical figures ------------------------------------------------------------------------
-        if not state.DATA_READY: logging.info('Preparing Tactical Figures!')
+        if not s.DATA_READY: logging.info('Preparing Tactical Figures!')
         tactical_figure_datas = np.array(tactical_figure_data())
         await data_processing(tactical_figure_datas, TACTICAL_FIGURE_STATE, USERS, NON_REALTIME_USERS, data_category="tactical_figure",
                                 mandatory_attr="visibility_type", must_remove=["REMOVE"], debug=False)
 
         # reference points ------------------------------------------------------------------------
-        if not state.DATA_READY: logging.info('Preparing Reference Points!')
+        if not s.DATA_READY: logging.info('Preparing Reference Points!')
         reference_point_datas = np.array(reference_point_data())
         await data_processing(reference_point_datas, REFERENCE_POINT_STATE, USERS, NON_REALTIME_USERS, data_category="reference_point",
                                 mandatory_attr="visibility_type", must_remove=["REMOVE"], debug=False)
 
         # area alerts ------------------------------------------------------------------------
-        if not state.DATA_READY: logging.info('Preparing Area Alerts!')
+        if not s.DATA_READY: logging.info('Preparing Area Alerts!')
         area_alert_datas = np.array(area_alert_data())
         await data_processing(area_alert_datas, AREA_ALERT_STATE, USERS, NON_REALTIME_USERS, data_category="area_alert",
                                 mandatory_attr="is_visible", must_remove=["REMOVE"], debug=False)
 
         # sessions ------------------------------------------------------------------------
-        if not state.DATA_READY: logging.info('Preparing Sessions!')
+        if not s.DATA_READY: logging.info('Preparing Sessions!')
         session_datas = np.array(session_data())
         await non_strict_data_processing(session_datas, SESSION_STATE, USERS, NON_REALTIME_USERS, data_category="session",
                                 debug=False)
 
-        if not state.DATA_READY: logging.info('Preparing Tracks!')
+        if not s.DATA_READY: logging.info('Preparing Tracks!')
         await improved_track_data() # get data track (enhanced)
 
-        # set active session
-        this_session = active_session() if active_session() != None else []
-        state.ACTIVE_SESSION = this_session[-1][1]['id'] if len(this_session) > 0 else None
+        if not s.DATA_READY: print(s.ACTIVE_SESSION)
 
-        state.DATA_READY = True
+        s.DATA_READY = True
+
         try:
             # lama tidur
             await asyncio.sleep(0.5)

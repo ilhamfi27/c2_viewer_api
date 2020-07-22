@@ -164,6 +164,9 @@ if db_connection == 'sqlite3':
     DATABASES.setdefault('default', {})['NAME'] = os.path.join(BASE_DIR, env('DB_name'))
 else:
     DATABASES.setdefault('default', {})['ENGINE'] = env('DB_ENGINE')
+    DATABASES.setdefault('default', {})['OPTIONS'] = {
+        'options': '-c search_path={}'.format(env('DB_SCHEMA'))
+    }
     DATABASES.setdefault('default', {})['NAME'] = env('DB_NAME')
     DATABASES.setdefault('default', {})['USER'] = env('DB_USER')
     DATABASES.setdefault('default', {})['PASSWORD'] = env('DB_PASSWORD')
