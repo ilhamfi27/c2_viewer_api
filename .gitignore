@@ -1,3 +1,4 @@
 c2_venv/
 *.pyc
 *.ext
+*.rdb

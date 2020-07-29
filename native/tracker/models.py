@@ -321,7 +321,7 @@ def improved_history_dots(stn, table_results):
                         "   max(latitude), " \
                         "   max(longitude), " \
                         "   last_update_time " \
-                        "from public.replay_system_track_kinetic k " \
+                        "from replay_system_track_kinetic k " \
                         "JOIN ( " \
                         "	select id " \
                         "	from sessions " \
@@ -353,7 +353,7 @@ def improved_history_dots(stn, table_results):
     #             "   max(latitude), " \
     #             "   max(longitude), " \
     #             "   last_update_time " \
-    #             "from public.replay_system_track_kinetic k " \
+    #             "from replay_system_track_kinetic k " \
     #             "JOIN ( " \
     #             "	select id " \
     #             "	from sessions " \
@@ -780,7 +780,7 @@ def session_data():
             "   name, " \
             "   start_time, " \
             "   end_time " \
-            "FROM public.sessions " \
+            "FROM sessions " \
             "WHERE end_time IS NOT NULL " \
             "ORDER BY id ASC; "
         cur.execute(q)
@@ -807,7 +807,7 @@ def active_session():
             "   name, " \
             "   start_time, " \
             "   end_time " \
-            "FROM public.sessions " \
+            "FROM sessions " \
             "WHERE end_time IS NULL " \
             "ORDER BY id DESC LIMIT 1;"
         cur.execute(q)
@@ -829,7 +829,7 @@ def history_dots(system_track_number):
                     "   max(latitude), " \
                     "   max(longitude), " \
                     "   last_update_time " \
-                    "from public.replay_system_track_kinetic k " \
+                    "from replay_system_track_kinetic k " \
                     "JOIN ( " \
                     "	select id " \
                     "	from sessions " \
@@ -865,7 +865,7 @@ def all_history_dots(system_track_numbers=[]):
                         "   max(latitude), " \
                         "   max(longitude), " \
                         "   last_update_time " \
-                        "from public.replay_system_track_kinetic k " \
+                        "from replay_system_track_kinetic k " \
                         "JOIN ( " \
                         "	select id " \
                         "	from sessions " \
