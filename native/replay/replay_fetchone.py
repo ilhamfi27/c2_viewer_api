@@ -32,17 +32,18 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
     
     # print(session_id, start_time, end_time, data_track)
     for table in ar_mandatory_table:                
-        sql_mandatory = """SELECT * 
-                                FROM {schema}.{table} st 
-                                JOIN( 
-                                    SELECT system_track_number,max(created_time) created_time 
-                                    FROM {schema}.{table} 
-                                    WHERE session_id = {session_id} AND created_time >= '{start_time}' AND created_time <= '{end_time}'
+        sql_mandatory = "SELECT * \
+                                FROM " + table + " st \
+                                JOIN( \
+                                    SELECT system_track_number,max(created_time) created_time \
+                                    FROM " + table + " \
+                                    WHERE session_id = " + str(session_id) + " AND created_time >= '" + str(
+                    start_time) + "' AND created_time <= '" + str(end_time) + "' \
                                     GROUP BY system_track_number \
                                 ) mx ON st.system_track_number=mx.system_track_number and st.created_time=mx.created_time \
-                                WHERE st.session_id = {session_id} AND st.created_time >= '{start_time}' 
-                                AND st.created_time <= '{end_time}' \
-                                ORDER BY st.system_track_number""".format(schema=schema_db, table=table, start_time=start_time, end_time=end_time, session_id=session_id)
+                                WHERE st.session_id = " + str(session_id) + " AND st.created_time >= '" + str(
+                    start_time) + "' AND st.created_time <= '" + str(end_time) + "' \
+                                ORDER BY st.system_track_number"                
         cur.execute(sql_mandatory)
         data_mandatory = cur.fetchall()
 
@@ -67,20 +68,17 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                     data_track[system_track_number]['replay_system_track_general']['hash'] = hashed_value
 
                     if data_track[system_track_number][table]['source_data'] == 'AIS_TYPE':
-                        q_ais_data = """SELECT  * 
-                                                FROM  
-                                                ( 
-                                                SELECT * 
-                                                    FROM {schema}.replay_ais_data  
-                                                WHERE session_id = {session_id}   
-                                                AND system_track_number = {stn}  
-                                                    AND created_time > '{start_time}'  
-                                                    AND created_time < '{end_time}'  
-                                                ORDER BY created_time DESC  
-                                                ) aa LIMIT 1;""".format(schema=schema_db, stn=str(d[1]),
-                                                                    session_id=session_id, 
-                                                                    start_time=start_time, 
-                                                                    end_time=end_time)
+                        q_ais_data = "SELECT  * \
+                                                FROM  \
+                                                ( \
+                                                SELECT * \
+                                                    FROM replay_ais_data  \
+                                                WHERE session_id = " + str(session_id) + "   \
+                                                AND system_track_number = " + str(d[1]) + "  \
+                                                    AND created_time > '" + start_time + "'  \
+                                                    AND created_time < '" + end_time + "'  \
+                                                ORDER BY created_time DESC  \
+                                                ) aa LIMIT 1;"
                         cur.execute(q_ais_data)
                         ais_data = cur.fetchall()
                         if len(ais_data) > 0:
@@ -166,17 +164,17 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
         if 'replay_system_track_general' in data and \
             data['replay_system_track_general']['source_data'] == 'AIS_TYPE' and \
             'replay_ais_data' not in data :
-            q_ais_data = """SELECT  * \
+            q_ais_data = "SELECT  * \
                                                 FROM  \
                                                 ( \
                                                 SELECT * \
-                                                    FROM {schema}.replay_ais_data  \
-                                                WHERE session_id = {session_id}    \
-                                                AND system_track_number = {stn}  \
-                                                    AND created_time >= '{start_time}'  \
-                                                    AND created_time <= '{end_time}'  \
+                                                    FROM replay_ais_data  \
+                                                WHERE session_id = " + str(session_id) + "   \
+                                                AND system_track_number = " + str(stn) + "  \
+                                                    AND created_time >= '" + start_time + "'  \
+                                                    AND created_time <= '" + end_time + "'  \
                                                 ORDER BY created_time DESC  \
-                                                ) aa LIMIT 1;""".format(schema=schema_db, session_id=session_id, stn=stn, start_time=start_time, end_time=end_time)
+                                                ) aa LIMIT 1;"
             cur.execute(q_ais_data)
             ais_data = cur.fetchall()
             if len(ais_data) > 0:
@@ -249,18 +247,18 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                         track['replay_ais_data']['eta']                    = str(value['replay_ais_data']['eta'])
                         track['replay_ais_data']['vendor_id']              = str(value['replay_ais_data']['vendor_id'])
                     if track['replay_system_track_general']['iu_indicator'] :
-                        sql_mission = """SELECT * FROM {schema}.replay_system_track_mission st 
-                                        JOIN (
-                                            SELECT system_track_number,max(created_time) created_time 
-                                            FROM {schema}.replay_system_track_mission 
-                                            WHERE session_id = '{session_id}'
-                                            AND created_time >= '{start_time}' AND created_time <= '{end_time}'
-                                            GROUP BY system_track_number 
-                                        ) mx ON st.system_track_number = mx.system_track_number and st.created_time = mx.created_time 
-                                        WHERE st.session_id = {session_id}
-                                        AND st.created_time >= '{start_time}' AND st.created_time <= '{end_time}' 
-                                        AND st.system_track_number = {key} 
-                                        ORDER BY st.system_track_number""".format(schema=schema_db, session_id=session_id, start_time=start_time, end_time=end_time, key=key)
+                        sql_mission = "SELECT * FROM replay_system_track_mission st \
+                                        JOIN (" \
+                                            "SELECT system_track_number,max(created_time) created_time " \
+                                            "FROM replay_system_track_mission " \
+                                            "WHERE session_id = '" + str(session_id) + "' \
+                                            AND created_time >= '" + start_time + "' AND created_time < '" + end_time + "' \
+                                            GROUP BY system_track_number \
+                                        ) mx ON st.system_track_number = mx.system_track_number and st.created_time = mx.created_time \
+                                        WHERE st.session_id = " + str(session_id) + " " \
+                                        "AND st.created_time >= '" + start_time + "' AND st.created_time < '" + end_time + "' \
+                                        AND st.system_track_number = " + str(key) + " \
+                                        ORDER BY st.system_track_number"
 
                         cur.execute(sql_mission)
                         mission_data = cur.fetchall()
@@ -337,18 +335,18 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
 
                     # print(value['replay_system_track_general'])     
                     if value['replay_system_track_general']['iu_indicator']:
-                        sql_mission = """SELECT * FROM {schema}.replay_system_track_mission st 
-                                        JOIN (
-                                            SELECT system_track_number,max(created_time) created_time 
-                                            FROM {schema}.replay_system_track_mission 
-                                            WHERE session_id = '{session_id}' 
-                                            AND created_time >= '{start_time}' AND created_time < '{end_time}'
-                                            GROUP BY system_track_number 
-                                        ) mx ON st.system_track_number = mx.system_track_number and st.created_time = mx.created_time 
-                                        WHERE st.session_id = {session_id} 
-                                        AND st.created_time >= '{start_time}' AND st.created_time < '{end_time}'
-                                        AND st.system_track_number = {key}
-                                        ORDER BY st.system_track_number""".format(schema=schema_db, session_id=session_id, start_time=start_time, end_time=end_time, key=key)  
+                        sql_mission = "SELECT * FROM replay_system_track_mission st \
+                                        JOIN (" \
+                                            "SELECT system_track_number,max(created_time) created_time " \
+                                            "FROM replay_system_track_mission " \
+                                            "WHERE session_id = '" + str(session_id) + "' \
+                                            AND created_time >= '" + start_time + "' AND created_time < '" + end_time + "' \
+                                            GROUP BY system_track_number \
+                                        ) mx ON st.system_track_number = mx.system_track_number and st.created_time = mx.created_time \
+                                        WHERE st.session_id = " + str(session_id) + " " \
+                                        "AND st.created_time >= '" + start_time + "' AND st.created_time < '" + end_time + "' \
+                                        AND st.system_track_number = " + str(key) + " \
+                                        ORDER BY st.system_track_number"    
                         cur.execute(sql_mission)
                         mission_data = cur.fetchall()
                         for md in mission_data:
@@ -515,13 +513,13 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
 # q = "SELECT aa.session_id as id, aa.*  FROM area_alerts aa  JOIN (    SELECT object_id,max(last_update_time) last_update_time     FROM area_alerts     WHERE session_id = '1' AND last_update_time > '2020-01-10 14:14:31' AND last_update_time < '2020-01-10 14:14:41'     GROUP BY object_id ) mx ON aa.object_id=mx.object_id and aa.last_update_time=mx.last_update_time  WHERE aa.session_id = '1'  AND aa.last_update_time > '2020-01-10 14:14:31' AND aa.last_update_time < '2020-01-10 14:14:41'  ORDER BY aa.object_id"
 def get_replay():
     '''Get data session yang sudah selesai'''
-    sql = """select id, to_char (start_time::timestamp, 'YYYY-MM-DD HH24:MI:SS') start_time, 
-                  to_char (end_time::timestamp, 'YYYY-MM-DD HH24:MI:SS') end_time, 
-                  EXTRACT(EPOCH FROM (end_time::timestamp - start_time::timestamp)) as durasi, name 
-                   from {schema}.sessions 
-                  WHERE end_time IS NOT null and
-                  id not in (SELECT distinct(session_id) FROM {schema}.stored_replay WHERE update_rate={rate} and finished=1)""".format(schema=schema_db, rate=UPDATE_RATE)    
-                  
+    sql = "select id, to_char (start_time::timestamp, 'YYYY-MM-DD HH24:MI:SS') start_time, " \
+                  " to_char (end_time::timestamp, 'YYYY-MM-DD HH24:MI:SS') end_time, " \
+                  "EXTRACT(EPOCH FROM (end_time::timestamp - start_time::timestamp)) as durasi, name " \
+                  " from sessions " \
+                  "WHERE end_time IS NOT null and" \
+                  " id not in (SELECT distinct(session_id) FROM stored_replay WHERE update_rate="+str(UPDATE_RATE)+" and finished=1)"
+    print(sql)
     
     cur.execute(sql)
     data = cur.fetchone()
@@ -629,19 +627,16 @@ def get_replay():
                 # ais_data = track_replay_data[3]
                 # ais_data = track_replay_data[3]
                 # check_ais_later = track_replay_data[4]
-                query_tf = """SELECT tf.*  
-                                    FROM {schema}.tactical_figures tf 
-                                    JOIN(
-                                         SELECT object_id,max(last_update_time) last_update_time 
-                                         FROM {schema}.tactical_figures  
-                                         WHERE session_id = {session_id} 
-                                         AND last_update_time >= '{start_time}' 
-                                         AND last_update_time < '{end_time}' 
-                                         GROUP BY object_id) mx 
-                                        ON tf.object_id=mx.object_id and tf.last_update_time=mx.last_update_time 
-                                        WHERE tf.session_id = '{session_id}' AND tf.last_update_time >= '{start_time}' 
-                                        AND tf.last_update_time < '{end_time}'
-                                        ORDER BY tf.object_id""".format(schema=schema_db, session_id=session_id, start_time=start_time, end_time=end_time)
+                query_tf = "SELECT tf.* " \
+                                    "FROM tactical_figures tf " \
+                                        "JOIN(" \
+                                    "     SELECT object_id,max(last_update_time) last_update_time " \
+                                    "     FROM tactical_figures " \
+                                    "     WHERE session_id = " + str(session_id) + " AND last_update_time >= '"+str(start_time)+"' AND last_update_time < '"+str(end_time)+"' " \
+                                        "     GROUP BY object_id) mx " \
+                                        "ON tf.object_id=mx.object_id and tf.last_update_time=mx.last_update_time " \
+                                        "WHERE tf.session_id = '"+str(session_id)+"' AND tf.last_update_time >= '"+str(start_time)+"' AND tf.last_update_time < '"+str(end_time)+"' " \
+                                        "ORDER BY tf.object_id"
                 # print(query_tf)
                 cur.execute(query_tf)
                 data_tf = cur.fetchall()
@@ -696,16 +691,16 @@ def get_replay():
                         tf_track['hashed']       = hashed_tf_value
                         result["track_play"][str(t)]["tactical_figures"].append(tf_track)
 
-                query_rp = """SELECT rrp.*
-                                FROM {schema}.replay_reference_point rrp 
-                                JOIN (
-                                    SELECT object_id,max(last_update_time) last_update_time 
-                                    FROM {schema}.replay_reference_point 
-                                    WHERE session_id = {session_id} AND last_update_time >= '{start_time}' AND last_update_time <= '{end_time}' 
-                                    GROUP BY object_id
-                                ) mx ON rrp.object_id=mx.object_id and rrp.last_update_time=mx.last_update_time
-                                 WHERE rrp.session_id = '{session_id}' AND rrp.last_update_time >= '{start_time}' AND rrp.last_update_time < '{end_time}' 
-                                ORDER BY rrp.object_id""".format(schema=schema_db, session_id=session_id, start_time=start_time, end_time=end_time)
+                query_rp = "SELECT rrp.* " \
+                                "FROM replay_reference_point rrp \
+                                JOIN (" \
+                                "    SELECT object_id,max(last_update_time) last_update_time " \
+                                "    FROM replay_reference_point " \
+                                "    WHERE session_id = " + str(session_id) + " AND last_update_time >= '"+str(start_time)+"' AND last_update_time < '"+str(end_time)+"' " \
+                                "    GROUP BY object_id" \
+                                ") mx ON rrp.object_id=mx.object_id and rrp.last_update_time=mx.last_update_time" \
+                                " WHERE rrp.session_id = '"+str(session_id)+"' AND rrp.last_update_time >= '"+str(start_time)+"' AND rrp.last_update_time < '"+str(end_time)+"' " \
+                                "ORDER BY rrp.object_id"
                 # print(query_rp)
                 cur.execute(query_rp)
                 data_rp = cur.fetchall()
@@ -760,17 +755,17 @@ def get_replay():
                         result["track_play"][str(t)]["reference_point"].append(rp_track)
 
 
-                query_aa = """SELECT  aa.* 
-                                     FROM {schema}.area_alerts aa
-                                     JOIN (
-                                        SELECT object_id,max(last_update_time) last_update_time 
-                                        FROM {schema}.area_alerts 
-                                        WHERE session_id = '{session_id}' AND last_update_time >= '{start_time}' AND last_update_time < '{end_time}' 
-                                        GROUP BY object_id 
-                                    ) mx ON aa.object_id=mx.object_id and aa.last_update_time=mx.last_update_time 
-                                     WHERE aa.session_id = '{session_id}' 
-                                     AND aa.last_update_time >= '{start_time}' AND aa.last_update_time < '{end_time}' 
-                                     ORDER BY aa.object_id""".format(schema=schema_db, session_id=session_id, start_time=start_time, end_time=end_time)
+                query_aa = "SELECT  aa.* " \
+                                    " FROM area_alerts aa " \
+                                    " JOIN (" \
+                                    "    SELECT object_id,max(last_update_time) last_update_time " \
+                                    "    FROM area_alerts " \
+                                    "    WHERE session_id = '" + str(session_id) + "' AND last_update_time >= '"+str(start_time)+"' AND last_update_time < '"+str(end_time)+"' " \
+                                    "    GROUP BY object_id " \
+                                    ") mx ON aa.object_id=mx.object_id and aa.last_update_time=mx.last_update_time " \
+                                    " WHERE aa.session_id = '" + str(session_id) + "' " \
+                                    " AND aa.last_update_time >= '"+str(start_time)+"' AND aa.last_update_time < '"+str(end_time)+"' " \
+                                    " ORDER BY aa.object_id"
                         # query_aa = "SELECT aa.session_id as id, aa.*  FROM area_alerts aa  JOIN (    SELECT object_id,max(last_update_time) last_update_time     FROM area_alerts     WHERE session_id = '1' AND last_update_time > '2020-01-10 14:14:31' AND last_update_time < '2020-01-10 14:14:41'     GROUP BY object_id ) mx ON aa.object_id=mx.object_id and aa.last_update_time=mx.last_update_time  WHERE aa.session_id = '1'  AND aa.last_update_time > '2020-01-10 14:14:31' AND aa.last_update_time < '2020-01-10 14:14:41'  ORDER BY aa.object_id"
                 cur.execute(query_aa)
                 data_aa = cur.fetchall()
@@ -819,25 +814,18 @@ def get_replay():
                         result["track_play"][str(t)]["area_alert"].append(aa_track)
 
             message = json.dumps(result, separators=(',', ':'))
-            check_stored = """SELECT distinct(id) 
-                                FROM {schema}.stored_replay 
-                                WHERE session_id={session_id} AND update_rate={UPDATE_RATE} 
-                                and sequence= '{sequence}' """.format(schema=schema_db, 
-                                                                        session_id=session_id, 
-                                                                        UPDATE_RATE=UPDATE_RATE,
-                                                                        sequence=sequence)
+            check_stored = "SELECT distinct(id) FROM stored_replay WHERE session_id="+str(session_id)+" AND update_rate="+str(UPDATE_RATE)+" and sequence= '"+str(sequence)+"' "
                 # print(check_stored)
             cur.execute(check_stored)
             stored_data = cur.fetchall()
             if len(stored_data) == 0:
-                q_store_replay = "INSERT INTO {schema}.stored_replay(update_rate, session_id, data, sequence, finished)" \
-                                "VALUES ({UPDATE_RATE}, {session_id}, '{message}', '{sequence}', 0 )".format(schema=schema_db, UPDATE_RATE=UPDATE_RATE,
-                                                                                                        session_id=session_id, message=message, sequence=sequence)
+                q_store_replay = "INSERT INTO stored_replay(update_rate, session_id, data, sequence, finished)" \
+                                "VALUES ("+str(UPDATE_RATE)+", "+str(session_id)+", '"+str(message)+"', '"+str(sequence)+"', 0 )"
                 cur.execute(q_store_replay)
                 conn.commit()
             if sequence == ujung:
-                q_set_finished = """UPDATE {schema}.stored_replay set finished = 1
-                                 WHERE session_id =  {session_id}""".format(schema=schema_db, session_id=session_id)
+                q_set_finished = "UPDATE stored_replay set finished = 1" \
+                                " WHERE session_id =  "+str(session_id)+""
                 cur.execute(q_set_finished)
                 conn.commit()
                 r.set("is_generating", "0")
