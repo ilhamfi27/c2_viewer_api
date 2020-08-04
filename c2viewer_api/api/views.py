@@ -34,7 +34,7 @@ class LocationViewSet(viewsets.ModelViewSet):
         user_count = User.objects.filter(location=location_data).count()
         if user_count > 0:
             response = {
-                "message": "Cannot Delete Location. This Location Is Used By Several Users."
+                "Warning": ["Cannot Delete Location. This Location Is Used By Several Users."]
             }
             return Response(response, status=st.HTTP_400_BAD_REQUEST)
 
