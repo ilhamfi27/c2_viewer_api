@@ -22,7 +22,7 @@ class User(models.Model):
     username = models.CharField(max_length=40, unique=True)
     password = models.CharField(max_length=255)
     level = models.CharField(max_length=20, choices=USER_LEVEL)
-    location = models.ForeignKey(Location, on_delete=models.CASCADE)
+    location = models.ForeignKey(Location, on_delete=models.DO_NOTHING)
 
     def save(self, *args, **kwargs):
         # get original data first

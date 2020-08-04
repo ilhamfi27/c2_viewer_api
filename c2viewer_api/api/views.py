@@ -29,6 +29,18 @@ class LocationViewSet(viewsets.ModelViewSet):
     queryset = Location.objects.all()
     serializer_class = LocationSerializer
 
+    def destroy(self, request, pk=None):
+        location_data = self.queryset.get(pk=pk)
+        user_count = User.objects.filter(location=location_data).count()
+        if user_count > 0:
+            response = {
+                "message": "Cannot Delete Location. This Location Is Used By Several Users."
+            }
+            return Response(response, status=st.HTTP_400_BAD_REQUEST)
+
+        location_data.delete()
+        return Response({})
+
 
 class UserViewSet(viewsets.ModelViewSet):
     # queryset = User.objects.filter(~Q(level="superadmin"))
