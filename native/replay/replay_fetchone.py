@@ -271,8 +271,8 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                             track['replay_system_track_mission']['voice_frequency_channel'] = str(md[5])
                             track['replay_system_track_mission']['fuel_status']             = str(md[6])
                             track['replay_system_track_mission']['mission_start']           = str(md[8])
-                            track['replay_system_track_mission']['mission_finish']          = str(md[9])    
-
+                            track['replay_system_track_mission']['mission_finish']          = str(md[9])
+                                                       
                             if 'replay_system_track_mission' not in data_track[key]:
                                 data_track[key]['replay_system_track_mission'] = {}
                             data_track[key]['replay_system_track_mission']['mission_name']            = str(md[2])
@@ -282,7 +282,6 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                             data_track[key]['replay_system_track_mission']['fuel_status']             = str(md[6])
                             data_track[key]['replay_system_track_mission']['mission_start']           = str(md[8])
                             data_track[key]['replay_system_track_mission']['mission_finish']          = str(md[9])
-
 
                             if 'replay_system_track_mission' not in value:
                                 value['replay_system_track_mission'] = {}
@@ -299,7 +298,7 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                             value['replay_system_track_mission']['hash'] = hashed_mission_value
                             track['replay_system_track_mission']['hash'] = hashed_mission_value
                             data_track[key]['replay_system_track_mission']['hash'] = hashed_mission_value
-                            # print(key, data_track[key]['replay_system_track_mission']['hash'])
+
 
                     #kinetic
                     if 'replay_system_track_kinetic' not in track:
@@ -362,13 +361,24 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
 
                             
                             if 'replay_system_track_mission' in data_track[key]:
-                                print(key, added_track, data_track[key]['replay_system_track_mission'])
-                                stored_mission_hash = data_track[key]['replay_system_track_mission']['hash']
-                                
-                                del data_track[key]['replay_system_track_mission']['hash']
-                                new_mission_value         = reduce(concat, new_mission.values())
-                                new_mission_hashed_value  = hashlib.md5(new_mission_value.encode('utf-8')).hexdigest()
-                                if stored_mission_hash != new_mission_hashed_value:                            
+                                if 'hash' in data_track[key]['replay_system_track_mission']:
+                                    stored_mission_hash = data_track[key]['replay_system_track_mission']['hash']
+                                    del data_track[key]['replay_system_track_mission']['hash']
+                                    new_mission_value         = reduce(concat, new_mission.values())
+                                    new_mission_hashed_value  = hashlib.md5(new_mission_value.encode('utf-8')).hexdigest()
+                                    if stored_mission_hash != new_mission_hashed_value:                            
+                                        if 'replay_system_track_mission' not in track:
+                                            track['replay_system_track_mission'] = {}
+                                        track['replay_system_track_mission']['mission_name']            = str(new_mission['mission_name'])
+                                        track['replay_system_track_mission']['mission_route']           = str(new_mission['mission_route'])
+                                        track['replay_system_track_mission']['voice_call_sig']          = str(new_mission['voice_call_sig'])
+                                        track['replay_system_track_mission']['voice_frequency_channel'] = str(new_mission['voice_frequency_channel'])
+                                        track['replay_system_track_mission']['fuel_status']             = str(new_mission['fuel_status'])
+                                        track['replay_system_track_mission']['mission_start']           = str(new_mission['mission_start'])
+                                        track['replay_system_track_mission']['mission_finish']          = str(new_mission['mission_finish'])
+                                        track['replay_system_track_mission']['track_status'] = "T" + str(key) + "U"
+                                    data_track[key]['replay_system_track_mission']['hash'] = new_mission_hashed_value
+                                else:                                   
                                     if 'replay_system_track_mission' not in track:
                                         track['replay_system_track_mission'] = {}
                                     track['replay_system_track_mission']['mission_name']            = str(new_mission['mission_name'])
@@ -379,7 +389,9 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                                     track['replay_system_track_mission']['mission_start']           = str(new_mission['mission_start'])
                                     track['replay_system_track_mission']['mission_finish']          = str(new_mission['mission_finish'])
                                     track['replay_system_track_mission']['track_status'] = "T" + str(key) + "U"
-                                data_track[key]['replay_system_track_mission']['hash'] = new_mission_hashed_value
+                                    new_mission_value         = reduce(concat, new_mission.values())
+                                    new_mission_hashed_value  = hashlib.md5(new_mission_value.encode('utf-8')).hexdigest()
+                                    data_track[key]['replay_system_track_mission']['hash'] = new_mission_hashed_value
                             else:
                                 data_track[key]['replay_system_track_mission'] = {}
                                 data_track[key]['replay_system_track_mission']['mission_name']            = str(new_mission['mission_name'])
@@ -403,7 +415,6 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                                 track['replay_system_track_mission']['fuel_status']             = str(new_mission['fuel_status'])
                                 track['replay_system_track_mission']['mission_start']           = str(new_mission['mission_start'])
                                 track['replay_system_track_mission']['mission_finish']          = str(new_mission['mission_finish'])    
-                                track['replay_system_track_mission']['hash']          = new_mission_hashed_value  
 
                     if key in changed_mandatory_data['replay_system_track_processing']:
                         changed_processing = changed_mandatory_data['replay_system_track_processing'][key]
