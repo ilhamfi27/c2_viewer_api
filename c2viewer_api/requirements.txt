@@ -29,7 +29,6 @@ incremental==17.5.0
 isort==4.3.21
 jdcal==1.4.1
 joblib==0.14.0
-jwt==1.0.0
 kiwisolver==1.1.0
 lazy-object-proxy==1.4.2
 mccabe==0.6.1
