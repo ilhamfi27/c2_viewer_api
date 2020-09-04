@@ -1,9 +1,10 @@
 import time, psycopg2
-from tracker.config import getconn
 from datetime import datetime
+from tracker.config import getconn, DB_SCHEMA
 
 conn = getconn()
 cur = conn.cursor()
+cur.execute("SET search_path TO {}". format(DB_SCHEMA))
 
 # variable penyimpanan realtime user
 USERS = set()
