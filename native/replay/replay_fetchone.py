@@ -55,14 +55,14 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                 if table not in data_track[system_track_number]:
                     data_track[system_track_number][table] = {}
                 if table == 'replay_system_track_general':
-                    data_track[system_track_number][table]['created_time']        = str(d[20])
+                    data_track[system_track_number][table]['created_time']        = str(d[21])
                     data_track[system_track_number][table]['source_data']         = str(d[10])
                     data_track[system_track_number][table]['track_name']          = str(d[2])
                     data_track[system_track_number][table]['environment']         = str(d[5])
                     data_track[system_track_number][table]['iu_indicator']        = str(d[12])
                     data_track[system_track_number][table]['identity']            = str(d[4])
-                    data_track[system_track_number][table]['initiation_time']     = str(d[19])
-                    data_track[system_track_number][table]['airborne_indicator']   = str(d[21])
+                    data_track[system_track_number][table]['initiation_time']     = str(d[20])
+                    data_track[system_track_number][table]['airborne_indicator']   = str(d[14])
                     table_value         = reduce(concat, data_track[system_track_number]['replay_system_track_general'].values())
                     hashed_value  = hashlib.md5(table_value.encode('utf-8')).hexdigest()
                     data_track[system_track_number]['replay_system_track_general']['hash'] = hashed_value
