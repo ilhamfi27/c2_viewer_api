@@ -236,7 +236,8 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                     track['replay_system_track_general']['identity']            = str(value['replay_system_track_general']['identity'])
                     track['replay_system_track_general']['initiation_time']     = str(value['replay_system_track_general']['initiation_time'])
                     track['replay_system_track_general']['airborne_indicator']   = str(value['replay_system_track_general']['airborne_indicator'])
-                    if track['replay_system_track_general']['source_data'] == 'AIS_TYPE':  
+                    if track['replay_system_track_general']['source_data'] == 'AIS_TYPE' or \
+                        track['replay_system_track_general']['source_data'] == 'DATA_LINK_TYPE':  
                         if 'replay_ais_data' not in track:
                             track['replay_ais_data'] = {}                      
                         track['replay_ais_data']['mmsi_number']            = str(value['replay_ais_data']['mmsi_number'])
