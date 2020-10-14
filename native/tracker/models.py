@@ -311,6 +311,7 @@ def improved_history_dots(stn, table_results):
                 hd_hash = {
                     "latitude": table_results['latitude'],
                     "longitude": table_results['longitude'],
+                    "height_depth": table_results['height_depth'],
                     "latlng": [table_results['latitude'], table_results['longitude']],
                     "last_update_time": table_results['last_update_time'],
                 }
@@ -320,6 +321,7 @@ def improved_history_dots(stn, table_results):
             the_query = "select " \
                         "   max(latitude), " \
                         "   max(longitude), " \
+                        "   max(height_depth), " \
                         "   last_update_time " \
                         "from replay_system_track_kinetic k " \
                         "JOIN ( " \
@@ -337,8 +339,9 @@ def improved_history_dots(stn, table_results):
                 hd_hash = {
                     "latitude": row[0],
                     "longitude": row[1],
+                    "height_depth": row[2],
                     "latlng": [row[0], row[1]],
-                    "last_update_time": util.single_datetime_to_string(row[2]),
+                    "last_update_time": util.single_datetime_to_string(row[3]),
                 }
                 history_dots_list.append(hd_hash)
             changed = True
