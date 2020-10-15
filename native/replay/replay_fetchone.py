@@ -167,7 +167,7 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
     for stn, data in data_track.items():  
         
         if 'replay_system_track_general' in data and \
-            data['replay_system_track_general']['source_data'] == 'AIS_TYPE' or\
+            data['replay_system_track_general']['source_data'] == 'AIS_TYPE' or \
             data['replay_system_track_general']['source_data'] == 'DATA_LINK_TYPE' and \
             'replay_ais_data' not in data :
             q_ais_data = "SELECT  * \
