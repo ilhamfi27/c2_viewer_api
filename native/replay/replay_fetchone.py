@@ -33,11 +33,11 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
     # print(session_id, start_time, end_time, data_track)
     for table in ar_mandatory_table:
         if table == 'replay_system_track_general':
-            columns = "created_time, source_data, track_name, environment, iu_indicator, identity, initiation_time, airborne_indicator"
+            columns = "st.system_track_number, st.created_time, st.source, st.track_name, st.environment, st.iu_indicator, st.identity, st.initiation_time, st.airborne_indicator"
         elif  table == 'replay_system_track_kinetic':
-            columns = "heading, latitude, longitude, altitude, speed_over_ground, course_over_ground, last_update_time"
+            columns = "st.system_track_number, st.heading, st.latitude, st.longitude, st.height_depth, st.speed_over_ground, st.course_over_ground, st.last_update_time"
         else:
-            columns = "fusion_status, join_status, track_phase_type, suspect_level"             
+            columns = "st.system_track_number, st.track_fusion_status, st.track_join_status, st.track_phase_type, st.track_suspect_level"             
         sql_mandatory = "SELECT {columns} \
                                 FROM {table} st \
                                 JOIN( \
@@ -48,38 +48,40 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                                 ) mx ON st.system_track_number=mx.system_track_number and st.created_time=mx.created_time \
                                 WHERE st.session_id = {session_id} AND st.created_time >= '{start_time}' AND st.created_time <= '{end_time}' \
                                 ORDER BY st.system_track_number".format(columns=columns, session_id=session_id, start_time=start_time, end_time=end_time, table=table)             
+        # print(sql_mandatory)
         cur.execute(sql_mandatory)
         data_mandatory = cur.fetchall()
 
         if len(data_mandatory) > 0:
             for d in data_mandatory:
-                system_track_number = str(d[1])
+                system_track_number = str(d[0])
                 if system_track_number not in data_track:
                     data_track[system_track_number] = {}
                 if table not in data_track[system_track_number]:
                     data_track[system_track_number][table] = {}
                 if table == 'replay_system_track_general':
-                    data_track[system_track_number][table]['created_time']        = str(d[0])
-                    data_track[system_track_number][table]['source_data']         = str(d[1])
-                    data_track[system_track_number][table]['track_name']          = str(d[2])
-                    data_track[system_track_number][table]['environment']         = str(d[3])
-                    data_track[system_track_number][table]['iu_indicator']        = str(d[4])
-                    data_track[system_track_number][table]['identity']            = str(d[5])
-                    data_track[system_track_number][table]['initiation_time']     = str(d[6])
-                    data_track[system_track_number][table]['airborne_indicator']   = str(d[7])
+                    data_track[system_track_number][table]['created_time']        = str(d[1])
+                    data_track[system_track_number][table]['source_data']         = str(d[2])
+                    data_track[system_track_number][table]['track_name']          = str(d[3])
+                    data_track[system_track_number][table]['environment']         = str(d[4])
+                    data_track[system_track_number][table]['iu_indicator']        = str(d[5])
+                    data_track[system_track_number][table]['identity']            = str(d[6])
+                    data_track[system_track_number][table]['initiation_time']     = str(d[7])
+                    data_track[system_track_number][table]['airborne_indicator']   = str(d[8])
                     table_value         = reduce(concat, data_track[system_track_number]['replay_system_track_general'].values())
                     hashed_value  = hashlib.md5(table_value.encode('utf-8')).hexdigest()
                     data_track[system_track_number]['replay_system_track_general']['hash'] = hashed_value
 
                     if data_track[system_track_number][table]['source_data'] == 'AIS_TYPE' or \
                         data_track[system_track_number][table]['source_data'] == 'DATA_LINK_TYPE':
+
                         q_ais_data = "SELECT  * \
                                                 FROM  \
                                                 ( \
                                                 SELECT * \
                                                     FROM replay_ais_data  \
                                                 WHERE session_id = " + str(session_id) + "   \
-                                                AND system_track_number = " + str(d[1]) + "  \
+                                                AND system_track_number = " + str(d[0]) + "  \
                                                     AND created_time > '" + start_time + "'  \
                                                     AND created_time < '" + end_time + "'  \
                                                 ORDER BY created_time DESC  \
@@ -89,6 +91,7 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                         if len(ais_data) > 0:
                             if 'replay_ais_data' not in data_track[system_track_number]:
                                 data_track[system_track_number]['replay_ais_data'] = {}
+
                             for ais in ais_data:
                                 data_track[system_track_number]['replay_ais_data']['mmsi_number']            = str(ais[2])
                                 data_track[system_track_number]['replay_ais_data']['ship_name']              = str(ais[3])
@@ -103,18 +106,18 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                                 data_track[system_track_number]['replay_ais_data']['country']                = str(ais[13])
                                 data_track[system_track_number]['replay_ais_data']['eta']                    = str(ais[15])
                                 data_track[system_track_number]['replay_ais_data']['vendor_id']              = str(ais[16])
-                                table_value         = reduce(concat, data_track[system_track_number][table].values())
-                                hashed_value  = hashlib.md5(table_value.encode('utf-8')).hexdigest()
-                                data_track[system_track_number]['replay_ais_data']['hash'] = hashed_value
+                                table_value                                                                  = reduce(concat, data_track[system_track_number][table].values())
+                                hashed_value                                                                 = hashlib.md5(table_value.encode('utf-8')).hexdigest()
+                                data_track[system_track_number]['replay_ais_data']['hash']                   = hashed_value
                                 
                 elif table == 'replay_system_track_kinetic':
-                    data_track[system_track_number]['replay_system_track_kinetic']['heading']             = str(d[0])
-                    data_track[system_track_number]['replay_system_track_kinetic']['latitude']            = str(d[1])
-                    data_track[system_track_number]['replay_system_track_kinetic']['longitude']           = str(d[2])
-                    data_track[system_track_number]['replay_system_track_kinetic']['altitude']            = str(d[3])
-                    data_track[system_track_number]['replay_system_track_kinetic']['speed_over_ground']   = str(d[4])
-                    data_track[system_track_number]['replay_system_track_kinetic']['course_over_ground']  = str(d[5])
-                    data_track[system_track_number]['replay_system_track_kinetic']['last_update_time']    = str(d[6])
+                    data_track[system_track_number]['replay_system_track_kinetic']['heading']             = str(d[1])
+                    data_track[system_track_number]['replay_system_track_kinetic']['latitude']            = str(d[2])
+                    data_track[system_track_number]['replay_system_track_kinetic']['longitude']           = str(d[3])
+                    data_track[system_track_number]['replay_system_track_kinetic']['altitude']            = str(d[4])
+                    data_track[system_track_number]['replay_system_track_kinetic']['speed_over_ground']   = str(d[5])
+                    data_track[system_track_number]['replay_system_track_kinetic']['course_over_ground']  = str(d[6])
+                    data_track[system_track_number]['replay_system_track_kinetic']['last_update_time']    = str(d[7])
                     
                     if 'hash' in data_track[system_track_number]['replay_system_track_kinetic']:                        
                         stored_kinetic_hash = data_track[system_track_number]['replay_system_track_kinetic']['hash']
@@ -135,10 +138,10 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                     
 
                 else:
-                    data_track[system_track_number][table]['fusion_status']       = str(d[0])
-                    data_track[system_track_number][table]['join_status']         = str(d[1])
-                    data_track[system_track_number][table]['track_phase_type']    = str(d[2])
-                    data_track[system_track_number][table]['suspect_level']       = str(d[3])
+                    data_track[system_track_number][table]['fusion_status']       = str(d[1])
+                    data_track[system_track_number][table]['join_status']         = str(d[2])
+                    data_track[system_track_number][table]['track_phase_type']    = str(d[3])
+                    data_track[system_track_number][table]['suspect_level']       = str(d[4])
 
                     if 'hash' in data_track[system_track_number][table]:                        
                         stored_kinetic_hash = data_track[system_track_number][table]['hash']
@@ -165,11 +168,12 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                     
     
     for stn, data in data_track.items():  
+        print(data['replay_system_track_general']['source_data'] )
         
         if 'replay_system_track_general' in data and \
-            data['replay_system_track_general']['source_data'] == 'AIS_TYPE' or \
-            data['replay_system_track_general']['source_data'] == 'DATA_LINK_TYPE' and \
-            'replay_ais_data' not in data :
+            (data['replay_system_track_general']['source_data'] == 'AIS_TYPE' or \
+            data['replay_system_track_general']['source_data'] == 'DATA_LINK_TYPE') and \
+            'replay_ais_data' not in data:
             q_ais_data = "SELECT  * \
                                                 FROM  \
                                                 ( \
@@ -181,6 +185,7 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                                                     AND created_time <= '" + end_time + "'  \
                                                 ORDER BY created_time DESC  \
                                                 ) aa LIMIT 1;"
+            # print(q_ais_data)
             cur.execute(q_ais_data)
             ais_data = cur.fetchall()
             if len(ais_data) > 0:
@@ -206,7 +211,8 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
         if 'replay_system_track_general' in data and \
                 'replay_system_track_kinetic' in data and \
                 'replay_system_track_processing' in data:
-            if data['replay_system_track_general']['source_data'] == 'AIS_TYPE':                        
+            if data['replay_system_track_general']['source_data'] == 'AIS_TYPE' or \
+               data['replay_system_track_general']['source_data'] == 'DATA_LINK_TYPE' :                       
                 if 'replay_ais_data' in data:
                     data['mandatory_complete_status'] = True
                 else:
@@ -239,7 +245,7 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                     if track['replay_system_track_general']['source_data'] == 'AIS_TYPE' or \
                         track['replay_system_track_general']['source_data'] == 'DATA_LINK_TYPE':  
                         if 'replay_ais_data' not in track:
-                            track['replay_ais_data'] = {}                      
+                            track['replay_ais_data'] = {}    
                         track['replay_ais_data']['mmsi_number']            = str(value['replay_ais_data']['mmsi_number'])
                         track['replay_ais_data']['ship_name']              = str(value['replay_ais_data']['ship_name'])
                         track['replay_ais_data']['radio_call_sign']        = str(value['replay_ais_data']['radio_call_sign'])
