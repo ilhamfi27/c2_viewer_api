@@ -167,9 +167,7 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                     # data_track[system_track_number]['replay_system_track_processing']['hash'] = hashed_value
                     
     
-    for stn, data in data_track.items():  
-        print(data['replay_system_track_general']['source_data'] )
-        
+    for stn, data in data_track.items():          
         if 'replay_system_track_general' in data and \
             (data['replay_system_track_general']['source_data'] == 'AIS_TYPE' or \
             data['replay_system_track_general']['source_data'] == 'DATA_LINK_TYPE') and \
