@@ -72,8 +72,7 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                     hashed_value  = hashlib.md5(table_value.encode('utf-8')).hexdigest()
                     data_track[system_track_number]['replay_system_track_general']['hash'] = hashed_value
 
-                    if data_track[system_track_number][table]['source_data'] == 'AIS_TYPE' or \
-                        data_track[system_track_number][table]['source_data'] == 'DATA_LINK_TYPE':
+                    if data_track[system_track_number][table]['source_data'] in ('AIS_TYPE', 'DATA_LINK_TYPE'):
 
                         q_ais_data = "SELECT  * \
                                                 FROM  \
@@ -88,7 +87,9 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                                                 ) aa LIMIT 1;"
                         cur.execute(q_ais_data)
                         ais_data = cur.fetchall()
+                        
                         if len(ais_data) > 0:
+                            print(ais_data, data_track[system_track_number][table]['source_data'])
                             if 'replay_ais_data' not in data_track[system_track_number]:
                                 data_track[system_track_number]['replay_ais_data'] = {}
 
@@ -134,9 +135,6 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                         hashed_value  = hashlib.md5(table_value.encode('utf-8')).hexdigest()
                         data_track[system_track_number]['replay_system_track_kinetic']['hash'] = hashed_value
                     
-                    
-                    
-
                 else:
                     data_track[system_track_number][table]['fusion_status']       = str(d[1])
                     data_track[system_track_number][table]['join_status']         = str(d[2])
@@ -239,11 +237,11 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                     track['replay_system_track_general']['identity']            = str(value['replay_system_track_general']['identity'])
                     track['replay_system_track_general']['initiation_time']     = str(value['replay_system_track_general']['initiation_time'])
                     track['replay_system_track_general']['airborne_indicator']   = str(value['replay_system_track_general']['airborne_indicator'])
-                    if track['replay_system_track_general']['source_data'] == 'AIS_TYPE' or \
-                        track['replay_system_track_general']['source_data'] == 'DATA_LINK_TYPE':  
-                        if 'replay_ais_data' not in track:
-                            track['replay_ais_data'] = {}    
+                    
+                    if track['replay_system_track_general']['source_data'] in ('AIS_TYPE', 'DATA_LINK_TYPE'):  
                         if track['replay_system_track_general']['source_data'] == 'AIS_TYPE':
+                            if 'replay_ais_data' not in track:
+                                track['replay_ais_data'] = {}
                             track['replay_ais_data']['mmsi_number']            = str(value['replay_ais_data']['mmsi_number'])
                             track['replay_ais_data']['ship_name']              = str(value['replay_ais_data']['ship_name'])
                             track['replay_ais_data']['radio_call_sign']        = str(value['replay_ais_data']['radio_call_sign'])
@@ -259,6 +257,8 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                             track['replay_ais_data']['vendor_id']              = str(value['replay_ais_data']['vendor_id']) 
                         else:
                             if 'replay_ais_data' in value:
+                                if 'replay_ais_data' not in track:
+                                    track['replay_ais_data'] = {}    
                                 track['replay_ais_data']['mmsi_number']            = str(value['replay_ais_data']['mmsi_number'])
                                 track['replay_ais_data']['ship_name']              = str(value['replay_ais_data']['ship_name'])
                                 track['replay_ais_data']['radio_call_sign']        = str(value['replay_ais_data']['radio_call_sign'])
