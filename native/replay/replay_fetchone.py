@@ -183,6 +183,7 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                 print(q_ais_data)
             cur.execute(q_ais_data)
             ais_data = cur.fetchall()
+            print(len(ais_data))
             if len(ais_data) > 0:
                 if 'replay_ais_data' not in data_track[stn]:
                     data_track[stn]['replay_ais_data'] = {}
