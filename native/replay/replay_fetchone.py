@@ -89,7 +89,6 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                         ais_data = cur.fetchall()
                         
                         if len(ais_data) > 0:
-                            print(ais_data, data_track[system_track_number][table]['source_data'])
                             if 'replay_ais_data' not in data_track[system_track_number]:
                                 data_track[system_track_number]['replay_ais_data'] = {}
 
@@ -123,17 +122,17 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                     if 'hash' in data_track[system_track_number]['replay_system_track_kinetic']:                        
                         stored_kinetic_hash = data_track[system_track_number]['replay_system_track_kinetic']['hash']
                         del data_track[system_track_number]['replay_system_track_kinetic']['hash']
-                        table_value   = reduce(concat, data_track[system_track_number]['replay_system_track_kinetic'].values())
-                        hashed_value  = hashlib.md5(table_value.encode('utf-8')).hexdigest()
+                        table_value         = reduce(concat, data_track[system_track_number]['replay_system_track_kinetic'].values())
+                        hashed_value        = hashlib.md5(table_value.encode('utf-8')).hexdigest()
 
                         if stored_kinetic_hash != hashed_value:
                             # print(system_track_number, stored_kinetic_hash, hashed_value)
                             changed_mandatory_data['replay_system_track_kinetic'][system_track_number] = data_track[system_track_number]['replay_system_track_kinetic']
                         data_track[system_track_number]['replay_system_track_kinetic']['hash'] = hashed_value
                     else:
-                        table_value   = reduce(concat, data_track[system_track_number]['replay_system_track_kinetic'].values())
-                        hashed_value  = hashlib.md5(table_value.encode('utf-8')).hexdigest()
-                        data_track[system_track_number]['replay_system_track_kinetic']['hash'] = hashed_value
+                        table_value                                                             = reduce(concat, data_track[system_track_number]['replay_system_track_kinetic'].values())
+                        hashed_value                                                            = hashlib.md5(table_value.encode('utf-8')).hexdigest()
+                        data_track[system_track_number]['replay_system_track_kinetic']['hash']  = hashed_value
                     
                 else:
                     data_track[system_track_number][table]['fusion_status']       = str(d[1])
@@ -144,17 +143,17 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                     if 'hash' in data_track[system_track_number][table]:                        
                         stored_kinetic_hash = data_track[system_track_number][table]['hash']
                         del data_track[system_track_number][table]['hash']
-                        table_value   = reduce(concat, data_track[system_track_number][table].values())
-                        hashed_value  = hashlib.md5(table_value.encode('utf-8')).hexdigest()
+                        table_value         = reduce(concat, data_track[system_track_number][table].values())
+                        hashed_value        = hashlib.md5(table_value.encode('utf-8')).hexdigest()
 
                         if stored_kinetic_hash != hashed_value:
                             # print(system_track_number, stored_kinetic_hash, hashed_value)
                             changed_mandatory_data[table][system_track_number] = data_track[system_track_number][table]
                         data_track[system_track_number][table]['hash'] = hashed_value
                     else:
-                        table_value   = reduce(concat, data_track[system_track_number][table].values())
-                        hashed_value  = hashlib.md5(table_value.encode('utf-8')).hexdigest()
-                        data_track[system_track_number][table]['hash'] = hashed_value
+                        table_value                                     = reduce(concat, data_track[system_track_number][table].values())
+                        hashed_value                                    = hashlib.md5(table_value.encode('utf-8')).hexdigest()
+                        data_track[system_track_number][table]['hash']  = hashed_value
 
                     # table_value         = reduce(concat, data_track[system_track_number]['replay_system_track_processing'].values())
                     # hashed_value  = hashlib.md5(table_value.encode('utf-8')).hexdigest()
@@ -179,7 +178,8 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                                                     AND created_time <= '" + end_time + "'  \
                                                 ORDER BY created_time DESC  \
                                                 ) aa LIMIT 1;"
-            # print(q_ais_data)
+            if stn == 5:
+                print(q_ais_data)
             cur.execute(q_ais_data)
             ais_data = cur.fetchall()
             if len(ais_data) > 0:
@@ -199,6 +199,7 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                     data_track[stn]['replay_ais_data']['country']                = str(ais[13])
                     data_track[stn]['replay_ais_data']['eta']                    = str(ais[15])
                     data_track[stn]['replay_ais_data']['vendor_id']              = str(ais[16])
+                    
                     table_value         = reduce(concat, data_track[stn][table].values())
                     hashed_value        = hashlib.md5(table_value.encode('utf-8')).hexdigest()
                     data_track[stn]['replay_ais_data']['hash'] = hashed_value
