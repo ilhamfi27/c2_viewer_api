@@ -178,6 +178,7 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                                                     AND created_time <= '" + end_time + "'  \
                                                 ORDER BY created_time DESC  \
                                                 ) aa LIMIT 1;"
+            print(stn)
             if stn == 5:
                 print(q_ais_data)
             cur.execute(q_ais_data)
