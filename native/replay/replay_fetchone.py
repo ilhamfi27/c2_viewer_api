@@ -185,8 +185,6 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
             ais_data = cur.fetchall()
 
             if len(ais_data) > 0:
-                if stn == "5":
-                    print(ais_data)
                 if 'replay_ais_data' not in data_track[stn]:
                     data_track[stn]['replay_ais_data'] = {}
                 for ais in ais_data:
