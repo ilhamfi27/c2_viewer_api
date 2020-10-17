@@ -17,7 +17,8 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
     track_data = []
     changed_mandatory_data = {
                 'replay_system_track_kinetic'       : {},
-                'replay_system_track_processing'    : {}
+                'replay_system_track_processing'    : {},
+                'replay_ais_data'                   : {}
     }
     ar_mandatory_table_8 = [            
         'replay_system_track_identification',
@@ -202,8 +203,23 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                     data_track[stn]['replay_ais_data']['country']                = str(ais[13])
                     data_track[stn]['replay_ais_data']['eta']                    = str(ais[15])
                     data_track[stn]['replay_ais_data']['vendor_id']              = str(ais[16])
+                     
+                    if 'hash' in data_track[stn]['replay_ais_data']:                        
+                        stored_kinetic_hash = data_track[stn]['replay_ais_data']['hash']
+                        del data_track[stn]['replay_ais_data']['hash']
+                        table_value         = reduce(concat, data_track[stn]['replay_ais_data'].values())
+                        hashed_value        = hashlib.md5(table_value.encode('utf-8')).hexdigest()
+
+                        if stored_kinetic_hash != hashed_value:
+                            # print(system_track_number, stored_kinetic_hash, hashed_value)
+                            changed_mandatory_data['replay_ais_data'][stn] = data_track[stn]['replay_ais_data']
+                        data_track[stn]['replay_ais_data']['hash'] = hashed_value
+                    else:
+                        table_value                                                             = reduce(concat, data_track[stn]['replay_ais_data'].values())
+                        hashed_value                                                            = hashlib.md5(table_value.encode('utf-8')).hexdigest()
+                        data_track[stn]['replay_ais_data']['hash']  = hashed_value
                     
-                    table_value         = reduce(concat, data_track[stn][table].values())
+                    table_value         = reduce(concat, data_track[stn]['replay_ais_data'].values())
                     hashed_value        = hashlib.md5(table_value.encode('utf-8')).hexdigest()
                     data_track[stn]['replay_ais_data']['hash'] = hashed_value
         if 'replay_system_track_general' in data and \
@@ -350,21 +366,42 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                     track['replay_system_track_processing']['suspect_level']       = str(value['replay_system_track_processing']['suspect_level'])
                 else:           
                     if value['replay_system_track_general']['source_data'] == 'DATA_LINK_TYPE' and 'replay_ais_data' in value:
-                        if 'replay_ais_data' not in track:
-                            track['replay_ais_data'] = {}
-                        track['replay_ais_data']['mmsi_number']            = str(value['replay_ais_data']['mmsi_number'])
-                        track['replay_ais_data']['ship_name']              = str(value['replay_ais_data']['ship_name'])
-                        track['replay_ais_data']['radio_call_sign']        = str(value['replay_ais_data']['radio_call_sign'])
-                        track['replay_ais_data']['imo_number']             = str(value['replay_ais_data']['imo_number'])
-                        track['replay_ais_data']['navigation_status']      = str(value['replay_ais_data']['navigation_status'])
-                        track['replay_ais_data']['destination']            = str(value['replay_ais_data']['destination'])
-                        track['replay_ais_data']['dimension_of_ship']      = str(value['replay_ais_data']['dimension_of_ship'])
-                        track['replay_ais_data']['ship_type']              = str(value['replay_ais_data']['ship_type'])
-                        track['replay_ais_data']['rate_of_turn']           = str(value['replay_ais_data']['rate_of_turn'])
-                        track['replay_ais_data']['gross_tonnage']          = str(value['replay_ais_data']['gross_tonnage'])
-                        track['replay_ais_data']['country']                = str(value['replay_ais_data']['country'])
-                        track['replay_ais_data']['eta']                    = str(value['replay_ais_data']['eta'])
-                        track['replay_ais_data']['vendor_id']              = str(value['replay_ais_data']['vendor_id']) 
+                        if key in changed_mandatory_data['replay_ais_data']:    
+                            if 'replay_ais_data' not in track:
+                                track['replay_ais_data'] = {}                   [key]
+                            track['replay_ais_data']['mmsi_number']            = str(changed_mandatory_data['replay_ais_data'][key]['mmsi_number'])
+                            track['replay_ais_data']['ship_name']              = str(changed_mandatory_data['replay_ais_data'][key]['ship_name'])
+                            track['replay_ais_data']['radio_call_sign']        = str(changed_mandatory_data['replay_ais_data'][key]['radio_call_sign'])
+                            track['replay_ais_data']['imo_number']             = str(changed_mandatory_data['replay_ais_data'][key]['imo_number'])
+                            track['replay_ais_data']['navigation_status']      = str(changed_mandatory_data['replay_ais_data'][key]['navigation_status'])
+                            track['replay_ais_data']['destination']            = str(changed_mandatory_data['replay_ais_data'][key]['destination'])
+                            track['replay_ais_data']['dimension_of_ship']      = str(changed_mandatory_data['replay_ais_data'][key]['dimension_of_ship'])
+                            track['replay_ais_data']['ship_type']              = str(changed_mandatory_data['replay_ais_data'][key]['ship_type'])
+                            track['replay_ais_data']['rate_of_turn']           = str(changed_mandatory_data['replay_ais_data'][key]['rate_of_turn'])
+                            track['replay_ais_data']['gross_tonnage']          = str(changed_mandatory_data['replay_ais_data'][key]['gross_tonnage'])
+                            track['replay_ais_data']['country']                = str(changed_mandatory_data['replay_ais_data'][key]['country'])
+                            track['replay_ais_data']['eta']                    = str(changed_mandatory_data['replay_ais_data'][key]['eta'])
+                            track['replay_ais_data']['vendor_id']              = str(changed_mandatory_data['replay_ais_data'][key]['vendor_id']) 
+                            track['replay_ais_data']['hash']                   = str(changed_mandatory_data['replay_ais_data'][key]['hash']) 
+
+                        if 'replay_ais_data' not in value:
+                            if 'replay_ais_data' not in track:
+                                track['replay_ais_data'] = {}
+                            
+                            track['replay_ais_data']['mmsi_number']            =  value['replay_ais_data']['mmsi_number']            
+                            track['replay_ais_data']['ship_name']              =  value['replay_ais_data']['ship_name']             
+                            track['replay_ais_data']['radio_call_sign']        =  value['replay_ais_data']['radio_call_sign']        
+                            track['replay_ais_data']['imo_number']             =  value['replay_ais_data']['imo_number']             
+                            track['replay_ais_data']['navigation_status']      =  value['replay_ais_data']['navigation_status']      
+                            track['replay_ais_data']['destination']            =  value['replay_ais_data']['destination']            
+                            track['replay_ais_data']['dimension_of_ship']      =  value['replay_ais_data']['dimension_of_ship']      
+                            track['replay_ais_data']['ship_type']              =  value['replay_ais_data']['ship_type']              
+                            track['replay_ais_data']['rate_of_turn']           =  value['replay_ais_data']['rate_of_turn']           
+                            track['replay_ais_data']['gross_tonnage']          =  value['replay_ais_data']['gross_tonnage']          
+                            track['replay_ais_data']['country']                =  value['replay_ais_data']['country']                
+                            track['replay_ais_data']['eta']                    =  value['replay_ais_data']['eta']                    
+                            track['replay_ais_data']['vendor_id']              =  value['replay_ais_data']['vendor_id']              
+                            track['replay_ais_data']['hash']                   =  value['replay_ais_data']['hash']              
 
                     if key in changed_mandatory_data['replay_system_track_kinetic']:
                         changed_kinetic = changed_mandatory_data['replay_system_track_kinetic'][key]
