@@ -349,6 +349,23 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                     track['replay_system_track_processing']['track_phase_type']    = str(value['replay_system_track_processing']['track_phase_type'])
                     track['replay_system_track_processing']['suspect_level']       = str(value['replay_system_track_processing']['suspect_level'])
                 else:           
+                    if value['replay_system_track_general']['source_data'] == 'DATA_LINK_TYPE' and 'replay_ais_data' in value:
+                        if 'replay_ais_data' not in track:
+                            track['replay_ais_data'] = {}
+                        track['replay_ais_data']['mmsi_number']            = str(value['replay_ais_data']['mmsi_number'])
+                        track['replay_ais_data']['ship_name']              = str(value['replay_ais_data']['ship_name'])
+                        track['replay_ais_data']['radio_call_sign']        = str(value['replay_ais_data']['radio_call_sign'])
+                        track['replay_ais_data']['imo_number']             = str(value['replay_ais_data']['imo_number'])
+                        track['replay_ais_data']['navigation_status']      = str(value['replay_ais_data']['navigation_status'])
+                        track['replay_ais_data']['destination']            = str(value['replay_ais_data']['destination'])
+                        track['replay_ais_data']['dimension_of_ship']      = str(value['replay_ais_data']['dimension_of_ship'])
+                        track['replay_ais_data']['ship_type']              = str(value['replay_ais_data']['ship_type'])
+                        track['replay_ais_data']['rate_of_turn']           = str(value['replay_ais_data']['rate_of_turn'])
+                        track['replay_ais_data']['gross_tonnage']          = str(value['replay_ais_data']['gross_tonnage'])
+                        track['replay_ais_data']['country']                = str(value['replay_ais_data']['country'])
+                        track['replay_ais_data']['eta']                    = str(value['replay_ais_data']['eta'])
+                        track['replay_ais_data']['vendor_id']              = str(value['replay_ais_data']['vendor_id']) 
+
                     if key in changed_mandatory_data['replay_system_track_kinetic']:
                         changed_kinetic = changed_mandatory_data['replay_system_track_kinetic'][key]
                         # print(key, changed_kinetic)
