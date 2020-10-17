@@ -167,9 +167,7 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
     
     for stn, data in data_track.items():          
         if 'replay_system_track_general' in data and \
-            (data['replay_system_track_general']['source_data'] == 'AIS_TYPE' or \
-            data['replay_system_track_general']['source_data'] == 'DATA_LINK_TYPE') and \
-            'replay_ais_data' not in data:
+            data['replay_system_track_general']['source_data'] in ('AIS_TYPE', 'DATA_LINK_TYPE'):
             q_ais_data = "SELECT  * \
                                                 FROM  \
                                                 ( \
@@ -238,7 +236,7 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                     track['replay_system_track_general']['initiation_time']     = str(value['replay_system_track_general']['initiation_time'])
                     track['replay_system_track_general']['airborne_indicator']   = str(value['replay_system_track_general']['airborne_indicator'])
                     
-                    if track['replay_system_track_general']['source_data'] in ('AIS_TYPE', 'DATA_LINK_TYPE'):  
+                    if track['replay_system_track_general']['source_data'] in ('AIS_TYPE', 'DATA_LINK_TYPE'):
                         if track['replay_system_track_general']['source_data'] == 'AIS_TYPE':
                             if 'replay_ais_data' not in track:
                                 track['replay_ais_data'] = {}
