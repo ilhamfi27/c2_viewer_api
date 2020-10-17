@@ -367,6 +367,7 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                         if key in changed_mandatory_data['replay_ais_data']:    
                             if 'replay_ais_data' not in track:
                                 track['replay_ais_data'] = {}
+                            track['replay_ais_data']['track_status']           = "T" + str(key) + "U"
                             track['replay_ais_data']['mmsi_number']            = str(changed_mandatory_data['replay_ais_data'][key]['mmsi_number'])
                             track['replay_ais_data']['ship_name']              = str(changed_mandatory_data['replay_ais_data'][key]['ship_name'])
                             track['replay_ais_data']['radio_call_sign']        = str(changed_mandatory_data['replay_ais_data'][key]['radio_call_sign'])
@@ -385,7 +386,7 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                         if 'replay_ais_data' not in value:
                             if 'replay_ais_data' not in track:
                                 track['replay_ais_data'] = {}
-                            
+                            track['replay_ais_data']['track_status']           = "T" + str(key) + "U"
                             track['replay_ais_data']['mmsi_number']            =  value['replay_ais_data']['mmsi_number']            
                             track['replay_ais_data']['ship_name']              =  value['replay_ais_data']['ship_name']             
                             track['replay_ais_data']['radio_call_sign']        =  value['replay_ais_data']['radio_call_sign']        
