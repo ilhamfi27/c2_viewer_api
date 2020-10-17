@@ -178,12 +178,11 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                                                     AND created_time <= '" + end_time + "'  \
                                                 ORDER BY created_time DESC  \
                                                 ) aa LIMIT 1;"
-            print(stn)
-            if stn == 5:
+            # print(stn)
+            if stn == "5":
                 print(q_ais_data)
             cur.execute(q_ais_data)
             ais_data = cur.fetchall()
-            # print(stn, len(ais_data))
             if len(ais_data) > 0:
                 if 'replay_ais_data' not in data_track[stn]:
                     data_track[stn]['replay_ais_data'] = {}
