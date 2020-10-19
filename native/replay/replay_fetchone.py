@@ -16,6 +16,7 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
     track_final = {}
     track_data = []
     changed_mandatory_data = {
+                'replay_system_track_general'       : {},
                 'replay_system_track_kinetic'       : {},
                 'replay_system_track_processing'    : {},
                 'replay_ais_data'                   : {}
@@ -69,9 +70,21 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                     data_track[system_track_number][table]['identity']            = str(d[6])
                     data_track[system_track_number][table]['initiation_time']     = str(d[7])
                     data_track[system_track_number][table]['airborne_indicator']   = str(d[8])
-                    table_value         = reduce(concat, data_track[system_track_number]['replay_system_track_general'].values())
-                    hashed_value  = hashlib.md5(table_value.encode('utf-8')).hexdigest()
-                    data_track[system_track_number]['replay_system_track_general']['hash'] = hashed_value
+                    
+                    if 'hash' in data_track[system_track_number]['replay_system_track_general']:                        
+                        stored_general_hash = data_track[system_track_number]['replay_system_track_general']['hash']
+                        del data_track[system_track_number]['replay_system_track_general']['hash']
+                        table_value         = reduce(concat, data_track[system_track_number]['replay_system_track_general'].values())
+                        hashed_value        = hashlib.md5(table_value.encode('utf-8')).hexdigest()
+
+                        if stored_general_hash != hashed_value:
+                            # print(system_track_number, stored_kinetic_hash, hashed_value)
+                            changed_mandatory_data['replay_system_track_general'][system_track_number] = data_track[system_track_number]['replay_system_track_general']
+                        data_track[system_track_number]['replay_system_track_general']['hash'] = hashed_value
+                    else:
+                        table_value                                                             = reduce(concat, data_track[system_track_number]['replay_system_track_general'].values())
+                        hashed_value                                                            = hashlib.md5(table_value.encode('utf-8')).hexdigest()
+                        data_track[system_track_number]['replay_system_track_general']['hash']  = hashed_value
 
                     if data_track[system_track_number][table]['source_data'] in ('AIS_TYPE', 'DATA_LINK_TYPE'):
 
@@ -402,6 +415,21 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                             track['replay_ais_data']['vendor_id']              =  value['replay_ais_data']['vendor_id']              
                             track['replay_ais_data']['hash']                   =  value['replay_ais_data']['hash']              
 
+                    if key in changed_mandatory_data['replay_system_track_general']:
+                        changed_general = changed_mandatory_data['replay_system_track_general'][key]
+                        if 'replay_system_track_general' not in track:
+                            track['replay_system_track_general'] = {}
+                        track['replay_system_track_general']['created_time']        = str(changed_general['created_time'])
+                        track['replay_system_track_general']['source_data']         = str(changed_general['source_data'])
+                        track['replay_system_track_general']['track_name']          = str(changed_general['track_name'])
+                        track['replay_system_track_general']['environment']         = str(changed_general['environment'])
+                        track['replay_system_track_general']['iu_indicator']        = str(changed_general['iu_indicator'])
+                        track['replay_system_track_general']['identity']            = str(changed_general['identity'])
+                        track['replay_system_track_general']['initiation_time']     = str(changed_general['initiation_time'])
+                        track['replay_system_track_general']['airborne_indicator']  = str(changed_general['airborne_indicator'])
+                        track['replay_system_track_general']['hash']                = str(changed_general['hash'])
+
+
                     if key in changed_mandatory_data['replay_system_track_kinetic']:
                         changed_kinetic = changed_mandatory_data['replay_system_track_kinetic'][key]
                         # print(key, changed_kinetic)
@@ -508,6 +536,7 @@ def replay_track(session_id, start_time, end_time, data_track, added_track):
                         track['replay_system_track_processing']['join_status']         = str(changed_processing['join_status'])
                         track['replay_system_track_processing']['track_phase_type']    = str(changed_processing['track_phase_type'])
                         track['replay_system_track_processing']['suspect_level']       = str(changed_processing['suspect_level'])
+                        track['replay_system_track_processing']['hash']                = str(changed_processing['hash'])
                         if track['replay_system_track_processing']['track_phase_type'] in ['DELETED_BY_SYSTEM', 'DELETED_BY_SENSOR']:
                             value['replay_system_track_processing'].clear()
                             data_track[key].clear()
@@ -602,7 +631,7 @@ def get_replay():
                   "EXTRACT(EPOCH FROM (end_time::timestamp - start_time::timestamp)) as durasi, name " \
                   " from sessions " \
                   "WHERE end_time IS NOT null and" \
-                  " id not in (SELECT distinct(session_id) FROM stored_replay WHERE update_rate="+str(UPDATE_RATE)+" and finished=1)"
+                  " id not in (SELECT distinct(session_id) FROM stored_replay WHERE update_rate="+str(UPDATE_RATE)+" and finished=1) and id=19"
     print(sql)
     
     cur.execute(sql)
