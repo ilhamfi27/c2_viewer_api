@@ -932,9 +932,11 @@ def get_replay():
             cur.execute(check_stored)
             stored_data = cur.fetchall()
             if len(stored_data) == 0:
+                # q_store_replay = "INSERT INTO stored_replay(update_rate, session_id, data, sequence, finished)" \
+                #                "VALUES ("+str(UPDATE_RATE)+", "+str(session_id)+", '"+str(message)+"', '"+str(sequence)+"', 0 )"
                 q_store_replay = "INSERT INTO stored_replay(update_rate, session_id, data, sequence, finished)" \
-                                "VALUES ("+str(UPDATE_RATE)+", "+str(session_id)+", '"+str(message)+"', '"+str(sequence)+"', 0 )"
-                cur.execute(q_store_replay)
+                                "VALUES (%s, %s, %s, %s, %s )"
+                cur.execute(q_store_replay, (UPDATE_RATE, session_id, message, sequence, 0))
                 conn.commit()
             if sequence == ujung:
                 q_set_finished = "UPDATE stored_replay set finished = 1" \
